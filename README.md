@@ -1,6 +1,8 @@
 # WeaveStudio
 
-WeaveStudio is a local-first visual workflow canvas for turning messy inputs into repeatable, human-reviewed professional deliverables.
+**WeaveStudio is a local-first visual workflow canvas that turns messy notes, transcripts, logs, research fragments, and process inputs into repeatable professional deliverables.**
+
+WeaveStudio enables professionals to turn variable real-world inputs into structured, traceable deliverables by combining visual workflow design with template reusability, iterative snapshot versioning, and built-in validation checkpoints.
 
 It is a static browser app. There is no backend, account system, external API dependency, cloud sync, database requirement, or authentication layer in this release.
 
@@ -11,14 +13,14 @@ It is a static browser app. There is no backend, account system, external API de
 - Local template gallery for common workflow starters.
 - Browser localStorage autosave for the current workspace.
 - Local version snapshots with save, restore, and delete actions.
-- Deterministic Process Check for workflow completeness, review checkpoints, and export readiness.
+- Deterministic Process Check for workflow completeness, review checkpoints, and export-readiness.
 - Output preview generated from current workflow nodes.
 - Markdown, JSON, and print-oriented PDF exports.
-- `/acquire` source/IP acquisition page for developer buyers.
+- `/acquire` source/IP acquisition page.
 
 ## AI Assist Blueprint
 
-AI Assist is an optional blueprint node, not a live AI integration. It is BYOK-ready for a future buyer or maintainer who wants to wire provider-specific adapters later. The current MVP includes no bundled API keys, makes no external provider calls, and does not save API keys to localStorage.
+AI Assist is an optional blueprint node, not a live AI integration. It is BYOK-ready for a future buyer or maintainer who wants to wire provider-specific adapters later. The current release includes no bundled API keys, makes no external provider calls, and does not save API keys to localStorage.
 
 Extension points:
 
@@ -40,13 +42,13 @@ Extension points:
 
 ## Routes
 
-- `/` - product overview
-- `/app` - workflow canvas
-- `/templates` - template gallery
-- `/exports` - export documentation
-- `/docs` - usage guide
-- `/acquire` - source/IP acquisition page
-- `/buyer` - redirect to `/acquire`
+- `/` — product overview
+- `/app` — workflow canvas
+- `/templates` — template gallery
+- `/exports` — export documentation
+- `/docs` — usage guide
+- `/acquire` — source/IP acquisition page
+- `/buyer` — redirects to `/acquire`
 
 ## Local Development
 
@@ -64,11 +66,12 @@ npm run lint
 - Browser localStorage can be cleared by the user, browser settings, private browsing, or device cleanup tools. Export important work.
 - Static hosting works on Netlify, Vercel, Cloudflare Pages, GitHub Pages, or equivalent hosts. Configure SPA fallback to `index.html` for deep routes.
 
-## Acquisition Package Notes
+## Acquisition Package
 
-The WeaveStudio local-first edition is packaged with source, documentation, templates, and buyer-facing notes. See:
+See the following files for IP acquisition details:
 
-- [BUYER_HANDOFF.md](./BUYER_HANDOFF.md)
+- [SOURCE_IP_HANDOFF.md](./SOURCE_IP_HANDOFF.md)
 - [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md)
 - [ROADMAP.md](./ROADMAP.md)
 - [ACQUISITION_LISTING.md](./ACQUISITION_LISTING.md)
+- [OUTREACH_MESSAGES.md](./OUTREACH_MESSAGES.md)
