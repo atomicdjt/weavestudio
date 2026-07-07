@@ -1,0 +1,62 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #09090b;
+  --color-panel: #18181b;
+  --color-border: #27272a;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+}
+
+html, body, #root {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  @apply bg-canvas text-gray-100 antialiased;
+}
+
+.react-flow__node {
+  @apply rounded-xl shadow-lg border border-border bg-panel text-white;
+  width: 280px;
+}
+
+.react-flow__handle {
+  @apply w-3 h-3 bg-gray-400 border-2 border-panel;
+}
+
+.react-flow__handle:hover {
+  @apply bg-primary scale-125 transition-transform;
+}
+
+.react-flow__edge-path {
+  stroke: #52525b;
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #3b82f6;
+}
+
+/* Custom scrollbar for panels */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #3f3f46;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #52525b;
+}
