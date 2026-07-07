@@ -31,7 +31,8 @@ body {
 }
 
 .react-flow__controls {
-  @apply !bg-panel !border !border-border;
+  background-color: var(--color-panel) !important;
+  border: 1px solid var(--color-border) !important;
   box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5) !important;
   border-radius: 0.5rem !important;
   overflow: hidden;
@@ -40,7 +41,8 @@ body {
 }
 
 .react-flow__controls-button {
-  @apply !bg-panel !text-gray-400;
+  background-color: var(--color-panel) !important;
+  color: #9ca3af !important;
   border-bottom: 1px solid var(--color-border) !important;
   display: flex !important;
   align-items: center !important;
@@ -52,7 +54,8 @@ body {
 }
 
 .react-flow__controls-button:hover {
-  @apply !bg-gray-800 !text-gray-200;
+  background-color: #1f2937 !important;
+  color: #e5e7eb !important;
 }
 
 .react-flow__controls-button svg {
