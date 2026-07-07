@@ -13,7 +13,7 @@ export const DocsPage = () => {
           <p className="text-sm leading-relaxed">
             Professionals often handle disorganized meeting notes, scattered chat logs, customer feedback, raw SOP
             notes, incident logs, and project requirements. WeaveStudio provides a visual canvas to organize those inputs,
-            map transformation steps, insert human review checkpoints, run a deterministic Process Check for
+            map transformation steps, insert human review checkpoints, run a deterministic Workflow Validator for
             export-readiness, and generate structured exports from reviewed workflow content.
           </p>
         </section>
@@ -59,9 +59,9 @@ export const DocsPage = () => {
         </section>
 
         <section className="bg-panel border border-border rounded-lg p-6">
-          <h2 className="text-xl font-bold text-white mb-4">Process Check and output</h2>
+          <h2 className="text-xl font-bold text-white mb-4">Workflow Validator and output</h2>
           <p className="text-sm leading-relaxed mb-3">
-            Process Check validates the current workflow graph for structural and export-readiness issues, including:
+            Workflow Validator validates the current workflow graph for structural and export-readiness issues, including:
           </p>
           <ul className="list-disc list-inside space-y-1 text-sm mb-3">
             <li>Missing input or output nodes</li>
@@ -74,9 +74,34 @@ export const DocsPage = () => {
           </ul>
           <p className="text-sm leading-relaxed">
             Generate Output creates a deterministic preview from the current workflow nodes and includes source nodes,
-            edges, review checkpoints, generated output, and metadata in exports. Process Check does not verify facts or
+            edges, review checkpoints, generated output, and metadata in exports. Workflow Validator does not verify facts or
             guarantee the correctness of source content.
           </p>
+        </section>
+
+        <section id="exports" className="bg-panel border border-border rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Exports</h2>
+          <p className="text-sm leading-relaxed mb-3">
+            Output generation happens directly in the Workspace. You can export the generated output and workflow in three formats:
+          </p>
+          <ul className="list-disc list-inside space-y-2 text-sm">
+            <li><strong>Markdown:</strong> Standard text file containing the generated output and raw workflow nodes.</li>
+            <li><strong>JSON Snapshot:</strong> A complete, machine-readable backup of your nodes and edges. You can use this for safe-keeping.</li>
+            <li><strong>PDF Report:</strong> A print-ready document containing the final rendered output.</li>
+          </ul>
+        </section>
+
+        <section id="data-portability" className="bg-panel border border-border rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Data Portability</h2>
+          <p className="text-sm leading-relaxed mb-3">
+            Local-first should never mean browser-locked. Export your workspace, snapshots, and workflow data at any time.
+            Look for the Data Portability button in the Workspace toolbar.
+          </p>
+          <ul className="list-disc list-inside space-y-2 text-sm">
+            <li><strong>Download All Data:</strong> Export a JSON file containing all your local snapshots, templates, and current canvas.</li>
+            <li><strong>Import Data:</strong> Restore an entire WeaveStudio environment from a previously downloaded JSON file.</li>
+            <li><strong>Clear Local Data:</strong> Wipe your browser's localStorage (always download a backup first).</li>
+          </ul>
         </section>
 
         <section className="bg-panel border border-border rounded-lg p-6">

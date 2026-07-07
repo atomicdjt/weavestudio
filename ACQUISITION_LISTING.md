@@ -23,7 +23,7 @@ The source/IP acquisition page is available at `/acquire`; `/buyer` redirects th
 
 - Addresses the recurring problem of converting variable, unstructured professional inputs into consistent outputs.
 - Local-first design differentiates it from cloud-first workflow and automation tools.
-- Reusable templates, Process Check validation, and versioning create a repeatability engine beyond basic diagramming.
+- Reusable templates, Workflow Validator validation, and versioning create a repeatability engine beyond basic diagramming.
 - Modular structure and optional BYOK AI blueprint give acquirers clear extension paths.
 - Accelerates development for productivity, documentation, and operations tooling by providing a working canvas, persistence, validation, and export foundation.
 
@@ -33,13 +33,13 @@ The source/IP acquisition page is available at `/acquire`; `/buyer` redirects th
 - Current product name and UI assets.
 - Workflow templates including an optional AI Assist Blueprint node.
 - Local autosave and snapshot versioning features.
-- Deterministic Process Check for workflow completeness and export-readiness.
+- Deterministic Workflow Validator for workflow completeness and export-readiness.
 - Markdown, JSON, and print-oriented PDF export modules.
 - README, handoff, roadmap, limitations, outreach, and listing docs.
 
 ## Ideal Buyers
 
-- Indie developers and micro-SaaS builders seeking a local-first workflow foundation.
+- Operations teams and indie productivity builders seeking a local-first workflow foundation.
 - Operations consultants packaging repeatable client workflows.
 - Researchers and technical writers organizing structured deliverables.
 - Documentation and knowledge management specialists.
@@ -48,13 +48,13 @@ The source/IP acquisition page is available at `/acquire`; `/buyer` redirects th
 ## Acquirer FAQ
 
 **There are already many canvas and workflow tools. Why this one?**
-Most existing options are either general-purpose diagramming libraries or cloud platforms optimized for task automation and team collaboration. WeaveStudio is focused on transforming messy professional inputs into repeatable, validated deliverables with templates, Process Check validation, snapshots, and local exports.
+Most existing options are either general-purpose diagramming libraries or cloud platforms optimized for task automation and team collaboration. WeaveStudio is focused on transforming messy professional inputs into repeatable, validated deliverables with templates, Workflow Validator validation, snapshots, and local exports.
 
 **Couldn't I build this with React Flow?**
 Wiring a canvas is the starting point, not the finished product. WeaveStudio includes the surrounding system: template application, workflow validation, snapshot-based iteration, local persistence, and coordinated Markdown, JSON, and PDF export pipelines.
 
 **Does the AI feature create reliability or lock-in concerns?**
-AI Assist is optional and implemented as a BYOK-ready blueprint. The core canvas, templates, Process Check validation, versioning, and exports function without AI or external services.
+AI Assist is optional and implemented as a BYOK-ready blueprint. The core canvas, templates, Workflow Validator validation, versioning, and exports function without AI or external services.
 
 ## Monetization Paths
 
@@ -66,7 +66,7 @@ AI Assist is optional and implemented as a BYOK-ready blueprint. The core canvas
 
 ## Suggested Acquisition Range
 
-$5,000–$15,000 depending on support, exclusivity, branding transfer, and any included deployment or domain assets.
+$3,000 - $5,000 depending on support, exclusivity, branding transfer, and any included deployment or domain assets.
 
 ## Limitations
 

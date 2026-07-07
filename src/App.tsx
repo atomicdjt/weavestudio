@@ -8,7 +8,6 @@ function App() {
     { name: 'Home', path: '/', icon: <Home className="w-4 h-4" /> },
     { name: 'Workspace', path: '/app', icon: <Workflow className="w-4 h-4" /> },
     { name: 'Templates', path: '/templates', icon: <Layers className="w-4 h-4" /> },
-    { name: 'Exports', path: '/exports', icon: <FileText className="w-4 h-4" /> },
     { name: 'Docs', path: '/docs', icon: <HelpCircle className="w-4 h-4" /> },
   ];
 

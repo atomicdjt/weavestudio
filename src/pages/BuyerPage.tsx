@@ -62,7 +62,7 @@ export const BuyerPage = () => {
             {[
               ['Workflow product', 'A visual canvas for mapping repeatable deliverable workflows.'],
               ['Template base', 'Starter workflows for proposals, meetings, incidents, SOPs, specs, research, and feedback.'],
-              ['Extension surface', 'Process Check, exports, and AI Assist Blueprint are modular places to extend.'],
+              ['Extension surface', 'Workflow Validator, exports, and AI Assist Blueprint are modular places to extend.'],
             ].map(([title, body]) => (
               <div key={title} className="rounded-lg border border-border bg-panel p-5">
                 <h3 className="font-bold text-white mb-2">{title}</h3>

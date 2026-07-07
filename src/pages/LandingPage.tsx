@@ -8,16 +8,8 @@ import {
   Workflow,
   Cpu,
   CheckSquare,
+  Play,
 } from 'lucide-react';
-
-const previewNodes = [
-  { label: 'Input', color: 'border-emerald-500/50 text-emerald-200', x: 'left-[6%]', y: 'top-[22%]' },
-  { label: 'Transform', color: 'border-blue-500/50 text-blue-200', x: 'left-[30%]', y: 'top-[44%]' },
-  { label: 'Review', color: 'border-purple-500/50 text-purple-200', x: 'left-[54%]', y: 'top-[24%]' },
-  { label: 'Output', color: 'border-rose-500/50 text-rose-200', x: 'left-[76%]', y: 'top-[46%]' },
-];
-
-const previewBadges = ['Local-first', 'Versioned', 'Exportable', 'Human-reviewed'];
 
 const features = [
   {
@@ -27,7 +19,7 @@ const features = [
   },
   {
     icon: <CheckSquare className="w-8 h-8 text-emerald-400" />,
-    title: 'Process Check Validation',
+    title: 'Workflow Validator',
     body: 'Identify missing inputs, unconnected nodes, incomplete review steps, and export-readiness issues before producing a final deliverable.',
   },
   {
@@ -46,9 +38,9 @@ const features = [
     body: 'Export structured outputs to Markdown, JSON, and PDF/print-ready reports for client delivery, documentation, or further editing.',
   },
   {
-    icon: <Cpu className="w-8 h-8 text-rose-400" />,
-    title: 'BYOK-Ready AI Blueprint',
-    body: 'Optional AI Assist node pattern gives a clear extension path without making AI required for the core product.',
+    icon: <Cpu className="w-8 h-8 text-cyan-400" />,
+    title: 'Optional BYOK AI Assist',
+    body: 'Optional AI Assist node gives a clear extension path to run local models (Ollama) or external providers without making AI required for the core product.',
   },
 ];
 
@@ -62,15 +54,15 @@ export const LandingPage = () => {
           <span>No accounts. No cloud. Visual workflow templates with validation and multi-format exports.</span>
         </div>
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8">
-          Weave messy work into <br />
+          Weave messy research into <br />
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-cyan-300">
-            repeatable professional deliverables.
+            structured deliverables.
           </span>
         </h1>
         <p className="text-xl text-gray-400 max-w-3xl mx-auto leading-relaxed mb-10">
           WeaveStudio is a local-first visual workflow canvas for turning notes, transcripts, logs, research fragments,
           and client inputs into structured, versioned, exportable outputs — without accounts, cloud lock-in, or data
-          leaving your device.
+          leaving the user’s device.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Link
@@ -98,65 +90,67 @@ export const LandingPage = () => {
           </p>
         </div>
 
-        <div className="grid lg:grid-cols-[1.25fr_0.75fr] gap-6 items-stretch">
-          {/* Canvas Preview */}
-          <div className="relative min-h-[360px] overflow-hidden rounded-lg border border-border bg-[#0b0b10] p-5 shadow-2xl">
-            <div
-              className="absolute inset-0 opacity-30"
-              style={{ backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)', backgroundSize: '22px 22px' }}
-            />
-            <div className="relative flex flex-wrap gap-2 mb-5">
-              {previewBadges.map((badge) => (
-                <span
-                  key={badge}
-                  className="rounded border border-blue-500/30 bg-blue-500/10 px-2.5 py-1 text-xs font-semibold text-blue-200"
-                >
-                  {badge}
-                </span>
+        <div className="rounded-xl border border-border bg-[#0b0b10] shadow-2xl overflow-hidden flex flex-col">
+          {/* Mock Toolbar */}
+          <div className="bg-[#18181b] border-b border-border p-3 flex items-center justify-between">
+            <div className="flex gap-2">
+              {['Local-first', 'Versioned', 'Human-reviewed'].map(badge => (
+                <span key={badge} className="rounded border border-blue-500/30 bg-blue-500/10 px-2 py-1 text-[10px] uppercase font-semibold text-blue-200">{badge}</span>
               ))}
             </div>
-            {/* Edge line */}
-            <div className="absolute left-[14%] top-[37%] h-px w-[68%] bg-gradient-to-r from-emerald-400/70 via-blue-400/70 to-rose-400/70" />
-            {previewNodes.map((node) => (
-              <div
-                key={node.label}
-                className={`absolute ${node.x} ${node.y} w-36 rounded-lg border bg-panel/95 p-3 shadow-xl ${node.color}`}
-              >
-                <div className="text-[11px] uppercase tracking-wider text-gray-500">Node</div>
-                <div className="font-semibold text-sm text-white">{node.label}</div>
-                <div className="mt-2 h-1.5 rounded bg-white/10" />
-                <div className="mt-1.5 h-1.5 w-2/3 rounded bg-white/10" />
+            <div className="flex gap-2">
+              <div className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5">
+                <CheckSquare className="w-3.5 h-3.5" />
+                Workflow Validator: 100% Ready
               </div>
-            ))}
-            <div className="absolute bottom-5 left-5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-              Version snapshot saved
             </div>
           </div>
+          
+          <div className="flex">
+            {/* Mock Canvas Area */}
+            <div className="flex-1 p-8 relative min-h-[400px]" style={{ backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
+              {/* Edges */}
+              <svg className="absolute inset-0 w-full h-full pointer-events-none" style={{ zIndex: 0 }}>
+                <path d="M 230 115 C 250 115, 250 115, 270 115" stroke="#3b82f6" strokeWidth="2" fill="none" />
+                <path d="M 480 115 C 500 115, 500 115, 520 115" stroke="#3b82f6" strokeWidth="2" fill="none" />
+              </svg>
 
-          {/* Output Preview */}
-          <div className="rounded-lg border border-border bg-panel p-5 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-gray-800 pb-3 mb-4">
-              <div>
-                <div className="text-xs uppercase tracking-wider text-gray-500">Output Preview</div>
-                <h3 className="font-bold text-white">Proposal Brief</h3>
+              {/* Nodes */}
+              <div className="absolute top-[60px] left-[20px] w-[210px] rounded-lg border border-emerald-500/30 bg-panel shadow-lg p-3 z-10">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-400 mb-1">Input</div>
+                <div className="text-sm font-semibold text-white mb-2 truncate">Discovery Notes</div>
+                <div className="text-xs text-gray-400 font-mono line-clamp-2">Client needs a new SOP...</div>
               </div>
-              <ClipboardCheck className="w-5 h-5 text-emerald-300" />
+
+              <div className="absolute top-[60px] left-[270px] w-[210px] rounded-lg border border-blue-500/30 bg-panel shadow-lg p-3 z-10">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400 mb-1">Transform</div>
+                <div className="text-sm font-semibold text-white mb-2 truncate">Extract Steps</div>
+                <div className="text-xs text-gray-400 font-mono line-clamp-2">- Step 1: Login...</div>
+              </div>
+
+              <div className="absolute top-[60px] left-[520px] w-[210px] rounded-lg border border-purple-500/30 bg-panel shadow-lg p-3 z-10 ring-2 ring-blue-500">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-purple-400 mb-1">Review</div>
+                <div className="text-sm font-semibold text-white mb-2 truncate">Human Verification</div>
+                <div className="text-xs text-gray-400 font-mono line-clamp-2">Verify step sequence.</div>
+              </div>
             </div>
-            <div className="space-y-4 text-sm">
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Executive summary</div>
-                <p className="text-gray-300">A lightweight workflow converts scattered discovery notes into a reviewed client brief.</p>
-              </div>
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-1">Review checkpoint</div>
-                <p className="text-gray-300">Assumptions, constraints, and next-step recommendations remain human-reviewed before export.</p>
-              </div>
-              <div className="grid grid-cols-3 gap-2 pt-2">
-                {['MD', 'JSON', 'PDF'].map((format) => (
-                  <div key={format} className="rounded border border-gray-800 bg-[#1e1e24] py-2 text-center text-xs font-semibold text-gray-300">
-                    {format}
-                  </div>
-                ))}
+
+            {/* Mock Inspector */}
+            <div className="w-[300px] bg-panel border-l border-border p-4 hidden md:block">
+              <h3 className="text-xs font-bold uppercase text-gray-500 mb-4">Node Inspector</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500">Type</label>
+                  <div className="text-sm text-gray-300">Review</div>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500">Title</label>
+                  <div className="bg-[#1e1e24] border border-gray-800 p-2 rounded text-sm text-white">Human Verification</div>
+                </div>
+                <div>
+                  <label className="text-[10px] uppercase font-bold text-gray-500">Content</label>
+                  <div className="bg-[#1e1e24] border border-gray-800 p-2 rounded text-xs font-mono text-gray-300 h-24">Verify step sequence.</div>
+                </div>
               </div>
             </div>
           </div>

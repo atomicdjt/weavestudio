@@ -8,7 +8,7 @@ WeaveStudio is a local-first visual workflow canvas for turning messy profession
 - Richer PDF layout options while keeping export generation local.
 - Template duplication and template editing inside the app.
 - More keyboard shortcuts and canvas accessibility refinements.
-- Process Check rule customization for buyer-specific workflow standards.
+- Workflow Validator rule customization for buyer-specific workflow standards.
 
 ## Mid Term
 

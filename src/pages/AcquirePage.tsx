@@ -27,12 +27,12 @@ const stackItems = [
 
 const buyerSegments = [
   {
-    title: 'Indie hackers & micro-SaaS builders',
+    title: 'Operations teams and indie productivity builders',
     body: 'Acquire a functional visual workflow foundation with template reusability and export pipelines already implemented. The modular node system and optional BYOK AI blueprint provide clear extension points without forcing AI or creating external dependencies.',
   },
   {
     title: 'Consultants & operations professionals',
-    body: 'Use reusable templates and Process Check validation to deliver more consistent outputs across client engagements while maintaining version history for quality control and knowledge transfer.',
+    body: 'Use reusable templates and Workflow Validator validation to deliver more consistent outputs across client engagements while maintaining version history for quality control and knowledge transfer.',
   },
   {
     title: 'Researchers & technical writers',
@@ -51,7 +51,7 @@ const buyerSegments = [
 const whyAcquire = [
   'Addresses the recurring problem of converting variable, unstructured professional inputs into consistent outputs.',
   'Local-first design differentiates it from cloud-first workflow and automation tools.',
-  'Reusable templates, Process Check validation, and versioning create a repeatability engine beyond basic diagramming.',
+  'Reusable templates, Workflow Validator validation, and versioning create a repeatability engine beyond basic diagramming.',
   'Modular structure and optional BYOK AI blueprint give acquirers clear extension paths.',
   'Accelerates development for productivity, documentation, and operations tooling by providing a working canvas, persistence, validation, and export foundation.',
 ];
@@ -59,7 +59,7 @@ const whyAcquire = [
 const faqs = [
   {
     q: 'There are already many canvas and workflow tools. Why this one?',
-    a: 'Most existing options are either general-purpose diagramming libraries or cloud platforms optimized for task automation and team collaboration. WeaveStudio is focused on transforming messy professional inputs into repeatable, validated deliverables with templates, Process Check validation, snapshots, and local exports.',
+    a: 'Most existing options are either general-purpose diagramming libraries or cloud platforms optimized for task automation and team collaboration. WeaveStudio is focused on transforming messy professional inputs into repeatable, validated deliverables with templates, Workflow Validator validation, snapshots, and local exports.',
   },
   {
     q: "Couldn't I build this with React Flow?",
@@ -67,7 +67,7 @@ const faqs = [
   },
   {
     q: 'Does the AI feature create reliability or lock-in concerns?',
-    a: 'AI Assist is optional and implemented as a BYOK-ready blueprint. The core canvas, templates, Process Check validation, versioning, and exports function without AI or external services.',
+    a: 'AI Assist is optional and implemented as a BYOK-ready blueprint. The core canvas, templates, Workflow Validator validation, versioning, and exports function without AI or external services.',
   },
 ];
 
@@ -82,7 +82,7 @@ export const AcquirePage = () => {
         </div>
         <h1 className="text-4xl font-extrabold mb-4">Acquire Project IP</h1>
         <p className="text-xl text-gray-400 max-w-3xl mb-4">
-          WeaveStudio is a production-ready, dependency-light implementation of a node-based visual workflow system built
+          WeaveStudio is a polished local-first implementation, dependency-light implementation of a node-based visual workflow system built
           for professional knowledge work.
         </p>
         <p className="text-gray-400 max-w-3xl text-sm leading-relaxed">
@@ -172,7 +172,7 @@ export const AcquirePage = () => {
             {[
               ['Visual workflow canvas', 'A node-based canvas for mapping repeatable deliverable workflows with drag-and-drop editing.'],
               ['Template & snapshot system', 'Starter workflows, autosave, and named version snapshots with restore and delete actions.'],
-              ['Validation & export modules', 'Process Check validation, Markdown, JSON, and PDF/print export pipelines.'],
+              ['Validation & export modules', 'Workflow Validator validation, Markdown, JSON, and PDF/print export pipelines.'],
             ].map(([title, body]) => (
               <div key={title} className="rounded-lg border border-border bg-panel p-5">
                 <h3 className="font-bold text-white mb-2">{title}</h3>

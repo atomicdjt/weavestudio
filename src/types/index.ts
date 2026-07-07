@@ -8,6 +8,9 @@ export interface NodeData extends Record<string, unknown> {
   content: string;
   status?: 'pending' | 'running' | 'complete' | 'needs_review' | 'warning' | 'incomplete' | 'ready';
   reviewRequired?: boolean;
+  provider?: 'openai' | 'ollama';
+  baseUrl?: string;
+  modelName?: string;
   promptInstruction?: string;
   expectedInput?: string;
   expectedOutput?: string;
@@ -37,31 +40,31 @@ export interface VersionSnapshot {
   edges: AppEdge[];
 }
 
-export type ProcessCheckStatus = 'Ready' | 'Needs Review' | 'Incomplete' | 'Warning';
+export type workflowValidatorStatus = 'Ready' | 'Needs Review' | 'Incomplete' | 'Warning';
 
-export interface ProcessCheckIssue {
+export interface workflowValidatorIssue {
   id: string;
-  status: ProcessCheckStatus;
+  status: workflowValidatorStatus;
   title: string;
   detail: string;
   suggestedFix: string;
   nodeId?: string;
 }
 
-export interface ProcessCheckStep {
+export interface workflowValidatorStep {
   nodeId: string;
   stepNumber: number;
   type: NodeType;
   title: string;
   action: string;
   requiresReview: boolean;
-  status: ProcessCheckStatus;
+  status: workflowValidatorStatus;
 }
 
-export interface ProcessCheckResult {
+export interface WorkflowValidatorResult {
   completenessScore: number;
   issueCount: number;
-  exportReadiness: ProcessCheckStatus;
-  issues: ProcessCheckIssue[];
-  walkthrough: ProcessCheckStep[];
+  exportReadiness: workflowValidatorStatus;
+  issues: workflowValidatorIssue[];
+  walkthrough: workflowValidatorStep[];
 }

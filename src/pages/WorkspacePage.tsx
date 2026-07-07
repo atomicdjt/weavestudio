@@ -4,21 +4,16 @@ import { ClipboardCheck, DatabaseX, Eye, RotateCcw, Trash2 } from 'lucide-react'
 import { WorkflowCanvas } from '../components/canvas/WorkflowCanvas';
 import { NodePalette, NodeInspector } from '../components/workspace/WorkspacePanels';
 import { VersionHistory } from '../components/workspace/VersionHistory';
-import { ProcessCheckPanel } from '../components/workspace/ProcessCheckPanel';
+import { WorkflowValidatorPanel } from '../components/workspace/WorkflowValidatorPanel';
 import { OutputPreviewPanel } from '../components/workspace/OutputPreviewPanel';
-import type { AppEdge, AppNode, NodeType, ProcessCheckResult } from '../types';
-import { clearAllLocalData, clearWorkspace, loadTemplate, loadWorkspace, saveWorkspace } from '../lib/storage';
-import { buildProcessCheck } from '../lib/processCheck';
+import { DataPortabilityModal } from '../components/workspace/DataPortabilityModal';
+import { TemplateLoadModal } from '../components/workspace/TemplateLoadModal';
+import type { AppEdge, AppNode, NodeType, WorkflowValidatorResult } from '../types';
+import { clearWorkspace, loadTemplate, loadWorkspace, saveWorkspace } from '../lib/storage';
+import { buildWorkflowValidator } from '../lib/workflowValidator';
 import { TEMPLATES } from '../data/templates';
 
 function getInitial(locationState: unknown): { nodes: AppNode[]; edges: AppEdge[] } {
-  const state = locationState as { loadTemplate?: string } | null;
-  const templateId = state?.loadTemplate;
-  if (templateId) {
-    const template = loadTemplate(templateId);
-    if (template) return template;
-  }
-
   const saved = loadWorkspace();
   if (saved && saved.nodes.length > 0) return saved;
 
@@ -71,11 +66,14 @@ export const WorkspacePage = () => {
   const [clearSignal, setClearSignal] = useState(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
-  const [processCheck, setProcessCheck] = useState<ProcessCheckResult | null>(null);
+  const [showPortabilityModal, setShowPortabilityModal] = useState(false);
+  const [workflowValidator, setWorkflowValidator] = useState<WorkflowValidatorResult | null>(null);
   const [nodeDataOverrides, setNodeDataOverrides] = useState<Record<string, Partial<AppNode['data']>>>({});
+  const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
 
   useEffect(() => {
     if (loadedTemplateId) {
+      setPendingTemplateId(loadedTemplateId);
       window.history.replaceState({}, document.title);
     }
   }, [loadedTemplateId]);
@@ -128,18 +126,16 @@ export const WorkspacePage = () => {
     clearWorkspace();
     setNodes([]);
     setEdges([]);
-    setProcessCheck(null);
+    setWorkflowValidator(null);
     setNodeDataOverrides({});
     setSelectedNodeId(null);
     setCanvasKey((key) => key + 1);
   };
 
-  const handleClearAllLocalData = () => {
-    if (!confirm('Clear the current workspace and all saved snapshots from this browser?')) return;
-    clearAllLocalData();
+  const handlePortabilityClearSignal = () => {
     setNodes([]);
     setEdges([]);
-    setProcessCheck(null);
+    setWorkflowValidator(null);
     setNodeDataOverrides({});
     setSelectedNodeId(null);
     setClearSignal((signal) => signal + 1);
@@ -152,7 +148,7 @@ export const WorkspacePage = () => {
     clearWorkspace();
     setNodes(demo.nodes);
     setEdges(demo.edges);
-    setProcessCheck(null);
+    setWorkflowValidator(null);
     setNodeDataOverrides({});
     setSelectedNodeId(null);
     setCanvasKey((key) => key + 1);
@@ -161,14 +157,62 @@ export const WorkspacePage = () => {
   const handleRestoreSnapshot = (nextNodes: AppNode[], nextEdges: AppEdge[]) => {
     setNodes(nextNodes);
     setEdges(nextEdges);
-    setProcessCheck(null);
+    setWorkflowValidator(null);
     setNodeDataOverrides({});
     setSelectedNodeId(null);
     setCanvasKey((key) => key + 1);
   };
 
-  const handleProcessCheck = () => {
-    setProcessCheck(buildProcessCheck(nodes, edges));
+  const handleWorkflowValidator = () => {
+    setWorkflowValidator(buildWorkflowValidator(nodes, edges));
+  };
+
+  const handleReplaceTemplate = () => {
+    if (!pendingTemplateId) return;
+    const template = loadTemplate(pendingTemplateId);
+    if (template) {
+      clearWorkspace();
+      setNodes(template.nodes);
+      setEdges(template.edges);
+      setWorkflowValidator(null);
+      setNodeDataOverrides({});
+      setSelectedNodeId(null);
+      setCanvasKey((key) => key + 1);
+    }
+    setPendingTemplateId(null);
+  };
+
+  const handleMergeTemplate = () => {
+    if (!pendingTemplateId) return;
+    const template = loadTemplate(pendingTemplateId);
+    if (template) {
+      // Find bounding box of current nodes to offset the new ones
+      const maxY = nodes.reduce((max, node) => Math.max(max, node.position.y), 0);
+      const offsetY = nodes.length > 0 ? maxY + 300 : 0;
+      
+      const idMap: Record<string, string> = {};
+      const newNodes = template.nodes.map(node => {
+        const newId = `node_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+        idMap[node.id] = newId;
+        return {
+          ...node,
+          id: newId,
+          position: { x: node.position.x, y: node.position.y + offsetY }
+        };
+      });
+      
+      const newEdges = template.edges.map(edge => ({
+        ...edge,
+        id: `edge_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`,
+        source: idMap[edge.source] || edge.source,
+        target: idMap[edge.target] || edge.target
+      }));
+
+      setNodes(current => [...current, ...newNodes]);
+      setEdges(current => [...current, ...newEdges]);
+      setCanvasKey((key) => key + 1);
+    }
+    setPendingTemplateId(null);
   };
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
@@ -191,10 +235,10 @@ export const WorkspacePage = () => {
             </button>
             <button
               type="button"
-              onClick={handleClearAllLocalData}
-              className="bg-panel border border-border text-amber-300 hover:text-amber-200 p-2 rounded-lg shadow-md transition-colors"
-              title="Clear Local Data"
-              aria-label="Clear local data"
+              onClick={() => setShowPortabilityModal(true)}
+              className="bg-panel border border-border text-blue-400 hover:text-blue-300 p-2 rounded-lg shadow-md transition-colors"
+              title="Data Portability"
+              aria-label="Data portability"
             >
               <DatabaseX className="w-4 h-4" />
             </button>
@@ -210,11 +254,11 @@ export const WorkspacePage = () => {
           <div className="pointer-events-auto flex items-center space-x-2">
             <button
               type="button"
-              onClick={handleProcessCheck}
+              onClick={handleWorkflowValidator}
               className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg font-semibold shadow-md shadow-emerald-900/20 flex items-center space-x-2 transition-colors"
             >
               <ClipboardCheck className="w-4 h-4" />
-              <span>Process Check</span>
+              <span>Workflow Validator</span>
             </button>
             <button
               type="button"
@@ -243,8 +287,17 @@ export const WorkspacePage = () => {
       <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} />
       <VersionHistory nodes={nodes} edges={edges} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />
 
-      {processCheck && <ProcessCheckPanel result={processCheck} onClose={() => setProcessCheck(null)} />}
+      {workflowValidator && <WorkflowValidatorPanel result={workflowValidator} onClose={() => setWorkflowValidator(null)} />}
       {showPreview && <OutputPreviewPanel nodes={nodes} edges={edges} onClose={() => setShowPreview(false)} />}
+      {showPortabilityModal && <DataPortabilityModal onClose={() => setShowPortabilityModal(false)} onClearSignal={handlePortabilityClearSignal} />}
+      {pendingTemplateId && (
+        <TemplateLoadModal
+          templateName={TEMPLATES.find(t => t.id === pendingTemplateId)?.title || 'Selected Template'}
+          onReplace={handleReplaceTemplate}
+          onMerge={handleMergeTemplate}
+          onCancel={() => setPendingTemplateId(null)}
+        />
+      )}
     </div>
   );
 };

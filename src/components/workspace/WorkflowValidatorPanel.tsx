@@ -1,25 +1,25 @@
-import type { ProcessCheckResult, ProcessCheckStatus } from '../../types';
+import type { WorkflowValidatorResult, workflowValidatorStatus } from '../../types';
 import { AlertTriangle, CheckCircle2, CircleDashed, ClipboardCheck, X } from 'lucide-react';
 
-interface ProcessCheckPanelProps {
-  result: ProcessCheckResult;
+interface WorkflowValidatorPanelProps {
+  result: WorkflowValidatorResult;
   onClose: () => void;
 }
 
-const statusClass: Record<ProcessCheckStatus, string> = {
+const statusClass: Record<workflowValidatorStatus, string> = {
   Ready: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/30',
   'Needs Review': 'text-amber-200 bg-amber-500/10 border-amber-500/30',
   Incomplete: 'text-red-200 bg-red-500/10 border-red-500/30',
   Warning: 'text-blue-200 bg-blue-500/10 border-blue-500/30',
 };
 
-const StatusBadge = ({ status }: { status: ProcessCheckStatus }) => (
+const StatusBadge = ({ status }: { status: workflowValidatorStatus }) => (
   <span className={`inline-flex items-center rounded border px-2 py-0.5 text-[11px] font-semibold ${statusClass[status]}`}>
     {status}
   </span>
 );
 
-export const ProcessCheckPanel = ({ result, onClose }: ProcessCheckPanelProps) => {
+export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPanelProps) => {
   const isReady = result.exportReadiness === 'Ready';
 
   return (
@@ -27,9 +27,9 @@ export const ProcessCheckPanel = ({ result, onClose }: ProcessCheckPanelProps) =
       <div className="flex items-center justify-between px-4 py-3 bg-[#1e1e24] border-b border-gray-800">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="w-4 h-4 text-blue-300" />
-          <h3 className="font-bold text-sm uppercase tracking-wider text-white">Process Check</h3>
+          <h3 className="font-bold text-sm uppercase tracking-wider text-white">Workflow Validator</h3>
         </div>
-        <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-white transition-colors" aria-label="Close process check">
+        <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-white transition-colors" aria-label="Close Workflow Validator">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -105,7 +105,7 @@ export const ProcessCheckPanel = ({ result, onClose }: ProcessCheckPanelProps) =
 
         <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
           <CircleDashed className="w-4 h-4 shrink-0" />
-          <span>Process Check is deterministic and local. It validates workflow structure; it does not verify facts.</span>
+          <span>Workflow Validator is deterministic and local. It validates workflow structure; it does not verify facts.</span>
         </div>
       </div>
     </div>

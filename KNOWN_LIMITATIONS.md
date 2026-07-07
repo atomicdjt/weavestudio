@@ -9,11 +9,11 @@ WeaveStudio is intentionally scoped as a local-first, assistive workflow canvas.
 - Export important work to Markdown or JSON before relying on it outside the current browser profile.
 - localStorage is not a substitute for durable filesystem or cloud storage.
 
-## Generation and Process Check
+## Generation and Workflow Validator
 
 - Output generation is deterministic local formatting from user-provided node content.
-- Process Check validates workflow structure, completeness, review checkpoints, and export-readiness.
-- Neither output generation nor Process Check verifies facts, extracts truth automatically, or guarantees correctness.
+- Workflow Validator validates workflow structure, completeness, review checkpoints, and export-readiness.
+- Neither output generation nor Workflow Validator verifies facts, extracts truth automatically, or guarantees correctness.
 - No external AI APIs or local LLMs are called in this release.
 - Exported deliverables should be reviewed by a human before sharing or relying on them.
 

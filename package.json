@@ -10,12 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.20",
     "@xyflow/react": "^12.11.2",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.1",
     "tailwind-merge": "^3.6.0"
   },

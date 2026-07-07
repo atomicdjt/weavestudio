@@ -16,7 +16,7 @@ WeaveStudio enables professionals to turn variable real-world inputs into struct
 - Optional AI Assist Blueprint node for future BYOK provider adapters.
 - Starter templates for proposals, meetings, incidents, research, SOPs, specs, and feedback.
 - Local autosave and version snapshots backed by browser localStorage.
-- Deterministic Process Check for workflow completeness and export-readiness.
+- Deterministic Workflow Validator for workflow completeness and export-readiness.
 - Deterministic Markdown, JSON, and print-oriented PDF export paths.
 - Product pages, docs page, export page, `/acquire` page, known limitations, roadmap, and acquisition listing copy.
 
@@ -70,6 +70,6 @@ The current release remains deterministic and local-first because no live AI pro
 
 - localStorage is convenient but not durable enough for high-value work without exports.
 - The generator structures existing node content; it does not rewrite, fact-check, or infer truth.
-- Process Check validates structure and export-readiness; it does not verify source accuracy.
+- Workflow Validator validates structure and export-readiness; it does not verify source accuracy.
 - The PDF export is intentionally simple and text-oriented.
 - Workflows involving sensitive or regulated data need independent review and a stronger storage and security model before production use in those domains.

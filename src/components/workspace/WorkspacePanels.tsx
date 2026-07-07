@@ -58,6 +58,10 @@ interface NodeInspectorProps {
 }
 
 export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspectorProps) => {
+  const [sessionApiKeys, setSessionApiKeys] = React.useState<Record<string, string>>({});
+  const [isGenerating, setIsGenerating] = React.useState(false);
+  const [errorMsg, setErrorMsg] = React.useState('');
+
   if (!selectedNode) {
     return (
       <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 flex flex-col lg:h-full min-h-40 lg:min-h-0 items-center justify-center text-gray-500 text-sm text-center">
@@ -70,6 +74,60 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
   }
 
   const { data } = selectedNode;
+  const apiKey = sessionApiKeys[selectedNode.id] || '';
+
+  const handleGenerate = async () => {
+    const provider = data.provider || 'openai';
+    const baseUrl = data.baseUrl || (provider === 'ollama' ? 'http://localhost:11434/api/generate' : 'https://api.openai.com/v1/chat/completions');
+    const model = data.modelName || (provider === 'ollama' ? 'llama3' : 'gpt-4o-mini');
+    const prompt = data.promptInstruction || '';
+    const input = data.expectedInput || '';
+    
+    setIsGenerating(true);
+    setErrorMsg('');
+    
+    try {
+      const fullPrompt = `Instruction: ${prompt}\n\nInput Context:\n${input}\n\nPlease generate the required output.`;
+      
+      let generatedText = '';
+      
+      if (provider === 'ollama') {
+        const res = await fetch(baseUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model, prompt: fullPrompt, stream: false })
+        });
+        if (!res.ok) throw new Error(`Ollama API error: ${res.statusText}`);
+        const json = await res.json();
+        generatedText = json.response;
+      } else {
+        // OpenAI-compatible
+        const res = await fetch(baseUrl, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`
+          },
+          body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: fullPrompt }]
+          })
+        });
+        if (!res.ok) {
+          const errJson = await res.json().catch(() => null);
+          throw new Error(`OpenAI API error: ${errJson?.error?.message || res.statusText}`);
+        }
+        const json = await res.json();
+        generatedText = json.choices[0].message.content;
+      }
+      
+      onUpdate(selectedNode.id, { content: generatedText });
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Generation failed');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   return (
     <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 flex flex-col lg:h-full max-h-96 lg:max-h-none overflow-y-auto">
@@ -138,14 +196,61 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
         {selectedNode.type === 'aiAssist' && (
           <div className="space-y-4 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200">BYOK-ready blueprint</div>
-              <p className="mt-1 text-xs leading-relaxed text-gray-400">
-                This node documents a future provider adapter. It does not make live AI calls or store API keys.
-              </p>
+              <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200">BYOK AI Provider</div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Provider</label>
+                <select
+                  value={data.provider || 'openai'}
+                  onChange={(e) => onUpdate(selectedNode.id, { provider: e.target.value as 'openai' | 'ollama' })}
+                  className="w-full bg-[#1e1e24] border border-gray-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                >
+                  <option value="openai">OpenAI / Compatible</option>
+                  <option value="ollama">Ollama (Local)</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Model Name</label>
+                <input
+                  type="text"
+                  value={data.modelName || ''}
+                  onChange={(e) => onUpdate(selectedNode.id, { modelName: e.target.value })}
+                  className="w-full bg-[#1e1e24] border border-gray-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  placeholder={data.provider === 'ollama' ? 'llama3' : 'gpt-4o-mini'}
+                />
+              </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Prompt / Instruction</label>
+              <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">Base URL</label>
+              <input
+                type="text"
+                value={data.baseUrl || ''}
+                onChange={(e) => onUpdate(selectedNode.id, { baseUrl: e.target.value })}
+                className="w-full bg-[#1e1e24] border border-gray-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                placeholder={data.provider === 'ollama' ? 'http://localhost:11434/api/generate' : 'https://api.openai.com/v1/chat/completions'}
+              />
+            </div>
+
+            {data.provider !== 'ollama' && (
+              <div>
+                <label className="block text-[10px] font-semibold text-gray-400 uppercase tracking-wider mb-1">
+                  API Key <span className="text-gray-500 lowercase normal-case">(session only)</span>
+                </label>
+                <input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setSessionApiKeys(prev => ({ ...prev, [selectedNode.id]: e.target.value }))}
+                  className="w-full bg-[#1e1e24] border border-gray-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-cyan-500"
+                  placeholder="sk-..."
+                />
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1 mt-4 border-t border-gray-800 pt-3">Prompt / Instruction</label>
               <textarea
                 value={data.promptInstruction ?? ''}
                 onChange={(e) => onUpdate(selectedNode.id, { promptInstruction: e.target.value })}
@@ -155,35 +260,43 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Expected Input</label>
-              <input
-                type="text"
+              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Input Context</label>
+              <textarea
                 value={data.expectedInput ?? ''}
                 onChange={(e) => onUpdate(selectedNode.id, { expectedInput: e.target.value })}
-                className="w-full bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                placeholder="Upstream notes, transcript, or structured text"
+                className="w-full h-16 bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none"
+                placeholder="Paste upstream notes, transcript, or structured text"
               />
             </div>
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Expected Output</label>
-              <input
-                type="text"
-                value={data.expectedOutput ?? ''}
-                onChange={(e) => onUpdate(selectedNode.id, { expectedOutput: e.target.value })}
-                className="w-full bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                placeholder="Draft summary, candidate sections, or checklist"
-              />
-            </div>
+            {errorMsg && (
+              <div className="text-red-400 text-xs bg-red-900/20 p-2 rounded border border-red-900/50">
+                {errorMsg}
+              </div>
+            )}
 
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Provider Note</label>
-              <textarea
-                value={data.providerNote ?? ''}
-                onChange={(e) => onUpdate(selectedNode.id, { providerNote: e.target.value })}
-                className="w-full h-20 bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none"
-                placeholder="Adapter requirements or BYOK notes"
-              />
+            <div className="pt-2 flex gap-2">
+              <button
+                type="button"
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white p-2 rounded text-sm font-semibold transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                <BrainCircuit className="w-4 h-4" />
+                <span>{isGenerating ? 'Generating...' : 'Run AI Assist'}</span>
+              </button>
+              
+              <button
+                type="button"
+                title="Simulate mock response"
+                onClick={() => {
+                  const mockText = `[MOCK AI GENERATION]\n\nBased on the expected input, here is a mock draft for "${data.title || 'the section'}". \n\n- Key point 1\n- Key point 2\n\n(This proves the UI flow works without requiring an API key. A real adapter would replace this text with a live response.)`;
+                  onUpdate(selectedNode.id, { content: mockText });
+                }}
+                className="px-3 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/30 rounded text-sm font-semibold transition-colors"
+              >
+                Mock
+              </button>
             </div>
 
             <div className="flex items-center space-x-2 pt-1">

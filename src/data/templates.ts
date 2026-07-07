@@ -208,5 +208,69 @@ export const TEMPLATES: WorkflowTemplate[] = [
       { id: 'ae2-3', source: 'a2', target: 'a3' },
       { id: 'ae3-4', source: 'a3', target: 'a4' }
     ]
+  },
+  {
+    id: 'project-kickoff',
+    title: 'Project Kickoff Planner',
+    description: 'Structure scattered kickoff notes into a formal project plan.',
+    idealUser: 'Project Managers, Agency Owners',
+    expectedOutputType: 'Project Plan',
+    valueProposition: 'Start projects with clarity instead of confusion.',
+    messyInputSample: "Budget is 50k. Deadline is Q3. We need a new landing page and updated copy. John is lead design, Sarah is dev. We must have weekly check-ins.",
+    nodes: [
+      { id: 'n1', type: 'input', position: { x: 50, y: 50 }, data: { title: 'Kickoff Notes', description: 'Raw client requests', content: "Budget: 50k\nDeadline: Q3\nScope: Landing page + copy\nTeam: John (Design), Sarah (Dev)\nRule: Weekly check-ins" } },
+      { id: 'n2', type: 'transform', position: { x: 400, y: -50 }, data: { title: 'Extract Scope', description: 'What we are building', content: "- Landing page\n- Updated copy" } },
+      { id: 'n3', type: 'transform', position: { x: 400, y: 150 }, data: { title: 'Extract Roles', description: 'Who is doing what', content: "- John: Lead Design\n- Sarah: Lead Dev" } },
+      { id: 'n4', type: 'review', position: { x: 750, y: 50 }, data: { title: 'Budget & Timeline', description: 'Verify constraints', content: "50k budget, Q3 deadline confirmed.", reviewRequired: true } },
+      { id: 'n5', type: 'output', position: { x: 1100, y: 50 }, data: { title: 'Project Plan', description: 'Final project document', content: "# Project Kickoff Plan\n\n**Scope**: Landing page & copy.\n**Team**: John, Sarah.\n**Constraints**: 50k, Q3." } }
+    ],
+    edges: [
+      { id: 'e1-2', source: 'n1', target: 'n2' },
+      { id: 'e1-3', source: 'n1', target: 'n3' },
+      { id: 'e2-4', source: 'n2', target: 'n4' },
+      { id: 'e3-4', source: 'n3', target: 'n4' },
+      { id: 'e4-5', source: 'n4', target: 'n5' }
+    ]
+  },
+  {
+    id: 'hiring-sop',
+    title: 'Standard Hiring SOP',
+    description: 'A predefined process for turning job requirements into a hiring pipeline.',
+    idealUser: 'Founders, HR Managers',
+    expectedOutputType: 'Hiring Pipeline',
+    valueProposition: 'Stop inventing the hiring process from scratch every time.',
+    messyInputSample: "We need a senior frontend dev. React, Vite. 5 years exp. Will pay $120k. Post on LinkedIn and HackerNews. Need them to do a take-home test.",
+    nodes: [
+      { id: 'n1', type: 'input', position: { x: 50, y: 50 }, data: { title: 'Job Req', description: 'Raw requirements', content: "Role: Senior Frontend (React, Vite)\nExp: 5 years\nPay: $120k\nTest: Take-home" } },
+      { id: 'n2', type: 'transform', position: { x: 400, y: -50 }, data: { title: 'Draft Job Post', description: 'Public JD', content: "# Hiring: Senior Frontend Dev\nWe are looking for an expert in React/Vite..." } },
+      { id: 'n3', type: 'transform', position: { x: 400, y: 150 }, data: { title: 'Draft Interview Stages', description: 'Internal pipeline', content: "1. Resume Screen\n2. Take-home Test\n3. Culture Fit" } },
+      { id: 'n4', type: 'output', position: { x: 750, y: 50 }, data: { title: 'Hiring Kit', description: 'Final SOP', content: "# Hiring Kit\n\nIncludes JD and 3-stage pipeline." } }
+    ],
+    edges: [
+      { id: 'e1-2', source: 'n1', target: 'n2' },
+      { id: 'e1-3', source: 'n1', target: 'n3' },
+      { id: 'e2-4', source: 'n2', target: 'n4' },
+      { id: 'e3-4', source: 'n3', target: 'n4' }
+    ]
+  },
+  {
+    id: 'code-review',
+    title: 'Code Review Checklist Maker',
+    description: 'Turn a list of known bugs into a specific code review checklist.',
+    idealUser: 'Lead Engineers, QA',
+    expectedOutputType: 'QA Checklist',
+    valueProposition: 'Ensure PRs are checked against recent team failures.',
+    messyInputSample: "Last week we had a memory leak in the canvas. Also someone pushed a hardcoded API key. We need to make sure we check for useEffect cleanup and .env variables.",
+    nodes: [
+      { id: 'n1', type: 'input', position: { x: 50, y: 50 }, data: { title: 'Recent Incidents', description: 'What broke recently', content: "Memory leak in canvas. Hardcoded API key." } },
+      { id: 'n2', type: 'transform', position: { x: 400, y: 50 }, data: { title: 'Derive Rule', description: 'Create review rule', content: "- Check all useEffects for return () => cleanup.\n- Check for missing process.env." } },
+      { id: 'n3', type: 'review', position: { x: 750, y: 50 }, data: { title: 'Security Check', description: 'Ensure secrets are safe', content: "Double check no secrets are checked in.", reviewRequired: true } },
+      { id: 'n4', type: 'output', position: { x: 1100, y: 50 }, data: { title: 'PR Checklist', description: 'To be pasted in Github', content: "# PR Checklist\n\n- [ ] Memory leaks checked?\n- [ ] Secrets safe?" } }
+    ],
+    edges: [
+      { id: 'e1-2', source: 'n1', target: 'n2' },
+      { id: 'e2-3', source: 'n2', target: 'n3' },
+      { id: 'e3-4', source: 'n3', target: 'n4' }
+    ]
   }
 ];

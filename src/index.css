@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --color-canvas: #09090b;
@@ -21,8 +22,41 @@ body {
 }
 
 .react-flow__node {
-  @apply rounded-xl shadow-lg border border-border bg-panel text-white;
-  width: 280px;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  width: auto !important;
+}
+
+.react-flow__controls {
+  @apply !bg-panel !border !border-border;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5) !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.react-flow__controls-button {
+  @apply !bg-panel !text-gray-400;
+  border-bottom: 1px solid var(--color-border) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.react-flow__controls-button:last-child {
+  border-bottom: none !important;
+}
+
+.react-flow__controls-button:hover {
+  @apply !bg-gray-800 !text-gray-200;
+}
+
+.react-flow__controls-button svg {
+  fill: currentColor !important;
 }
 
 .react-flow__handle {

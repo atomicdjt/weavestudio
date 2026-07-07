@@ -13,7 +13,7 @@ It is a static browser app. There is no backend, account system, external API de
 - Local template gallery for common workflow starters.
 - Browser localStorage autosave for the current workspace.
 - Local version snapshots with save, restore, and delete actions.
-- Deterministic Process Check for workflow completeness, review checkpoints, and export-readiness.
+- Deterministic Workflow Validator for workflow completeness, review checkpoints, and export-readiness.
 - Output preview generated from current workflow nodes.
 - Markdown, JSON, and print-oriented PDF exports.
 - `/acquire` source/IP acquisition page.
