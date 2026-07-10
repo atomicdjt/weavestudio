@@ -1,40 +1,43 @@
 # Release Verification
 
-## Audit Overview
-**Date**: 2026-07-07
-**App**: WeaveStudio Local-First Edition
-**Status**: 🟢 Production Ready
+## Release scope
 
-## Build Health
-- [x] Dependencies are correct
-- [x] Dev server starts and runs cleanly
-- [x] Production build passes (`✓ built in 1.10s`)
-- [x] Zero TypeScript errors
-- [x] Zero broken imports
+- **Release:** WeaveStudio v1.0.0
+- **Authoritative branch:** `master`
+- **Production URL:** [https://weavestudio-nine.vercel.app/](https://weavestudio-nine.vercel.app/)
+- **Production-tested base commit:** `742a017388547e1e89b996c8d01bea9e79f9a55d`
 
-## Core Routes
-- [x] `/` (Landing Page)
-- [x] `/app` (Workspace)
-- [x] `/templates` (Gallery)
-- [x] `/exports` (Export center)
-- [x] `/docs` (Documentation)
-- [x] `/acquire` (Acquisition portal)
-- [x] `/buyer` (Redirects to `/acquire`)
+## Local validation
 
-## Features Verified
-- **Visual Canvas**: Renders correctly, nodes are draggable, edges connect properly.
-- **Local Persistence**: Workspace saves and restores from localStorage. Snapshots work.
-- **Workflow Validator**: Validation engine checks for broken connections, empty nodes, and unresolved reviews.
-- **Exports**: Markdown (with new premium renderer), PDF, and JSON backups work.
-- **AI Assist**: BYOK-ready blueprint node includes a "Simulate AI" button to prove UX flow without API keys.
+- [x] `npm ci`
+- [x] `npm test` - 33 tests passing
+- [x] `npm run lint` - zero errors and zero warnings
+- [x] `npm run typecheck` - zero TypeScript errors
+- [x] `npm run build` - successful production build
 
-## Known Limitations (By Design)
-- **No cloud sync**: Strictly local-first architecture.
-- **No live AI calls**: The app documents the workflow but does not bundle an API key or make external requests.
-- **No real-time collaboration**: Single-player utility.
+## Product behavior verified
 
-## Deployment Readiness
-- **Build Command**: `npm run build`
-- **Output Directory**: `dist/`
-- **Environment**: No `.env` configuration required.
-- **Hosting**: Compatible with any static site host (Vercel, Netlify, Cloudflare Pages, GitHub Pages) with SPA fallback configured.
+- [x] Core routes render and direct refreshes use the SPA rewrite.
+- [x] Guided demo creates exactly one workspace.
+- [x] Source synchronization preserves unrelated node edits and canvas viewport.
+- [x] Workflow Validator completes structural and export-readiness checks.
+- [x] Deliverable generation completes without duplicate generated headings.
+- [x] Manual draft edits require confirmation before overwrite.
+- [x] Snapshots restore coherent workspace state.
+- [x] Markdown, PDF, and Project JSON exports work; Project JSON re-imports.
+- [x] The standard workflow makes no hidden provider request.
+
+## Optional AI boundary
+
+AI Assist is an optional blueprint. The offline/mock path is the default. A live provider request can occur only after explicit confirmation and may send the configured prompt/context to that provider. No API key is bundled; keys are not written to browser `localStorage`.
+
+## Deployment configuration
+
+- Build command: `npm run build`
+- Output directory: `dist/`
+- Hosting: Vercel static deployment with SPA rewrite in `vercel.json`
+- No environment configuration is required for the standard workflow.
+
+## Release gate
+
+This document records verified checks; it is not a guarantee of future deployment health. Final merge, production verification, tagging, and GitHub Release publication remain separately approval-gated.

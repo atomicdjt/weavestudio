@@ -1,41 +1,36 @@
-# Known Limitations — WeaveStudio
+# Known Limitations - WeaveStudio
 
 ## Storage
 
-- Workspaces and snapshots are stored in browser localStorage.
+- Workspaces and snapshots are stored in browser `localStorage`.
 - Clearing browser data, private browsing, changing browsers, or device cleanup tools can remove local data.
-- Export important work to Markdown or project JSON before relying on it outside the current browser profile.
-- localStorage is not a substitute for durable filesystem or cloud storage.
-- Storage quota errors surface in the UI; free space or export, then delete old workspaces.
+- Export important work to Markdown or Project JSON before relying on it outside the current browser profile.
+- `localStorage` is not encrypted and is not a substitute for durable filesystem or cloud storage.
+- Storage quota errors surface in the UI; export work before deleting old workspaces.
 
 ## Generation and Workflow Validator
 
 - Output generation is deterministic local composition from user-provided node content and template structure.
-- Workflow Validator validates structure, completeness, review checkpoints, and export-readiness.
-- Neither verifies facts, extracts truth automatically, nor guarantees correctness.
-- Exported deliverables should be reviewed by a human before sharing.
+- Workflow Validator evaluates structure, completeness, review checkpoints, and export readiness.
+- Neither output generation nor Workflow Validator verifies facts, extracts truth automatically, or guarantees correctness.
+- Review generated deliverables before sharing them.
 
 ## AI Assist
 
 - AI Assist is optional.
-- **Mock (offline)** is the default recommended path.
-- **Live provider calls** (OpenAI-compatible or Ollama) run only after explicit user consent and may send prompt/context over the network.
-- No API keys are bundled. Keys are not saved to localStorage.
-- Provider URL and model name fields may be stored on the node in localStorage if the user sets them.
+- The offline/mock path is the default recommended path.
+- Live provider calls require explicit user confirmation and may send prompt/context over the network.
+- No API keys are bundled, and keys are not stored in `localStorage`.
+- Provider URL and model fields can be stored on a local node if the user enters them.
 
-## Collaboration
+## Collaboration and export
 
-- Single-user only.
-- No multiplayer editing, account system, cloud sync, or shared workspace model.
-
-## Exporting
-
-- Markdown and project JSON are the most complete handoff formats.
-- PDF export is a simple text-mapped representation of the markdown (limited fonts/Unicode).
-- Complex page layout, signatures, redaction, and publishing controls are outside this release.
+- WeaveStudio is single-user and has no accounts, cloud sync, shared workspace model, or real-time collaboration.
+- Markdown and Project JSON are the most complete handoff formats.
+- PDF export is a simple text-mapped representation of the markdown draft with limited typography and Unicode support.
+- Complex layout, signatures, redaction, and publishing controls are outside this release.
 
 ## Scope
 
-- Not a legal, medical, financial, compliance, or security product.
-- Does not encrypt localStorage.
-- Canvas is desktop-oriented; mobile is usable but cramped.
+- WeaveStudio is not legal, medical, financial, compliance, or security software.
+- The canvas is desktop-oriented; mobile access is supported but constrained.
