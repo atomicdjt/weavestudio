@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { FileText, HelpCircle, Home, Layers, Workflow } from 'lucide-react';
+import { HelpCircle, Home, Layers, Workflow } from 'lucide-react';
 
 function App() {
   const location = useLocation();
@@ -44,9 +44,9 @@ function App() {
         <Outlet />
       </main>
       <footer className="shrink-0 border-t border-border bg-panel/80 px-4 sm:px-6 py-2 text-xs text-gray-500 flex items-center justify-between gap-3">
-        <span>Local-first. Human-reviewed. Exportable.</span>
-        <Link to="/acquire" className="text-gray-400 hover:text-blue-300 transition-colors">
-          Acquire Project IP
+        <span>Local-first by default. Human-reviewed. Exportable.</span>
+        <Link to="/docs" className="text-gray-500 hover:text-gray-300 transition-colors">
+          Usage guide
         </Link>
       </footer>
     </div>

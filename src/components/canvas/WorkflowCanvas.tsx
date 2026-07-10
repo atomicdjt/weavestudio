@@ -36,13 +36,13 @@ const getDefaultNodeData = (type: NodeType): AppNode['data'] => {
   if (type === 'aiAssist') {
     return {
       title: 'New AI Assist Blueprint',
-      description: 'Optional BYOK-ready AI adapter step. No live API calls are made by default.',
-      content: 'Blueprint only: define the intended assistive transformation and keep human review enabled.',
+      description: 'Optional BYOK AI step. Live network calls require explicit consent.',
+      content: 'Blueprint only by default. Use Mock offline, or allow a network call to run a provider.',
       status: 'pending',
       promptInstruction: '',
       expectedInput: '',
       expectedOutput: '',
-      providerNote: 'Requires a user-supplied key or future provider adapter to execute real AI calls.',
+      providerNote: 'Requires a user-supplied key or local Ollama. No bundled API keys. Live calls are gated.',
       reviewRequired: true,
     };
   }

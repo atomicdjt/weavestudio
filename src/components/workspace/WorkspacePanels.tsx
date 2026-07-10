@@ -1,6 +1,18 @@
 import React from 'react';
-import type { AppNode, NodeType } from '../../types';
+import type { AppNode, NodeCategory, NodeType } from '../../types';
 import { BrainCircuit, FileInput, FileOutput, GitFork, Plus, Scissors, Trash2, UserCheck } from 'lucide-react';
+
+const CATEGORY_OPTIONS: { value: NodeCategory; label: string }[] = [
+  { value: 'source', label: 'Source' },
+  { value: 'evidence', label: 'Evidence' },
+  { value: 'action', label: 'Action' },
+  { value: 'risk', label: 'Risk' },
+  { value: 'decision', label: 'Decision' },
+  { value: 'conclusion', label: 'Conclusion' },
+  { value: 'open_question', label: 'Open question' },
+  { value: 'output', label: 'Output' },
+  { value: 'other', label: 'Other' },
+];
 
 interface NodePaletteProps {
   onAddNode: (type: NodeType) => void;
@@ -59,6 +71,7 @@ interface NodeInspectorProps {
 
 export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspectorProps) => {
   const [sessionApiKeys, setSessionApiKeys] = React.useState<Record<string, string>>({});
+  const [networkAllowed, setNetworkAllowed] = React.useState(false);
   const [isGenerating, setIsGenerating] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState('');
 
@@ -67,7 +80,7 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
       <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 flex flex-col lg:h-full min-h-40 lg:min-h-0 items-center justify-center text-gray-500 text-sm text-center">
         <div className="max-w-56">
           <div className="font-semibold text-gray-300 mb-1">No node selected</div>
-          <p>Select a canvas node to edit its title, description, content, and review settings.</p>
+          <p>Select a canvas node to edit its title, description, content, category, and review settings.</p>
         </div>
       </aside>
     );
@@ -77,6 +90,14 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
   const apiKey = sessionApiKeys[selectedNode.id] || '';
 
   const handleGenerate = async () => {
+    if (!networkAllowed) {
+      const confirmed = confirm(
+        'Run AI Assist will send the prompt and input context to the configured provider URL over the network (or to local Ollama). API keys stay in session memory only. Continue?',
+      );
+      if (!confirmed) return;
+      setNetworkAllowed(true);
+    }
+
     const provider = data.provider || 'openai';
     const baseUrl = data.baseUrl || (provider === 'ollama' ? 'http://localhost:11434/api/generate' : 'https://api.openai.com/v1/chat/completions');
     const model = data.modelName || (provider === 'ollama' ? 'llama3' : 'gpt-4o-mini');
@@ -122,8 +143,8 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
       }
       
       onUpdate(selectedNode.id, { content: generatedText });
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Generation failed');
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : 'Generation failed');
     } finally {
       setIsGenerating(false);
     }
@@ -169,6 +190,21 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
         </div>
 
         <div>
+          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Category</label>
+          <select
+            value={data.category || 'other'}
+            onChange={(e) => onUpdate(selectedNode.id, { category: e.target.value as NodeCategory })}
+            className="w-full bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
+          >
+            {CATEGORY_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
           <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Content</label>
           <textarea
             value={data.content}
@@ -196,7 +232,10 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
         {selectedNode.type === 'aiAssist' && (
           <div className="space-y-4 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200">BYOK AI Provider</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200">Optional AI Assist</div>
+              <p className="text-[11px] text-cyan-100/70 mt-1 leading-relaxed">
+                Default path is offline (Mock). Live provider calls leave this device only after you confirm.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
@@ -275,27 +314,26 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
               </div>
             )}
 
-            <div className="pt-2 flex gap-2">
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                title="Offline mock response — no network"
+                onClick={() => {
+                  const mockText = `[MOCK — offline]\n\nDraft for "${data.title || 'the section'}" based on the input context.\n\n- Key point 1\n- Key point 2\n\nReplace with human-edited content before export.`;
+                  onUpdate(selectedNode.id, { content: mockText });
+                }}
+                className="w-full bg-cyan-600 hover:bg-cyan-500 text-white p-2 rounded text-sm font-semibold transition-colors flex items-center justify-center space-x-2"
+              >
+                <BrainCircuit className="w-4 h-4" />
+                <span>Mock (offline)</span>
+              </button>
               <button
                 type="button"
                 onClick={handleGenerate}
                 disabled={isGenerating}
-                className="flex-1 bg-cyan-600 hover:bg-cyan-500 text-white p-2 rounded text-sm font-semibold transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+                className="w-full bg-cyan-600/15 hover:bg-cyan-600/25 text-cyan-200 border border-cyan-500/30 p-2 rounded text-sm font-semibold transition-colors disabled:opacity-50"
               >
-                <BrainCircuit className="w-4 h-4" />
-                <span>{isGenerating ? 'Generating...' : 'Run AI Assist'}</span>
-              </button>
-              
-              <button
-                type="button"
-                title="Simulate mock response"
-                onClick={() => {
-                  const mockText = `[MOCK AI GENERATION]\n\nBased on the expected input, here is a mock draft for "${data.title || 'the section'}". \n\n- Key point 1\n- Key point 2\n\n(This proves the UI flow works without requiring an API key. A real adapter would replace this text with a live response.)`;
-                  onUpdate(selectedNode.id, { content: mockText });
-                }}
-                className="px-3 bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 border border-cyan-500/30 rounded text-sm font-semibold transition-colors"
-              >
-                Mock
+                {isGenerating ? 'Calling provider…' : networkAllowed ? 'Run live provider' : 'Run live provider (asks consent)'}
               </button>
             </div>
 
