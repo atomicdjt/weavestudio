@@ -1,23 +1,30 @@
 # Changelog
 
-All notable changes to the WeaveStudio project will be documented in this file.
+All notable changes to WeaveStudio are documented in this file.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-07-10
+
 ### Added
-- Golden-path product flow: source ingest, split-into-nodes, template-structured deliverables, editable draft.
-- Named multi-workspace persistence with schema v1, migrations, save status, and project JSON round-trip.
-- Five primary data-driven templates + expandable legacy pack.
-- Landing CTAs: Start with template, Guided demo, Blank workspace.
-- Vitest unit tests for structureSource, deliverableEngine, schema, templates.
-- Product/audit docs under `docs/`.
+
+- Golden-path workflow: source ingest, editable node structure, template-structured deliverables, and editable drafts.
+- Named multi-workspace persistence with schema v1, migrations, save status, coherent snapshots, and Project JSON round-trip.
+- Five primary data-driven templates plus an expandable legacy pack.
+- Landing actions for templates, guided demo, and blank workspace.
+- Vitest coverage for source structure, deliverables, schema, templates, snapshots, synchronization, navigation, and workspace initialization.
+- Release validation CI for tests, lint, typecheck, and production build.
 
 ### Changed
-- Deliverable engine composes from template `outputStructure` (no default inventory dump).
-- AI Assist: Mock offline is primary; live provider requires explicit consent.
-- Acquisition CTA demoted from primary product chrome.
-- README and limitations rewritten for privacy honesty.
+
+- Process Check is the canonical deterministic workflow-readiness surface.
+- AI Assist is offline/mock-first; live provider activity requires explicit consent.
+- Repository ownership is explicitly proprietary and All Rights Reserved.
+- README, QA summary, and limitations document the local-first and human-review boundaries.
 
 ### Fixed
-- Docs no longer claim zero network capability while live AI path exists without disclosure.
 
+- Guided demo workspace creation avoids duplicate workspaces.
+- Source synchronization avoids destructive source-to-node replacement and preserves viewport state.
+- Snapshot restoration keeps graph, source, draft, and metadata coherent.
+- Deliverable generation avoids duplicate headings and stale snapshot output.

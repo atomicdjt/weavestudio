@@ -27,6 +27,8 @@ WEAVESTUDIO-PROD-SCREENSHOTS/
 playwright-report/
 test-results/
 coverage/
+.playwright-cli/
+output/playwright/
 
 # Editor directories and files
 .vscode/*
