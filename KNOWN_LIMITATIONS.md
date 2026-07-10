@@ -8,11 +8,11 @@
 - `localStorage` is not encrypted and is not a substitute for durable filesystem or cloud storage.
 - Storage quota errors surface in the UI; export work before deleting old workspaces.
 
-## Generation and Process Check
+## Generation and Workflow Validator
 
 - Output generation is deterministic local composition from user-provided node content and template structure.
-- Process Check evaluates structure, completeness, review checkpoints, and export readiness.
-- Neither output generation nor Process Check verifies facts, extracts truth automatically, or guarantees correctness.
+- Workflow Validator evaluates structure, completeness, review checkpoints, and export readiness.
+- Neither output generation nor Workflow Validator verifies facts, extracts truth automatically, or guarantees correctness.
 - Review generated deliverables before sharing them.
 
 ## AI Assist

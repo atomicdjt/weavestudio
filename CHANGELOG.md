@@ -17,7 +17,7 @@ All notable changes to WeaveStudio are documented in this file.
 
 ### Changed
 
-- Process Check is the canonical deterministic workflow-readiness surface.
+- Workflow Validator is the deterministic workflow-readiness surface.
 - AI Assist is offline/mock-first; live provider activity requires explicit consent.
 - Repository ownership is explicitly proprietary and All Rights Reserved.
 - README, QA summary, and limitations document the local-first and human-review boundaries.

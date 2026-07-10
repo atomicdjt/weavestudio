@@ -20,7 +20,7 @@ Important source material often begins as scattered, inconsistent fragments. Wea
 2. Paste unstructured source material.
 3. Apply the source to an Input node or split it into editable nodes.
 4. Organize, connect, classify, and review the workflow on the canvas.
-5. Run Process Check, then generate a template-structured deliverable.
+5. Run Workflow Validator, then generate a template-structured deliverable.
 6. Review and edit the draft before exporting Markdown, PDF, or Project JSON.
 7. Reopen the named workspace later in the same browser profile.
 
@@ -30,7 +30,7 @@ Important source material often begins as scattered, inconsistent fragments. Wea
 - Five primary templates plus an expandable legacy starter pack
 - Source ingest, editable canvas nodes, and explicit review checkpoints
 - Named browser-local workspaces with autosave, visible save state, and snapshots
-- Process Check for structure, completeness, review gaps, and export readiness
+- Workflow Validator for structure, completeness, review gaps, and export readiness
 - Template-structured deliverable generation with an editable draft
 - Markdown, PDF, and re-importable Project JSON export
 - Optional AI Assist blueprint: offline/mock-first, with live provider requests only after explicit confirmation
@@ -87,7 +87,7 @@ npm run preview
 ## Known limitations and review boundaries
 
 - Browser `localStorage` is neither encrypted storage nor durable cloud storage. Clearing site data, using private browsing, changing browsers, or device cleanup can remove workspaces.
-- Process Check evaluates workflow structure and readiness; it does not verify facts or guarantee correctness.
+- Workflow Validator evaluates workflow structure and readiness; it does not verify facts or guarantee correctness.
 - Generated work requires human review before sharing.
 - WeaveStudio is a single-user, desktop-oriented workflow tool. It does not provide real-time collaboration, cloud sync, or account-based sharing.
 - It is not legal, medical, financial, compliance, or security software.

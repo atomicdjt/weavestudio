@@ -20,7 +20,7 @@
 - [x] Core routes render and direct refreshes use the SPA rewrite.
 - [x] Guided demo creates exactly one workspace.
 - [x] Source synchronization preserves unrelated node edits and canvas viewport.
-- [x] Process Check completes structural and export-readiness checks.
+- [x] Workflow Validator completes structural and export-readiness checks.
 - [x] Deliverable generation completes without duplicate generated headings.
 - [x] Manual draft edits require confirmation before overwrite.
 - [x] Snapshots restore coherent workspace state.
