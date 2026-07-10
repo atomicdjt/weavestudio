@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import {
   ClipboardCheck,
   FileDown,
@@ -10,6 +10,7 @@ import {
   Play,
   FilePlus,
 } from 'lucide-react';
+import { createId } from '../lib/ids';
 
 const features = [
   {
@@ -45,6 +46,20 @@ const features = [
 ];
 
 export const LandingPage = () => {
+  const navigate = useNavigate();
+
+  const openGuidedDemo = () => {
+    navigate('/app', {
+      state: { openGuidedDemo: true, intentId: createId('intent') },
+    });
+  };
+
+  const openBlank = () => {
+    navigate('/app', {
+      state: { blankWorkspace: true, intentId: createId('intent') },
+    });
+  };
+
   return (
     <div className="flex-1 overflow-y-auto pb-20">
       <section className="max-w-5xl mx-auto px-6 pt-16 pb-12 text-center">
@@ -64,29 +79,31 @@ export const LandingPage = () => {
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-4">
-          <Link
-            to="/templates"
+          <button
+            type="button"
+            onClick={() => navigate('/templates')}
             className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-3.5 rounded-lg font-semibold text-base transition-colors flex items-center space-x-2 shadow-lg shadow-blue-600/20"
           >
             <Layers className="w-5 h-5" />
             <span>Start with a template</span>
-          </Link>
-          <Link
-            to="/app"
-            state={{ openGuidedDemo: true }}
+          </button>
+          <button
+            type="button"
+            onClick={openGuidedDemo}
+            data-testid="open-guided-demo"
             className="bg-emerald-700 hover:bg-emerald-600 text-white px-6 py-3.5 rounded-lg font-semibold text-base transition-colors flex items-center space-x-2"
           >
             <Play className="w-5 h-5" />
             <span>Open guided demo</span>
-          </Link>
-          <Link
-            to="/app"
-            state={{ blankWorkspace: true }}
+          </button>
+          <button
+            type="button"
+            onClick={openBlank}
             className="bg-panel border border-border hover:bg-gray-800 text-gray-300 px-6 py-3.5 rounded-lg font-semibold text-base transition-colors flex items-center space-x-2"
           >
             <FilePlus className="w-5 h-5" />
             <span>Blank workspace</span>
-          </Link>
+          </button>
         </div>
         <p className="text-xs text-gray-500">
           Golden path: template → paste source → structure nodes → validate → generate → export → reopen.
@@ -112,7 +129,10 @@ export const LandingPage = () => {
       <section className="max-w-6xl mx-auto px-6 py-12">
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((f) => (
-            <div key={f.title} className="bg-panel p-8 rounded-lg border border-border hover:border-blue-800/60 transition-colors">
+            <div
+              key={f.title}
+              className="bg-panel p-8 rounded-lg border border-border hover:border-blue-800/60 transition-colors"
+            >
               <div className="mb-4">{f.icon}</div>
               <h3 className="text-lg font-bold mb-2 text-white">{f.title}</h3>
               <p className="text-gray-400 text-sm leading-relaxed">{f.body}</p>

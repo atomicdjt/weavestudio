@@ -73,6 +73,13 @@ export const OutputPreviewPanel = ({
   };
 
   const handleRegenerate = () => {
+    if (userEdited) {
+      const ok = confirm(
+        'Regenerate from canvas will replace your manually edited deliverable draft. This cannot be undone from this dialog.\n\nCancel keeps your edited draft. OK replaces it with a fresh composition from the canvas.',
+      );
+      if (!ok) return;
+    }
+
     const next = composeDeliverableMarkdown(workspace.nodes, workspace.edges, {
       title,
       template,
@@ -83,6 +90,10 @@ export const OutputPreviewPanel = ({
         title,
         markdown: next,
         userEdited: false,
+      },
+      meta: {
+        ...workspace.meta,
+        deliverableNeedsRegen: false,
       },
     });
   };
@@ -191,12 +202,20 @@ export const OutputPreviewPanel = ({
                 Include process appendix
               </label>
               {userEdited && (
-                <span className="text-amber-300">Edited manually — regenerate to rebuild from canvas.</span>
+                <span className="text-amber-300 font-medium">
+                  Manual edits active — regenerate asks for confirmation before replacing them.
+                </span>
+              )}
+              {workspace.meta?.deliverableNeedsRegen && (
+                <span className="text-amber-200">
+                  Deliverable was cleared after a legacy snapshot restore — regenerate before export.
+                </span>
               )}
               <button
                 type="button"
                 onClick={handleRegenerate}
                 className="inline-flex items-center gap-1.5 text-blue-300 hover:text-blue-200"
+                data-testid="regenerate-deliverable"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Regenerate from canvas

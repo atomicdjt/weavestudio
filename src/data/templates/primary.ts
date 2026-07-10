@@ -95,8 +95,9 @@ proposal.nodes = proposal.nodes.map((node) => {
       data: {
         ...node.data,
         category: 'output',
+        // Body only — section headings are owned by the deliverable engine / template outputStructure
         content:
-          '# Proposal: Lightweight Operations Upgrade\n\n## Executive summary\nNorthline loses revenue when website leads stall between first contact and scheduled work. We recommend a lightweight intake and follow-up system—not a full CRM—so staff can close the loop without changing how they already work.\n\n## Recommended scope\n- Intake checklist for new leads\n- Quote follow-up cadence\n- Sales-to-operations handoff form\n- 30-day pilot and review\n\n## Success criteria\n- Every website lead logged within one business day\n- Every quote followed up at least twice\n- Handoff form used on all won jobs',
+          'Northline loses revenue when website leads stall between first contact and scheduled work. We recommend a lightweight intake and follow-up system—not a full CRM—so staff can close the loop without changing how they already work.\n\n### Recommended scope\n- Intake checklist for new leads\n- Quote follow-up cadence\n- Sales-to-operations handoff form\n- 30-day pilot and review\n\n### Success criteria\n- Every website lead logged within one business day\n- Every quote followed up at least twice\n- Handoff form used on all won jobs',
       },
     };
   }

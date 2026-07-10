@@ -90,7 +90,7 @@ export const emptySkeleton = (
     position: { x: labels.review ? 1040 : 700, y: 120 },
     data: {
       title: labels.output,
-      description: 'Final deliverable content',
+      description: '',
       content: '',
       status: 'pending',
       category: 'output',

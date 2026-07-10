@@ -1,8 +1,7 @@
 /**
  * Compatibility facade over workspaceStore.
- * Prefer importing from workspaceStore for new code.
  */
-import type { AppEdge, AppNode, VersionSnapshot } from '../types';
+import type { AppEdge, AppNode, VersionSnapshot, WorkspaceDocument } from '../types';
 import { TEMPLATES, getTemplateById } from '../data/templates';
 import {
   clearAllLocalData as clearAll,
@@ -49,10 +48,8 @@ export const loadTemplate = (templateId: string): { nodes: AppNode[]; edges: App
   };
 };
 
-export const saveVersion = (title: string, nodes: AppNode[], edges: AppEdge[]): VersionSnapshot => {
-  const active = getActiveWorkspace();
-  return saveSnapshot(title, nodes, edges, active?.id);
-};
+export const saveVersion = (title: string, workspace: WorkspaceDocument): VersionSnapshot =>
+  saveSnapshot(title, workspace);
 
 export const getVersions = (): VersionSnapshot[] => {
   const active = getActiveWorkspace();

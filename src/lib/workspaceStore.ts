@@ -7,7 +7,7 @@ import type {
   WorkspaceDocument,
   WorkspaceIndex,
 } from '../types';
-import { WORKSPACE_SCHEMA_VERSION } from '../types';
+import { SNAPSHOT_FORMAT_VERSION, WORKSPACE_SCHEMA_VERSION } from '../types';
 import { createId } from './ids';
 import {
   ensureMigratedStore,
@@ -70,18 +70,30 @@ export const createWorkspace = (options?: {
   nodes?: AppNode[];
   edges?: AppEdge[];
   sourceMaterial?: string;
+  meta?: WorkspaceDocument['meta'];
+  deliverableDraft?: WorkspaceDocument['deliverableDraft'];
+  id?: string;
 }): WorkspaceDocument => {
   const now = new Date().toISOString();
+  const sourceMaterial = options?.sourceMaterial ?? '';
   const doc: WorkspaceDocument = {
     schemaVersion: WORKSPACE_SCHEMA_VERSION,
-    id: createId('ws'),
+    id: options?.id ?? createId('ws'),
     name: options?.name?.trim() || 'Untitled workspace',
     templateId: options?.templateId ?? null,
     createdAt: now,
     updatedAt: now,
-    sourceMaterial: options?.sourceMaterial ?? '',
+    sourceMaterial,
     nodes: structuredClone(options?.nodes ?? []),
     edges: structuredClone(options?.edges ?? []),
+    deliverableDraft: options?.deliverableDraft
+      ? structuredClone(options.deliverableDraft)
+      : undefined,
+    meta: {
+      appliedSourceFingerprint: sourceMaterial,
+      sourceSyncStatus: 'in_sync',
+      ...options?.meta,
+    },
   };
 
   const index = loadIndex();
@@ -257,17 +269,27 @@ export const getSnapshots = (): VersionSnapshot[] => {
 
 export const saveSnapshot = (
   title: string,
-  nodes: AppNode[],
-  edges: AppEdge[],
-  workspaceId?: string,
+  workspace: WorkspaceDocument,
 ): VersionSnapshot => {
   const snapshot: VersionSnapshot = {
     id: createId('snap'),
     timestamp: Date.now(),
     title,
-    nodes: structuredClone(nodes),
-    edges: structuredClone(edges),
-    workspaceId,
+    snapshotVersion: SNAPSHOT_FORMAT_VERSION,
+    workspaceId: workspace.id,
+    workspaceName: workspace.name,
+    nodes: structuredClone(workspace.nodes),
+    edges: structuredClone(workspace.edges),
+    sourceMaterial: workspace.sourceMaterial,
+    deliverableDraft: workspace.deliverableDraft
+      ? structuredClone(workspace.deliverableDraft)
+      : undefined,
+    templateId: workspace.templateId,
+    viewport: workspace.viewport ? { ...workspace.viewport } : undefined,
+    appliedSourceFingerprint:
+      typeof workspace.meta?.appliedSourceFingerprint === 'string'
+        ? workspace.meta.appliedSourceFingerprint
+        : workspace.sourceMaterial,
   };
   const next = [...getSnapshots(), snapshot];
   writeJson(SNAPSHOTS_KEY, next);
@@ -277,6 +299,62 @@ export const saveSnapshot = (
     /* ignore */
   }
   return snapshot;
+};
+
+/**
+ * Apply a snapshot onto a workspace document.
+ * Full snapshots (v2) restore deliverable + source.
+ * Legacy snapshots restore graph only and invalidate deliverable.
+ */
+export const applySnapshotToWorkspace = (
+  workspace: WorkspaceDocument,
+  snapshot: VersionSnapshot,
+): { workspace: WorkspaceDocument; legacyIncomplete: boolean } => {
+  const isFull =
+    (snapshot.snapshotVersion ?? 1) >= SNAPSHOT_FORMAT_VERSION ||
+    snapshot.sourceMaterial !== undefined ||
+    snapshot.deliverableDraft !== undefined;
+
+  if (isFull) {
+    return {
+      legacyIncomplete: false,
+      workspace: {
+        ...workspace,
+        nodes: structuredClone(snapshot.nodes),
+        edges: structuredClone(snapshot.edges),
+        sourceMaterial: snapshot.sourceMaterial ?? '',
+        deliverableDraft: snapshot.deliverableDraft
+          ? structuredClone(snapshot.deliverableDraft)
+          : undefined,
+        templateId:
+          snapshot.templateId !== undefined ? snapshot.templateId : workspace.templateId,
+        viewport: snapshot.viewport ? { ...snapshot.viewport } : workspace.viewport,
+        meta: {
+          ...workspace.meta,
+          appliedSourceFingerprint:
+            snapshot.appliedSourceFingerprint ?? snapshot.sourceMaterial ?? '',
+          sourceSyncStatus: 'in_sync',
+          deliverableNeedsRegen: false,
+        },
+      },
+    };
+  }
+
+  // Legacy: nodes/edges only — invalidate deliverable so it cannot stay silently stale
+  return {
+    legacyIncomplete: true,
+    workspace: {
+      ...workspace,
+      nodes: structuredClone(snapshot.nodes),
+      edges: structuredClone(snapshot.edges),
+      deliverableDraft: undefined,
+      meta: {
+        ...workspace.meta,
+        deliverableNeedsRegen: true,
+        sourceSyncStatus: 'unknown',
+      },
+    },
+  };
 };
 
 export const deleteSnapshot = (id: string): void => {

@@ -42,6 +42,9 @@ export interface DeliverableDraft {
   userEdited: boolean;
 }
 
+/** Source panel vs canvas input synchronization */
+export type SourceSyncStatus = 'in_sync' | 'source_ahead' | 'canvas_ahead' | 'unknown';
+
 export interface WorkspaceDocument {
   schemaVersion: typeof WORKSPACE_SCHEMA_VERSION;
   id: string;
@@ -54,7 +57,13 @@ export interface WorkspaceDocument {
   edges: AppEdge[];
   deliverableDraft?: DeliverableDraft;
   viewport?: { x: number; y: number; zoom: number };
-  meta?: Record<string, unknown>;
+  meta?: Record<string, unknown> & {
+    guidedDemo?: boolean;
+    /** Last source string applied to the Input node via Apply */
+    appliedSourceFingerprint?: string;
+    sourceSyncStatus?: SourceSyncStatus;
+    deliverableNeedsRegen?: boolean;
+  };
 }
 
 export interface WorkspaceIndexEntry {
@@ -136,6 +145,9 @@ export interface LegacyWorkflowTemplate {
   edges: AppEdge[];
 }
 
+/** Snapshot format: 1 = nodes/edges only (legacy); 2 = full workspace slice */
+export const SNAPSHOT_FORMAT_VERSION = 2 as const;
+
 export interface VersionSnapshot {
   id: string;
   timestamp: number;
@@ -143,6 +155,14 @@ export interface VersionSnapshot {
   nodes: AppNode[];
   edges: AppEdge[];
   workspaceId?: string;
+  /** 2 = includes source, deliverable, template, viewport, sync meta */
+  snapshotVersion?: number;
+  sourceMaterial?: string;
+  deliverableDraft?: DeliverableDraft;
+  templateId?: string | null;
+  viewport?: { x: number; y: number; zoom: number };
+  appliedSourceFingerprint?: string;
+  workspaceName?: string;
 }
 
 export type workflowValidatorStatus = 'Ready' | 'Needs Review' | 'Incomplete' | 'Warning';

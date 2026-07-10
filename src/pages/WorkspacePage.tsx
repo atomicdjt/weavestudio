@@ -11,13 +11,26 @@ import { TemplateLoadModal } from '../components/workspace/TemplateLoadModal';
 import { SourceIngestPanel } from '../components/workspace/SourceIngestPanel';
 import { WorkspaceManager } from '../components/workspace/WorkspaceManager';
 import { SaveStatusChip } from '../components/workspace/SaveStatus';
-import type { AppEdge, AppNode, NodeType, SaveStatus, WorkflowValidatorResult, WorkspaceDocument } from '../types';
+import type {
+  AppNode,
+  NodeType,
+  SaveStatus,
+  VersionSnapshot,
+  WorkflowValidatorResult,
+  WorkspaceDocument,
+} from '../types';
 import { buildWorkflowValidator } from '../lib/workflowValidator';
-import { applySourceToInputNode, splitSourceIntoNodes } from '../lib/structureSource';
+import {
+  applySourceToInputNode,
+  countDerivedNodes,
+  splitSourceIntoNodes,
+  willOverwriteInputContent,
+} from '../lib/structureSource';
+import { computeSourceSyncStatus } from '../lib/sourceSync';
 import { createId } from '../lib/ids';
 import { getTemplateById, resolveTemplateId, TEMPLATES } from '../data/templates';
-import { createGuidedDemoWorkspace } from '../data/demos/guidedDemo';
 import {
+  applySnapshotToWorkspace,
   createWorkspace,
   deleteWorkspace,
   duplicateWorkspace,
@@ -27,12 +40,7 @@ import {
   saveWorkspaceDocument,
   setActiveWorkspaceId,
 } from '../lib/workspaceStore';
-
-type LocationState = {
-  loadTemplate?: string;
-  openGuidedDemo?: boolean;
-  blankWorkspace?: boolean;
-} | null;
+import { resolveWorkspaceFromNav, type LocationState } from '../lib/workspaceInit';
 
 const getNewNodeData = (type: NodeType): AppNode['data'] => {
   const base = {
@@ -74,51 +82,16 @@ const defaultWorkspace = (): WorkspaceDocument => {
   const existing = getActiveWorkspace();
   if (existing) return existing;
 
-  const template = getTemplateById('client-proposal-builder') ?? TEMPLATES[0];
-  return createWorkspace({
-    name: template.title,
-    templateId: template.id,
-    nodes: structuredClone(template.nodes),
-    edges: structuredClone(template.edges),
-    sourceMaterial: template.nodes.find((n) => n.type === 'input')?.data.content ?? '',
-  });
+  // Empty store: blank workspace only — never auto-create a template as a side effect of guided demo
+  return createWorkspace({ name: 'Blank workspace', nodes: [], edges: [], sourceMaterial: '' });
 };
 
-const workspaceFromNavState = (state: LocationState): WorkspaceDocument | null => {
-  if (!state) return null;
-
-  if (state.openGuidedDemo) {
-    const demo = createGuidedDemoWorkspace();
-    return createWorkspace({
-      name: demo.name,
-      templateId: demo.templateId,
-      nodes: demo.nodes,
-      edges: demo.edges,
-      sourceMaterial: demo.sourceMaterial,
-    });
+const readHistoryState = (): LocationState => {
+  try {
+    return (window.history.state as LocationState) ?? null;
+  } catch {
+    return null;
   }
-
-  if (state.blankWorkspace) {
-    return createWorkspace({ name: 'Blank workspace', nodes: [], edges: [], sourceMaterial: '' });
-  }
-
-  if (state.loadTemplate) {
-    const templateId = resolveTemplateId(state.loadTemplate) ?? state.loadTemplate;
-    const template = getTemplateById(templateId);
-    if (template) {
-      const source =
-        template.nodes.find((n) => n.type === 'input')?.data.content || template.messyInputSample || '';
-      return createWorkspace({
-        name: template.title,
-        templateId: template.id,
-        nodes: structuredClone(template.nodes),
-        edges: structuredClone(template.edges),
-        sourceMaterial: source,
-      });
-    }
-  }
-
-  return null;
 };
 
 export const WorkspacePage = () => {
@@ -126,15 +99,19 @@ export const WorkspacePage = () => {
   const navigate = useNavigate();
   const locationState = location.state as LocationState;
 
-  const [workspace, setWorkspace] = useState<WorkspaceDocument>(() => defaultWorkspace());
+  const [workspace, setWorkspace] = useState<WorkspaceDocument>(() => {
+    // Process nav intent in initializer so we never create a default template first
+    const fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
+    return fromNav ?? defaultWorkspace();
+  });
   const [indexEntries, setIndexEntries] = useState(() => loadIndex().workspaces);
-  const [canvasKey, setCanvasKey] = useState(0);
+  /** Bumped only for external graph replacements / workspace switches — not for pan or source panel typing */
+  const [graphEpoch, setGraphEpoch] = useState(0);
   const [clearSignal, setClearSignal] = useState(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
   const [showPortabilityModal, setShowPortabilityModal] = useState(false);
   const [workflowValidator, setWorkflowValidator] = useState<WorkflowValidatorResult | null>(null);
-  const [nodeDataOverrides, setNodeDataOverrides] = useState<Record<string, Partial<AppNode['data']>>>({});
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -145,26 +122,61 @@ export const WorkspacePage = () => {
       return true;
     }
   });
+  const [navConsumedKey, setNavConsumedKey] = useState<string | null>(() =>
+    locationState?.intentId || locationState?.openGuidedDemo || locationState?.blankWorkspace || locationState?.loadTemplate
+      ? location.key
+      : null,
+  );
 
   const nodes = workspace.nodes;
   const edges = workspace.edges;
   const template = useMemo(
-    () => (workspace.templateId ? getTemplateById(resolveTemplateId(workspace.templateId) ?? workspace.templateId) : null),
+    () =>
+      workspace.templateId
+        ? getTemplateById(resolveTemplateId(workspace.templateId) ?? workspace.templateId)
+        : null,
     [workspace.templateId],
   );
 
-  // Consume navigation intents (template / demo / blank) exactly once per location key
+  const syncStatus = useMemo(
+    () =>
+      computeSourceSyncStatus(
+        workspace.sourceMaterial,
+        workspace.nodes,
+        typeof workspace.meta?.appliedSourceFingerprint === 'string'
+          ? workspace.meta.appliedSourceFingerprint
+          : undefined,
+      ),
+    [workspace.sourceMaterial, workspace.nodes, workspace.meta?.appliedSourceFingerprint],
+  );
+
+  // Subsequent navigations to /app with new intents (same mounted route)
   useEffect(() => {
-    const next = workspaceFromNavState(locationState);
+    if (!locationState) return;
+    if (!(locationState.openGuidedDemo || locationState.blankWorkspace || locationState.loadTemplate)) {
+      return;
+    }
+    if (navConsumedKey === location.key) return;
+
+    const next = resolveWorkspaceFromNav(locationState);
     if (!next) return;
+
     setWorkspace(next);
     setIndexEntries(loadIndex().workspaces);
-    setNodeDataOverrides({});
     setSelectedNodeId(null);
     setWorkflowValidator(null);
-    setCanvasKey((k) => k + 1);
+    setGraphEpoch((e) => e + 1);
+    setNavConsumedKey(location.key);
     navigate('/app', { replace: true, state: null });
-  }, [location.key]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [location.key, locationState, navConsumedKey, navigate]);
+
+  // Clear history state after first paint if we already consumed intent in useState
+  useEffect(() => {
+    if (locationState && (locationState.openGuidedDemo || locationState.blankWorkspace || locationState.loadTemplate)) {
+      navigate('/app', { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Autosave
   useEffect(() => {
@@ -178,121 +190,170 @@ export const WorkspacePage = () => {
     return () => clearTimeout(timer);
   }, [workspace]);
 
-  const patchWorkspace = (patch: Partial<WorkspaceDocument> | ((current: WorkspaceDocument) => WorkspaceDocument)) => {
+  const patchWorkspace = (
+    patch: Partial<WorkspaceDocument> | ((current: WorkspaceDocument) => WorkspaceDocument),
+  ) => {
     setWorkspace((current) => (typeof patch === 'function' ? patch(current) : { ...current, ...patch }));
   };
 
+  const replaceGraph = (next: Partial<WorkspaceDocument> & { nodes: AppNode[]; edges?: WorkspaceDocument['edges'] }) => {
+    patchWorkspace((current) => ({
+      ...current,
+      ...next,
+      edges: next.edges ?? current.edges,
+    }));
+    setGraphEpoch((e) => e + 1);
+  };
+
   const handleUpdateNode = (id: string, data: Partial<AppNode['data']>) => {
-    setNodeDataOverrides((prev) => ({ ...prev, [id]: { ...(prev[id] || {}), ...data } }));
     patchWorkspace((current) => ({
       ...current,
       nodes: current.nodes.map((node) => (node.id === id ? { ...node, data: { ...node.data, ...data } } : node)),
-      deliverableDraft: current.deliverableDraft?.userEdited
-        ? current.deliverableDraft
-        : current.deliverableDraft
-          ? { ...current.deliverableDraft, userEdited: false }
-          : current.deliverableDraft,
     }));
+    setGraphEpoch((e) => e + 1);
   };
 
   const handleDeleteNode = (id: string) => {
-    patchWorkspace((current) => ({
-      ...current,
-      nodes: current.nodes.filter((node) => node.id !== id),
-      edges: current.edges.filter((edge) => edge.source !== id && edge.target !== id),
-    }));
-    setSelectedNodeId((current) => (current === id ? null : current));
-    setNodeDataOverrides((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
+    replaceGraph({
+      nodes: workspace.nodes.filter((node) => node.id !== id),
+      edges: workspace.edges.filter((edge) => edge.source !== id && edge.target !== id),
     });
-    setCanvasKey((key) => key + 1);
+    setSelectedNodeId((current) => (current === id ? null : current));
   };
 
   const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
-    if (Object.keys(nodeDataOverrides).length === 0) {
-      patchWorkspace({ nodes: canvasNodes });
-      return;
-    }
-    patchWorkspace({
-      nodes: canvasNodes.map((node) =>
-        nodeDataOverrides[node.id] ? { ...node, data: { ...node.data, ...nodeDataOverrides[node.id] } } : node,
-      ),
-    });
+    patchWorkspace({ nodes: canvasNodes });
   };
 
   const handleAddNode = (type: NodeType) => {
-    patchWorkspace((current) => ({
-      ...current,
-      nodes: [...current.nodes, createNode(type, current.nodes.length)],
-    }));
-    setCanvasKey((key) => key + 1);
+    replaceGraph({
+      nodes: [...workspace.nodes, createNode(type, workspace.nodes.length)],
+    });
   };
 
   const handleClear = () => {
     if (!confirm('Clear the current canvas? Named snapshots remain available.')) return;
-    patchWorkspace({
+    replaceGraph({
       nodes: [],
       edges: [],
       sourceMaterial: '',
       deliverableDraft: undefined,
+      meta: {
+        ...workspace.meta,
+        appliedSourceFingerprint: '',
+        sourceSyncStatus: 'in_sync',
+      },
     });
     setWorkflowValidator(null);
-    setNodeDataOverrides({});
     setSelectedNodeId(null);
-    setCanvasKey((key) => key + 1);
   };
 
   const handlePortabilityReload = () => {
     const active = getActiveWorkspace();
     if (active) {
       setWorkspace(active);
-      setIndexEntries(loadIndex().workspaces);
     } else {
-      setWorkspace(
-        createWorkspace({
-          name: 'Blank workspace',
-          nodes: [],
-          edges: [],
-        }),
-      );
-      setIndexEntries(loadIndex().workspaces);
+      setWorkspace(createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
     }
+    setIndexEntries(loadIndex().workspaces);
     setWorkflowValidator(null);
-    setNodeDataOverrides({});
     setSelectedNodeId(null);
     setClearSignal((s) => s + 1);
-    setCanvasKey((key) => key + 1);
+    setGraphEpoch((e) => e + 1);
   };
 
   const handleResetDemo = () => {
-    const demo = createGuidedDemoWorkspace();
-    const next = createWorkspace({
-      name: demo.name,
-      templateId: demo.templateId,
-      nodes: demo.nodes,
-      edges: demo.edges,
-      sourceMaterial: demo.sourceMaterial,
-    });
+    const intentId = createId('intent');
+    const next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
+    if (!next) return;
     setWorkspace(next);
     setIndexEntries(loadIndex().workspaces);
     setWorkflowValidator(null);
-    setNodeDataOverrides({});
     setSelectedNodeId(null);
-    setCanvasKey((key) => key + 1);
+    setGraphEpoch((e) => e + 1);
   };
 
-  const handleRestoreSnapshot = (nextNodes: AppNode[], nextEdges: AppEdge[]) => {
-    patchWorkspace({ nodes: nextNodes, edges: nextEdges });
+  const handleRestoreSnapshot = (snapshot: VersionSnapshot) => {
+    const { workspace: restored, legacyIncomplete } = applySnapshotToWorkspace(workspace, snapshot);
+    setWorkspace(restored);
     setWorkflowValidator(null);
-    setNodeDataOverrides({});
     setSelectedNodeId(null);
-    setCanvasKey((key) => key + 1);
+    setGraphEpoch((e) => e + 1);
+    setClearSignal((s) => s + 1);
+    if (legacyIncomplete) {
+      alert(
+        'Restored a legacy snapshot (nodes and edges only). The deliverable draft was cleared — regenerate before export so it matches the canvas.',
+      );
+    }
   };
 
   const handleWorkflowValidator = () => {
     setWorkflowValidator(buildWorkflowValidator(nodes, edges));
+  };
+
+  const handleApplyToInput = () => {
+    if (willOverwriteInputContent(workspace.nodes, workspace.sourceMaterial)) {
+      const ok = confirm(
+        'Apply to Input node will replace the current Input node content with the source panel text.\n\n' +
+          'Other nodes, edges, and positions are not changed.\n\n' +
+          'Cancel keeps the canvas as-is. OK updates only the Input node.',
+      );
+      if (!ok) return;
+    }
+
+    const nextNodes = applySourceToInputNode(workspace.nodes, workspace.sourceMaterial);
+    replaceGraph({
+      nodes: nextNodes,
+      meta: {
+        ...workspace.meta,
+        appliedSourceFingerprint: workspace.sourceMaterial,
+        sourceSyncStatus: 'in_sync',
+      },
+    });
+  };
+
+  const handleSplitIntoNodes = () => {
+    if (!workspace.sourceMaterial.trim()) {
+      alert('Paste source material first.');
+      return;
+    }
+
+    const derived = countDerivedNodes(workspace.nodes);
+    let replaceDerived = false;
+
+    if (derived > 0) {
+      const replace = confirm(
+        `Split into nodes can restructure derived canvas content.\n\n` +
+          `There are currently ${derived} transform/decision/AI node(s).\n\n` +
+          `OK = REPLACE those derived nodes with a fresh split from the source panel (Input content also updates).\n` +
+          `Cancel = choose append-only or abort next.`,
+      );
+      if (!replace) {
+        const append = confirm(
+          'Append split nodes without removing existing derived nodes?\n\n' +
+            'OK = append new nodes from source (Input content updates; existing derived nodes stay).\n' +
+            'Cancel = do nothing — canvas is preserved.',
+        );
+        if (!append) return;
+        replaceDerived = false;
+      } else {
+        replaceDerived = true;
+      }
+    }
+
+    const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, {
+      replaceDerived,
+    });
+
+    replaceGraph({
+      nodes: result.nodes,
+      edges: result.edges,
+      meta: {
+        ...workspace.meta,
+        appliedSourceFingerprint: workspace.sourceMaterial,
+        sourceSyncStatus: 'in_sync',
+      },
+    });
   };
 
   const applyTemplate = (templateId: string, mode: 'replace' | 'merge') => {
@@ -301,13 +362,18 @@ export const WorkspacePage = () => {
 
     if (mode === 'replace') {
       const source = tpl.nodes.find((n) => n.type === 'input')?.data.content || tpl.messyInputSample || '';
-      patchWorkspace({
+      replaceGraph({
         templateId: tpl.id,
         name: workspace.name.startsWith(tpl.title) ? workspace.name : tpl.title,
         nodes: structuredClone(tpl.nodes),
         edges: structuredClone(tpl.edges),
         sourceMaterial: source,
         deliverableDraft: undefined,
+        meta: {
+          ...workspace.meta,
+          appliedSourceFingerprint: source,
+          sourceSyncStatus: 'in_sync',
+        },
       });
     } else {
       const maxY = nodes.reduce((max, node) => Math.max(max, node.position.y), 0);
@@ -328,7 +394,7 @@ export const WorkspacePage = () => {
         source: idMap[edge.source] || edge.source,
         target: idMap[edge.target] || edge.target,
       }));
-      patchWorkspace({
+      replaceGraph({
         nodes: [...nodes, ...newNodes],
         edges: [...edges, ...newEdges],
         templateId: workspace.templateId ?? tpl.id,
@@ -336,13 +402,21 @@ export const WorkspacePage = () => {
     }
 
     setWorkflowValidator(null);
-    setNodeDataOverrides({});
     setSelectedNodeId(null);
-    setCanvasKey((key) => key + 1);
     setPendingTemplateId(null);
   };
 
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
+
+  const switchWorkspace = (id: string) => {
+    const next = loadWorkspaceById(id);
+    if (!next) return;
+    setActiveWorkspaceId(id);
+    setWorkspace(next);
+    setSelectedNodeId(null);
+    setWorkflowValidator(null);
+    setGraphEpoch((e) => e + 1);
+  };
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden relative min-h-0 h-full">
@@ -355,31 +429,21 @@ export const WorkspacePage = () => {
               workspaces={indexEntries}
               activeId={workspace.id}
               workspaceName={workspace.name}
-              onSelect={(id) => {
-                const next = loadWorkspaceById(id);
-                if (!next) return;
-                setActiveWorkspaceId(id);
-                setWorkspace(next);
-                setNodeDataOverrides({});
-                setSelectedNodeId(null);
-                setWorkflowValidator(null);
-                setCanvasKey((k) => k + 1);
-              }}
+              onSelect={switchWorkspace}
               onRename={(name) => patchWorkspace({ name })}
               onCreate={() => {
                 const next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
                 setWorkspace(next);
                 setIndexEntries(loadIndex().workspaces);
-                setNodeDataOverrides({});
                 setSelectedNodeId(null);
-                setCanvasKey((k) => k + 1);
+                setGraphEpoch((e) => e + 1);
               }}
               onDuplicate={() => {
                 const copy = duplicateWorkspace(workspace.id);
                 if (!copy) return;
                 setWorkspace(copy);
                 setIndexEntries(loadIndex().workspaces);
-                setCanvasKey((k) => k + 1);
+                setGraphEpoch((e) => e + 1);
               }}
               onDelete={() => {
                 if (!confirm(`Delete workspace “${workspace.name}”? This cannot be undone.`)) return;
@@ -392,7 +456,7 @@ export const WorkspacePage = () => {
                   setWorkspace(createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
                 }
                 setIndexEntries(loadIndex().workspaces);
-                setCanvasKey((k) => k + 1);
+                setGraphEpoch((e) => e + 1);
               }}
             />
             <div className="pointer-events-auto flex flex-wrap items-center gap-2">
@@ -453,7 +517,7 @@ export const WorkspacePage = () => {
               <div className="font-semibold mb-1">Golden path</div>
               <ol className="list-decimal list-inside text-xs text-blue-100/90 space-y-1 mb-2">
                 <li>Paste source material below (or use sample).</li>
-                <li>Split into nodes, then edit and connect on the canvas.</li>
+                <li>Apply to Input or Split into nodes (confirms before overwriting).</li>
                 <li>Validate → Generate → export Markdown/PDF/project JSON.</li>
               </ol>
               <button
@@ -479,48 +543,58 @@ export const WorkspacePage = () => {
             sourceMaterial={workspace.sourceMaterial}
             inputInstructions={template?.inputInstructions}
             sample={template?.messyInputSample}
-            onChange={(value) => patchWorkspace({ sourceMaterial: value })}
+            syncStatus={syncStatus}
+            onChange={(value) =>
+              patchWorkspace({
+                sourceMaterial: value,
+                meta: {
+                  ...workspace.meta,
+                  sourceSyncStatus: computeSourceSyncStatus(
+                    value,
+                    workspace.nodes,
+                    typeof workspace.meta?.appliedSourceFingerprint === 'string'
+                      ? workspace.meta.appliedSourceFingerprint
+                      : undefined,
+                  ),
+                },
+              })
+            }
             onUseSample={() => {
               if (!template?.messyInputSample) return;
-              patchWorkspace({ sourceMaterial: template.messyInputSample });
-            }}
-            onApplyToInput={() => {
               patchWorkspace({
-                nodes: applySourceToInputNode(workspace.nodes, workspace.sourceMaterial),
+                sourceMaterial: template.messyInputSample,
+                meta: {
+                  ...workspace.meta,
+                  sourceSyncStatus: 'source_ahead',
+                },
               });
-              setCanvasKey((k) => k + 1);
             }}
-            onSplitIntoNodes={() => {
-              if (!workspace.sourceMaterial.trim()) {
-                alert('Paste source material first.');
-                return;
-              }
-              const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges);
-              patchWorkspace({
-                nodes: result.nodes,
-                edges: result.edges,
-                sourceMaterial: workspace.sourceMaterial,
-              });
-              setCanvasKey((k) => k + 1);
-            }}
+            onApplyToInput={handleApplyToInput}
+            onSplitIntoNodes={handleSplitIntoNodes}
           />
         </div>
 
         <div className="flex-1 min-h-[480px] lg:min-h-0 w-full">
           <WorkflowCanvas
-            canvasKey={canvasKey}
-            initialNodes={nodes}
-            initialEdges={edges}
-            nodeDataOverrides={nodeDataOverrides}
+            workspaceId={workspace.id}
+            graphEpoch={graphEpoch}
+            nodes={nodes}
+            edges={edges}
+            initialViewport={workspace.viewport}
             onNodesChange={handleCanvasNodesChange}
             onEdgesChange={(nextEdges) => patchWorkspace({ edges: nextEdges })}
             onNodeSelect={(node) => setSelectedNodeId(node?.id ?? null)}
+            onViewportChange={(viewport) =>
+              patchWorkspace({
+                viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom },
+              })
+            }
           />
         </div>
       </div>
 
       <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} />
-      <VersionHistory nodes={nodes} edges={edges} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />
+      <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />
 
       {workflowValidator && (
         <WorkflowValidatorPanel result={workflowValidator} onClose={() => setWorkflowValidator(null)} />

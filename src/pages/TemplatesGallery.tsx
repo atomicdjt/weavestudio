@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getLegacyTemplates, getPrimaryTemplates } from '../data/templates';
 import { ChevronDown, ChevronRight, FileText, Play } from 'lucide-react';
 import type { WorkflowTemplate } from '../types';
+import { createId } from '../lib/ids';
 
 const TemplateCard = ({ template, onLoad }: { template: WorkflowTemplate; onLoad: (id: string) => void }) => (
   <div className="bg-panel border border-border rounded-xl p-6 flex flex-col transition-all hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-900/10">
@@ -45,7 +46,7 @@ export const TemplatesGallery = () => {
   const legacy = getLegacyTemplates();
 
   const handleLoad = (id: string) => {
-    navigate('/app', { state: { loadTemplate: id } });
+    navigate('/app', { state: { loadTemplate: id, intentId: createId('intent') } });
   };
 
   return (

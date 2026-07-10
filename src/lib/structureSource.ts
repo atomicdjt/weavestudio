@@ -11,7 +11,6 @@ export const splitSourceMaterial = (source: string): SourceChunk[] => {
   const text = source.replace(/\r\n/g, '\n').trim();
   if (!text) return [];
 
-  // Prefer markdown heading splits
   if (/^#{1,3}\s+/m.test(text)) {
     const parts = text.split(/(?=^#{1,3}\s+)/m).map((part) => part.trim()).filter(Boolean);
     return parts.map((part, index) => {
@@ -23,7 +22,6 @@ export const splitSourceMaterial = (source: string): SourceChunk[] => {
     });
   }
 
-  // Blank-line paragraphs
   const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   if (paragraphs.length <= 1) {
     return [{ title: 'Source material', content: text }];
@@ -37,6 +35,7 @@ export const splitSourceMaterial = (source: string): SourceChunk[] => {
   });
 };
 
+/** Targeted update: only the primary Input node's content changes. Positions/edges preserved. */
 export const applySourceToInputNode = (nodes: AppNode[], source: string): AppNode[] => {
   const inputIndex = nodes.findIndex((node) => node.type === 'input');
   if (inputIndex === -1) {
@@ -69,15 +68,24 @@ export const applySourceToInputNode = (nodes: AppNode[], source: string): AppNod
   );
 };
 
+export const willOverwriteInputContent = (nodes: AppNode[], source: string): boolean => {
+  const input = nodes.find((node) => node.type === 'input');
+  if (!input) return false;
+  const current = input.data.content ?? '';
+  return current.trim().length > 0 && current !== source;
+};
+
 export interface SplitIntoNodesResult {
   nodes: AppNode[];
   edges: AppEdge[];
   createdCount: number;
+  removedCount: number;
 }
 
 /**
  * Create transform nodes from source chunks, connected from the primary input node.
- * Does not remove existing non-input nodes unless replaceTransforms is true.
+ * Default: append derived nodes (non-destructive).
+ * replaceDerived: remove existing transform/decision/aiAssist nodes before adding.
  */
 export const splitSourceIntoNodes = (
   source: string,
@@ -87,7 +95,7 @@ export const splitSourceIntoNodes = (
 ): SplitIntoNodesResult => {
   const chunks = splitSourceMaterial(source);
   if (chunks.length === 0) {
-    return { nodes: existingNodes, edges: existingEdges, createdCount: 0 };
+    return { nodes: existingNodes, edges: existingEdges, createdCount: 0, removedCount: 0 };
   }
 
   let nodes = applySourceToInputNode(existingNodes, source);
@@ -95,16 +103,20 @@ export const splitSourceIntoNodes = (
 
   let baseNodes = nodes;
   let baseEdges = existingEdges;
+  let removedCount = 0;
 
   if (options?.replaceDerived) {
-    const keepIds = new Set(
-      nodes.filter((node) => node.type === 'input' || node.type === 'output' || node.type === 'review').map((n) => n.id),
-    );
-    baseNodes = nodes.filter((node) => keepIds.has(node.id));
+    const removeTypes = new Set(['transform', 'decision', 'aiAssist']);
+    const keep = nodes.filter((node) => !removeTypes.has(node.type ?? ''));
+    removedCount = nodes.length - keep.length;
+    const keepIds = new Set(keep.map((n) => n.id));
+    baseNodes = keep;
     baseEdges = existingEdges.filter((edge) => keepIds.has(edge.source) && keepIds.has(edge.target));
   }
 
-  const startY = 80;
+  const maxY = baseNodes.reduce((max, node) => Math.max(max, node.position.y), 0);
+  const startY = baseNodes.length > 1 ? maxY + 160 : 80;
+
   const created: AppNode[] = chunks.map((chunk, index) => ({
     id: createId('node'),
     type: 'transform' as NodeType,
@@ -127,10 +139,13 @@ export const splitSourceIntoNodes = (
     target: node.id,
   }));
 
-  // Offset existing non-input nodes if they collide in x band — keep simple: append
   return {
     nodes: [...baseNodes, ...created],
     edges: [...baseEdges, ...newEdges],
     createdCount: created.length,
+    removedCount,
   };
 };
+
+export const countDerivedNodes = (nodes: AppNode[]): number =>
+  nodes.filter((n) => n.type === 'transform' || n.type === 'decision' || n.type === 'aiAssist').length;
