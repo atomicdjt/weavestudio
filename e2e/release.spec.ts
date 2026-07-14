@@ -134,12 +134,25 @@ test('keyboard undo and redo restore a canvas mutation', async ({ page }, testIn
   await page.goto('/app');
   const undo = page.getByRole('button', { name: 'Undo' });
   const redo = page.getByRole('button', { name: 'Redo' });
-  await page.getByRole('button', { name: 'Add Input node' }).click();
+  await page.getByLabel('Add Input node', { exact: true }).click();
   await expect(undo).toBeEnabled();
   await page.keyboard.press('Control+z');
   await expect(redo).toBeEnabled();
   await page.keyboard.press('Control+Shift+z');
   await expect(undo).toBeEnabled();
+});
+
+test('canvas navigation controls are reachable without changing text-field shortcuts', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Minimap is intentionally hidden on compact viewports.');
+  await page.goto('/app');
+  await expect(page.getByLabel('Workflow minimap')).toBeVisible();
+  await page.getByLabel('Add Input node', { exact: true }).click();
+  await page.getByRole('button', { name: 'Auto-layout workflow' }).click();
+  await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
+  const title = page.getByLabel('Title').last();
+  await title.fill('Native undo stays available');
+  await title.press('Control+z');
+  await expect(title).not.toHaveValue('');
 });
 
 test('corrupt project import reports an error without leaving the recovery flow', async ({ page }) => {
