@@ -490,6 +490,8 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
   };
 
+  // The listener intentionally refreshes from document state so keyboard commands use the active selection.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
