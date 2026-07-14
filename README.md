@@ -6,9 +6,15 @@ WeaveStudio is a local-first visual workflow canvas for turning messy notes, tra
 
 [Open the public demo](https://weavestudio-demo.vercel.app/) · [Acquisition overview](https://weavestudio-demo.vercel.app/acquire)
 
-**Release status:** v1.0.0
+**Release status:** v1.0.0 — acquisition-ready consolidated release
 
 ![WeaveStudio home screen](docs/screenshots/weavestudio-home.png)
+
+## Current release authority
+
+The authoritative editable source is the `master` branch of this repository. The acquisition hardening, OpenAI/Gemini BYOK workflow, browser validation, buyer materials, commercial architecture guidance, and repository-governance work were consolidated into `master` on July 14, 2026.
+
+Generated acquisition ZIPs and deployment artifacts are outputs of the authoritative source; they do not supersede it.
 
 ## The problem it solves
 
@@ -30,10 +36,13 @@ Important source material often begins as scattered, inconsistent fragments. Wea
 - Five primary templates plus an expandable legacy starter pack
 - Source ingest, editable canvas nodes, and explicit review checkpoints
 - Named browser-local workspaces with autosave, visible save state, and snapshots
+- Bounded workspace undo/redo with toolbar and keyboard shortcuts
+- Workflow outline, minimap, explicit auto-layout, and keyboard-safe deletion
 - Workflow Validator for structure, completeness, review gaps, and export readiness
 - Template-structured deliverable generation with an editable draft
 - Markdown, PDF, and re-importable Project JSON export
-- Optional AI Assist blueprint: offline/mock-first, with live provider requests only after explicit confirmation
+- Owned-data backup, validated restore, import-as-new, scoped clearing, and storage-pressure guidance
+- Optional OpenAI/Gemini BYOK assistance with explicit consent for each request and human review before applying output
 
 ## Product tour
 
@@ -53,7 +62,7 @@ Important source material often begins as scattered, inconsistent fragments. Wea
 
 WeaveStudio is a static browser application. The standard workflow has no backend, account system, cloud database, or required external API. Workspaces are stored in browser `localStorage`; exports are files you initiate from the browser.
 
-The normal workflow does not make provider requests. Optional AI Assist live-provider requests are disabled until a user explicitly confirms the action and may send the configured prompt/context to that provider. API keys are not bundled with WeaveStudio and are not saved to `localStorage`.
+The normal workflow does not make provider requests. Optional AI Assist requests are disabled until a user explicitly confirms the individual action and may send the displayed prompt/context to the selected provider. API keys are not bundled with WeaveStudio, are held only in volatile tab memory, and are not saved to `localStorage` or project exports.
 
 ## Local development
 
@@ -71,7 +80,7 @@ npm run typecheck
 npm run build
 npm run test:browser
 npm run package:acquisition
-# Full buyer release gate (all of the above)
+# Full buyer release gate
 npm run verify:buyer
 ```
 
@@ -85,29 +94,33 @@ npm run preview
 
 - **Markdown** produces an editable text deliverable.
 - **PDF** produces a simple local print-oriented representation of the draft.
-- **Project JSON** preserves the workspace nodes, edges, source material, template selection, and deliverable draft for re-import.
-- **Snapshots** capture a coherent local checkpoint of the workspace state.
+- **Project JSON** preserves workspace nodes, edges, source material, template selection, and the deliverable draft for re-import.
+- **Snapshots** capture a coherent local checkpoint of workspace state.
+- **Download all local data** creates an owned-data backup that can be validated and restored.
 
 ## Known limitations and review boundaries
 
 - Browser `localStorage` is neither encrypted storage nor durable cloud storage. Clearing site data, using private browsing, changing browsers, or device cleanup can remove workspaces.
 - Workflow Validator evaluates workflow structure and readiness; it does not verify facts or guarantee correctness.
-- Generated work requires human review before sharing.
-- WeaveStudio is a single-user, desktop-oriented workflow tool. It does not provide real-time collaboration, cloud sync, or account-based sharing.
+- Generated and AI-assisted work requires human review before sharing or applying.
+- WeaveStudio is a single-user workflow tool. It does not provide real-time collaboration, cloud sync, account-based sharing, or billing.
+- Dense graph editing is most efficient on desktop; mobile includes dedicated Inspector and Snapshot sheets but remains better suited to review and lighter edits.
 - It is not legal, medical, financial, compliance, or security software.
 
 See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for full details.
 
 ## License
 
-[Proprietary - All Rights Reserved](LICENSE.md). Access to this private repository does not grant a license to reuse the source or associated intellectual property.
+[Proprietary — All Rights Reserved](LICENSE.md). Public visibility is provided for evaluation and portfolio review only. It does not grant a license to copy, redistribute, commercialize, or reuse the source or associated intellectual property.
 
 ## Production deployment
 
-Production is deployed from the authoritative `master` branch to [weavestudio-nine.vercel.app](https://weavestudio-nine.vercel.app/). `vercel.json` provides the SPA rewrite needed for direct route refreshes.
+Production is deployed from the authoritative `master` branch to [weavestudio-nine.vercel.app](https://weavestudio-nine.vercel.app/). The public review demo and acquisition overview are available at [weavestudio-demo.vercel.app](https://weavestudio-demo.vercel.app/). `vercel.json` provides the SPA rewrite needed for direct route refreshes.
 
 ## Buyer materials
 
-The acquisition-ready executive summary, architecture/maintenance guide, feature-reality matrix, outreach copy, and preview instructions are in [`docs/buyer/`](docs/buyer/). The package command builds a fresh ZIP and prints its SHA-256; generated release files are intentionally not committed.
+The acquisition-ready executive summary, architecture and maintenance guide, feature-reality matrix, outreach copy, value proof, public-demo notes, and preview instructions are in [`docs/buyer/`](docs/buyer/). The package command builds a fresh ZIP and prints its SHA-256; generated release files are intentionally not committed.
 
-For a buyer transfer runbook and first-90-day operating plan, see [`docs/buyer/TRANSFER_CHECKLIST.md`](docs/buyer/TRANSFER_CHECKLIST.md) and [`docs/buyer/OPERATING_PLAN_90_DAYS.md`](docs/buyer/OPERATING_PLAN_90_DAYS.md).
+For transfer and post-acquisition operation, see [`docs/buyer/TRANSFER_CHECKLIST.md`](docs/buyer/TRANSFER_CHECKLIST.md) and [`docs/buyer/OPERATING_PLAN_90_DAYS.md`](docs/buyer/OPERATING_PLAN_90_DAYS.md).
+
+No revenue, customer, active-user, compliance-certification, or completed-acquisition claim is included with this asset.
