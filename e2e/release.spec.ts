@@ -31,7 +31,8 @@ test('AI provider request stays behind explicit consent', async ({ page }, testI
   expect(requests).toBe(0);
 });
 
-test('AI consent preflight is visible without a key and dispatches exactly once after confirmation', async ({ page }) => {
+test('AI consent preflight is visible without a key and dispatches exactly once after confirmation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The existing consent test covers the mobile inspector sheet.');
   let requests = 0;
   await page.route(/api\.openai\.com/, async (route) => { requests += 1; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output_text: 'Reviewed draft' }) }); });
   await page.goto('/app');
@@ -51,7 +52,8 @@ test('AI consent preflight is visible without a key and dispatches exactly once 
   expect(requests).toBe(1);
 });
 
-test('workspace dialogs close with Escape and return focus to their trigger', async ({ page }) => {
+test('workspace dialogs close with Escape and return focus to their trigger', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop toolbar dialog coverage; mobile sheets are covered separately.');
   await page.goto('/app');
   const validate = page.getByRole('button', { name: /validate/i });
   await validate.click();
