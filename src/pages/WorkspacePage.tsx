@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ClipboardCheck, Database, Eye, LayoutDashboard, ListTree, Redo2, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
 import { WorkflowCanvas } from '../components/canvas/WorkflowCanvas';
@@ -243,13 +243,15 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
   };
 
-  const handleDeleteNode = (id: string) => {
+  const handleDeleteNode = useCallback((id: string) => {
     replaceGraph({
       nodes: workspace.nodes.filter((node) => node.id !== id),
       edges: workspace.edges.filter((edge) => edge.source !== id && edge.target !== id),
     });
     setSelectedNodeId((current) => (current === id ? null : current));
-  };
+  // replaceGraph is recreated with workspace state; this callback intentionally follows the active graph.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace.nodes, workspace.edges]);
 
   const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
     if (restoringHistoryRef.current) return;
@@ -491,7 +493,6 @@ export const WorkspacePage = () => {
   };
 
   // The listener intentionally refreshes from document state so keyboard commands use the active selection.
-  // oxlint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -511,7 +512,7 @@ export const WorkspacePage = () => {
     };
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
-  }, [selectedNodeId, workspace.nodes, workspace.edges]);
+  }, [handleDeleteNode, selectedNodeId]);
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden relative min-h-0 h-full">
