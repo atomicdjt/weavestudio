@@ -493,12 +493,13 @@ export const WorkspacePage = () => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.matches('input, textarea, select, button, [contenteditable="true"]')) return;
-      if (!event.ctrlKey && !event.metaKey && (event.key === 'Delete' || event.key === 'Backspace') && selectedNodeId) {
+      const isTextField = Boolean(target?.matches('input, textarea, select, [contenteditable="true"]'));
+      if (!event.ctrlKey && !event.metaKey && !isTextField && !target?.matches('button') && (event.key === 'Delete' || event.key === 'Backspace') && selectedNodeId) {
         event.preventDefault();
         handleDeleteNode(selectedNodeId);
         return;
       }
+      if (isTextField) return;
       if (!(event.ctrlKey || event.metaKey)) return;
       const redo = event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey);
       const undo = event.key.toLowerCase() === 'z' && !event.shiftKey;

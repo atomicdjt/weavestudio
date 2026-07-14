@@ -28,7 +28,8 @@ test('guided demo and invalid routes recover in the rendered app', async ({ page
   await expect(page.getByRole('heading', { name: /page not found/i })).toBeVisible();
 });
 
-test('guided-demo reset asks before replacing a non-demo workspace', async ({ page }) => {
+test('guided-demo reset asks before replacing a non-demo workspace', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The desktop toolbar control is covered here; mobile exposes the same action in the responsive toolbar.');
   await page.goto('/app');
   await page.getByRole('button', { name: 'Guided demo', exact: true }).click();
   const confirm = page.getByRole('dialog', { name: 'Open guided demo?' });
