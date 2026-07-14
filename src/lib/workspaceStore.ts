@@ -107,6 +107,24 @@ export const createWorkspace = (options?: {
   return doc;
 };
 
+/** Stable, idempotent guided-demo creation. Existing user duplicates are intentionally preserved. */
+export const getOrCreateGuidedDemo = (factory: () => WorkspaceDocument): WorkspaceDocument => {
+  const index = loadIndex();
+  for (const entry of index.workspaces) {
+    const existing = loadWorkspaceById(entry.id);
+    if (existing?.meta?.guidedDemo === true) {
+      setActiveWorkspaceId(existing.id);
+      return existing;
+    }
+  }
+  const demo = factory();
+  return createWorkspace({
+    id: 'weavestudio-guided-demo', name: demo.name, templateId: demo.templateId,
+    nodes: demo.nodes, edges: demo.edges, sourceMaterial: demo.sourceMaterial,
+    deliverableDraft: demo.deliverableDraft, meta: { ...demo.meta, guidedDemo: true },
+  });
+};
+
 export const saveWorkspaceDocument = (doc: WorkspaceDocument): SaveResult => {
   const updated: WorkspaceDocument = {
     ...doc,
@@ -267,6 +285,12 @@ export const getSnapshots = (): VersionSnapshot[] => {
   }
 };
 
+export const saveRecoverySnapshot = (title: string, workspace: WorkspaceDocument): { snapshot: VersionSnapshot; result: SaveResult } => {
+  const snapshot = saveSnapshot(title, workspace);
+  const saved = getSnapshots().some((item) => item.id === snapshot.id);
+  return { snapshot, result: saved ? { status: 'saved' } : { status: 'error', error: 'Could not save a recovery checkpoint.' } };
+};
+
 export const saveSnapshot = (
   title: string,
   workspace: WorkspaceDocument,
@@ -278,6 +302,7 @@ export const saveSnapshot = (
     snapshotVersion: SNAPSHOT_FORMAT_VERSION,
     workspaceId: workspace.id,
     workspaceName: workspace.name,
+    workspaceNameAtCreation: workspace.name,
     nodes: structuredClone(workspace.nodes),
     edges: structuredClone(workspace.edges),
     sourceMaterial: workspace.sourceMaterial,
@@ -310,6 +335,9 @@ export const applySnapshotToWorkspace = (
   workspace: WorkspaceDocument,
   snapshot: VersionSnapshot,
 ): { workspace: WorkspaceDocument; legacyIncomplete: boolean } => {
+  if (snapshot.workspaceId && snapshot.workspaceId !== workspace.id) {
+    throw new Error('This snapshot belongs to another workspace. Create a workspace from it instead.');
+  }
   const isFull =
     (snapshot.snapshotVersion ?? 1) >= SNAPSHOT_FORMAT_VERSION ||
     snapshot.sourceMaterial !== undefined ||
@@ -374,6 +402,54 @@ export const clearAllLocalData = (): void => {
     if (key && key.startsWith('weavestudio_')) keysToRemove.push(key);
   }
   keysToRemove.forEach((key) => localStorage.removeItem(key));
+};
+
+/** Export only WeaveStudio-owned records for a portable full-browser backup. */
+export const collectFullBrowserBackup = (): Record<string, string> => {
+  const backup: Record<string, string> = {};
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith('weavestudio_')) backup[key] = localStorage.getItem(key) ?? '';
+  }
+  return backup;
+};
+
+export type FullBrowserBackup = { records: Record<string, string>; workspaceCount: number; snapshotCount: number };
+
+/** Validate every owned record before a restore can mutate browser storage. */
+export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBrowserBackup } | { ok: false; error: string } => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, error: 'Backup must be a JSON object.' };
+  const records = raw as Record<string, unknown>;
+  const keys = Object.keys(records);
+  if (!keys.length || keys.some((key) => !key.startsWith('weavestudio_') || typeof records[key] !== 'string')) {
+    return { ok: false, error: 'Backup contains invalid or non-WeaveStudio records.' };
+  }
+  const parsed: Record<string, unknown> = {};
+  try { for (const key of keys) parsed[key] = JSON.parse(records[key] as string); } catch { return { ok: false, error: 'Backup contains invalid JSON and was not restored.' }; }
+  if (parsed[INDEX_KEY]) {
+    const index = validateWorkspaceIndex(parsed[INDEX_KEY]);
+    if (!index.ok) return { ok: false, error: `Backup index is invalid: ${index.error}` };
+    for (const entry of index.data.workspaces) {
+      const document = parsed[workspaceKey(entry.id)];
+      const valid = validateWorkspaceDocument(document);
+      if (!valid.ok) return { ok: false, error: `Workspace “${entry.name}” is invalid: ${valid.error}` };
+    }
+  }
+  const snapshots = parsed[SNAPSHOTS_KEY] ?? parsed[LEGACY_VERSIONS_KEY];
+  if (snapshots !== undefined && !Array.isArray(snapshots)) return { ok: false, error: 'Backup snapshots are invalid.' };
+  const workspaceCount = parsed[INDEX_KEY] ? (validateWorkspaceIndex(parsed[INDEX_KEY]).ok ? (validateWorkspaceIndex(parsed[INDEX_KEY]) as { ok: true; data: WorkspaceIndex }).data.workspaces.length : 0) : 0;
+  return { ok: true, data: { records: records as Record<string, string>, workspaceCount, snapshotCount: Array.isArray(snapshots) ? snapshots.length : 0 } };
+};
+
+/** Replace only owned keys after a successful staged inspection. */
+export const restoreFullBrowserBackup = (backup: FullBrowserBackup): { ok: true } | { ok: false; error: string } => {
+  try {
+    clearAllLocalData();
+    for (const [key, value] of Object.entries(backup.records)) localStorage.setItem(key, value);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Could not write the backup to browser storage.' };
+  }
 };
 
 export const downloadProjectJson = (doc: WorkspaceDocument): void => {

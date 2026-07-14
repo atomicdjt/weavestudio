@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layers, X } from 'lucide-react';
+import { AccessibleDialog } from '../ui/AccessibleDialog';
 
 interface TemplateLoadModalProps {
   templateName: string;
@@ -10,8 +11,7 @@ interface TemplateLoadModalProps {
 
 export const TemplateLoadModal = ({ templateName, onReplace, onMerge, onCancel }: TemplateLoadModalProps) => {
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-panel border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
+    <AccessibleDialog label="Load Template" onClose={onCancel} className="bg-panel border border-border rounded-xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border bg-[#18181b]">
           <h2 className="font-bold text-white flex items-center gap-2">
             <Layers className="w-5 h-5 text-blue-400" />
@@ -42,7 +42,6 @@ export const TemplateLoadModal = ({ templateName, onReplace, onMerge, onCancel }
             </button>
           </div>
         </div>
-      </div>
-    </div>
+    </AccessibleDialog>
   );
 };

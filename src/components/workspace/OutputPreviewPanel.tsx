@@ -9,6 +9,8 @@ import {
 import { composeDeliverableMarkdown } from '../../lib/deliverableEngine';
 import { FileText, FileJson, FileDown, X, Code2, Eye, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { AccessibleDialog } from '../ui/AccessibleDialog';
 
 interface OutputPreviewPanelProps {
   workspace: WorkspaceDocument;
@@ -32,6 +34,7 @@ export const OutputPreviewPanel = ({
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
 
   const generated = useMemo(
     () =>
@@ -74,11 +77,14 @@ export const OutputPreviewPanel = ({
 
   const handleRegenerate = () => {
     if (userEdited) {
-      const ok = confirm(
-        'Regenerate from canvas will replace your manually edited deliverable draft. This cannot be undone from this dialog.\n\nCancel keeps your edited draft. OK replaces it with a fresh composition from the canvas.',
-      );
-      if (!ok) return;
+      setConfirmRegenerate(true);
+      return;
     }
+
+    regenerate();
+  };
+
+  const regenerate = () => {
 
     const next = composeDeliverableMarkdown(workspace.nodes, workspace.edges, {
       title,
@@ -132,13 +138,8 @@ export const OutputPreviewPanel = ({
   };
 
   return (
-    <div className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center p-3 sm:p-8 backdrop-blur-sm">
-      <div
-        className="bg-panel border border-border rounded-lg shadow-2xl w-full max-w-6xl h-full max-h-[880px] flex flex-col overflow-hidden"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Output preview"
-      >
+    <>
+    <AccessibleDialog label="Output preview" onClose={onClose} className="bg-panel border border-border rounded-lg shadow-2xl w-full max-w-6xl h-full max-h-[880px] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 bg-[#1e1e24] border-b border-gray-800 shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white">Deliverable preview</h2>
@@ -303,7 +304,8 @@ export const OutputPreviewPanel = ({
             </p>
           </div>
         </div>
-      </div>
-    </div>
+    </AccessibleDialog>
+      <ConfirmDialog open={confirmRegenerate} title="Replace manual deliverable edits?" description="Regenerating replaces the edited draft with a fresh composition from the canvas." confirmLabel="Regenerate draft" destructive onCancel={() => setConfirmRegenerate(false)} onConfirm={() => { setConfirmRegenerate(false); regenerate(); }} />
+    </>
   );
 };

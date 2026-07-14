@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const created: Array<{ name: string; meta?: { guidedDemo?: boolean } }> = [];
+const store = new Map<string, { id: string; name: string; meta?: { guidedDemo?: boolean } }>();
 
 const sessionMap = new Map<string, string>();
 
 vi.mock('./workspaceStore', () => {
-  const store = new Map<string, { id: string; name: string; meta?: { guidedDemo?: boolean } }>();
   return {
     createWorkspace: (options: {
       name?: string;
@@ -28,6 +28,14 @@ vi.mock('./workspaceStore', () => {
     },
     loadWorkspaceById: (id: string) => store.get(id) ?? null,
     setActiveWorkspaceId: vi.fn(),
+    getOrCreateGuidedDemo: (factory: () => { name: string; templateId: string; nodes: unknown[]; edges: unknown[]; sourceMaterial: string }) => {
+      const existing = [...store.values()].find((entry) => entry.meta?.guidedDemo);
+      if (existing) return existing;
+      const demo = factory();
+      const id = 'weavestudio-guided-demo';
+      const doc = { id, name: demo.name, meta: { guidedDemo: true }, nodes: demo.nodes, edges: demo.edges, sourceMaterial: demo.sourceMaterial, templateId: demo.templateId };
+      created.push({ name: doc.name, meta: doc.meta }); store.set(id, doc); return doc;
+    },
   };
 });
 
@@ -56,6 +64,7 @@ vi.mock('../data/templates', () => ({
 describe('resolveWorkspaceFromNav / guided demo', () => {
   beforeEach(() => {
     created.length = 0;
+    store.clear();
     sessionMap.clear();
     vi.stubGlobal('sessionStorage', {
       getItem: (k: string) => sessionMap.get(k) ?? null,
@@ -91,11 +100,11 @@ describe('resolveWorkspaceFromNav / guided demo', () => {
     expect(created).toHaveLength(1);
   });
 
-  it('new intentId creates a separate intentional demo workspace', async () => {
+  it('new intentId activates the canonical guided demo without creating a duplicate', async () => {
     const { resolveWorkspaceFromNav } = await import('./workspaceInit');
     const first = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId: 'one' });
     const second = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId: 'two' });
-    expect(first?.id).not.toBe(second?.id);
-    expect(created).toHaveLength(2);
+    expect(first?.id).toBe(second?.id);
+    expect(created).toHaveLength(1);
   });
 });

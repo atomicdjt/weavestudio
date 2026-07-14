@@ -84,6 +84,11 @@ export const SourceIngestPanel = ({
           nodes (you will be asked to confirm if that would replace edits).
         </p>
       )}
+      {syncStatus === 'canvas_ahead' && (
+        <p className="text-[11px] text-sky-200/90">
+          Canvas changes are newer than the source panel. Your canvas is preserved. Export it, or update the source panel deliberately before applying another split.
+        </p>
+      )}
       <textarea
         value={sourceMaterial}
         onChange={(e) => onChange(e.target.value)}

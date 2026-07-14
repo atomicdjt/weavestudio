@@ -1,6 +1,6 @@
 import type { WorkspaceDocument } from '../types';
 import { claimNavIntent } from './navIntent';
-import { createWorkspace } from './workspaceStore';
+import { createWorkspace, getOrCreateGuidedDemo } from './workspaceStore';
 import { createGuidedDemoWorkspace } from '../data/demos/guidedDemo';
 import { getTemplateById, resolveTemplateId } from '../data/templates';
 
@@ -17,17 +17,7 @@ export const resolveWorkspaceFromNav = (state: LocationState): WorkspaceDocument
 
   if (state.openGuidedDemo) {
     const intentId = state.intentId || 'guided-demo-default';
-    return claimNavIntent(intentId, () => {
-      const demo = createGuidedDemoWorkspace();
-      return createWorkspace({
-        name: demo.name,
-        templateId: demo.templateId,
-        nodes: demo.nodes,
-        edges: demo.edges,
-        sourceMaterial: demo.sourceMaterial,
-        meta: { guidedDemo: true, appliedSourceFingerprint: demo.sourceMaterial },
-      });
-    });
+    return claimNavIntent(intentId, () => getOrCreateGuidedDemo(createGuidedDemoWorkspace));
   }
 
   if (state.blankWorkspace) {

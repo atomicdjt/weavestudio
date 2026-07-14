@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import {
   CheckCircle2,
   Code2,
@@ -7,6 +8,7 @@ import {
   TrendingUp,
   Users,
   HelpCircle,
+  PlayCircle,
 } from 'lucide-react';
 
 const stackItems = [
@@ -71,6 +73,16 @@ const faqs = [
   },
 ];
 
+const WalkthroughPreview = () => {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  return <section aria-label="Recorded workflow walkthrough" className="rounded-xl border border-blue-500/30 bg-[#0d1423] p-5 sm:p-6">
+    <div className="grid gap-5 md:grid-cols-[1.1fr_1fr] md:items-center">
+      <div><p className="text-xs font-semibold uppercase tracking-wider text-blue-300">Recorded product walkthrough</p><h2 className="mt-2 text-2xl font-bold text-white">See a local-first workflow become a deliverable</h2><p className="mt-3 text-sm leading-relaxed text-gray-300">A concise guided-demo recording shows source material, workflow validation, and export preparation. No account, API key, or live provider call is used in this walkthrough.</p><button type="button" onClick={() => { void videoRef.current?.play(); }} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-blue-400/40 bg-blue-500/15 px-4 py-2.5 text-sm font-semibold text-blue-100 hover:bg-blue-500/25"><PlayCircle className="h-4 w-4" />Play guided demo walkthrough</button></div>
+      <video ref={videoRef} controls preload="metadata" poster="/weavestudio-demo-poster.png" className="w-full rounded-lg border border-border bg-black shadow-xl" aria-label="Guided demo walkthrough: source material to validated deliverable"><source src="/weavestudio-guided-demo.webm" type="video/webm" />Your browser cannot play this video. The buyer package includes the recorded walkthrough.</video>
+    </div>
+  </section>;
+};
+
 export const AcquirePage = () => {
   return (
     <div className="flex-1 overflow-y-auto p-6 sm:p-8 max-w-5xl mx-auto w-full">
@@ -92,6 +104,11 @@ export const AcquirePage = () => {
           points and an optional BYOK AI integration pattern. Complete source and documentation are available for
           acquisition and customization.
         </p>
+        <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 max-w-3xl">
+          <h2 className="font-semibold text-emerald-100">Request the acquisition brief</h2>
+          <p className="mt-2 text-sm leading-relaxed text-emerald-50/80">Request source/IP inventory, the verified buyer package, and transfer checklist. Pricing is discussed privately after scope and handover needs are understood.</p>
+          <a href="mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry" aria-label="Email davidelsey9513@gmail.com for acquisition inquiries" className="mt-4 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">Email acquisition inquiries</a>
+        </div>
       </div>
 
       <div className="space-y-12">
@@ -103,6 +120,8 @@ export const AcquirePage = () => {
             validation checkpoints.
           </p>
         </section>
+
+        <WalkthroughPreview />
 
         {/* Why acquire */}
         <section>

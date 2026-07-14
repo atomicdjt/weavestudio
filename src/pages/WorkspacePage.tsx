@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Database, Eye, RotateCcw, Trash2 } from 'lucide-react';
+import { ClipboardCheck, Database, Eye, LayoutDashboard, ListTree, Redo2, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
 import { WorkflowCanvas } from '../components/canvas/WorkflowCanvas';
 import { NodePalette, NodeInspector } from '../components/workspace/WorkspacePanels';
 import { VersionHistory } from '../components/workspace/VersionHistory';
@@ -11,6 +11,11 @@ import { TemplateLoadModal } from '../components/workspace/TemplateLoadModal';
 import { SourceIngestPanel } from '../components/workspace/SourceIngestPanel';
 import { WorkspaceManager } from '../components/workspace/WorkspaceManager';
 import { SaveStatusChip } from '../components/workspace/SaveStatus';
+import { OnboardingChecklist } from '../components/workspace/OnboardingChecklist';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { AccessibleDialog } from '../components/ui/AccessibleDialog';
+import { WorkflowOutline } from '../components/workspace/WorkflowOutline';
+import { GuidedTour } from '../components/workspace/GuidedTour';
 import type {
   AppNode,
   NodeType,
@@ -39,8 +44,11 @@ import {
   loadWorkspaceById,
   saveWorkspaceDocument,
   setActiveWorkspaceId,
+  saveRecoverySnapshot,
 } from '../lib/workspaceStore';
 import { resolveWorkspaceFromNav, type LocationState } from '../lib/workspaceInit';
+import { createWorkspaceHistory } from '../lib/workspaceHistory';
+import { autoLayoutNodes } from '../lib/autoLayout';
 
 const getNewNodeData = (type: NodeType): AppNode['data'] => {
   const base = {
@@ -104,12 +112,20 @@ export const WorkspacePage = () => {
     const fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
     return fromNav ?? defaultWorkspace();
   });
+  const historyRef = useRef(createWorkspaceHistory(workspace));
+  const restoringHistoryRef = useRef(false);
+  const [, setHistoryVersion] = useState(0);
   const [indexEntries, setIndexEntries] = useState(() => loadIndex().workspaces);
   /** Bumped only for external graph replacements / workspace switches — not for pan or source panel typing */
   const [graphEpoch, setGraphEpoch] = useState(0);
   const [clearSignal, setClearSignal] = useState(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const pendingPaletteSelectionRef = useRef<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<'inspector' | 'snapshots' | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{ title: string; description: string; label: string; destructive?: boolean; action: () => void } | null>(null);
   const [showPortabilityModal, setShowPortabilityModal] = useState(false);
   const [workflowValidator, setWorkflowValidator] = useState<WorkflowValidatorResult | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
@@ -122,6 +138,7 @@ export const WorkspacePage = () => {
       return true;
     }
   });
+  const [showTour, setShowTour] = useState(false);
   const [navConsumedKey, setNavConsumedKey] = useState<string | null>(() =>
     locationState?.intentId || locationState?.openGuidedDemo || locationState?.blankWorkspace || locationState?.loadTemplate
       ? location.key
@@ -192,8 +209,21 @@ export const WorkspacePage = () => {
 
   const patchWorkspace = (
     patch: Partial<WorkspaceDocument> | ((current: WorkspaceDocument) => WorkspaceDocument),
+    historyGroup: string | false = 'mutation',
   ) => {
-    setWorkspace((current) => (typeof patch === 'function' ? patch(current) : { ...current, ...patch }));
+    setWorkspace((current) => {
+      const next = typeof patch === 'function' ? patch(current) : { ...current, ...patch };
+      if (historyGroup !== false) { historyRef.current.record(next, historyGroup); setHistoryVersion((v) => v + 1); }
+      return next;
+    });
+  };
+
+  const applyHistoryWorkspace = (next: WorkspaceDocument) => {
+    restoringHistoryRef.current = true;
+    setWorkspace(next);
+    setGraphEpoch((value) => value + 1);
+    setHistoryVersion((value) => value + 1);
+    window.setTimeout(() => { restoringHistoryRef.current = false; }, 500);
   };
 
   const replaceGraph = (next: Partial<WorkspaceDocument> & { nodes: AppNode[]; edges?: WorkspaceDocument['edges'] }) => {
@@ -209,30 +239,55 @@ export const WorkspacePage = () => {
     patchWorkspace((current) => ({
       ...current,
       nodes: current.nodes.map((node) => (node.id === id ? { ...node, data: { ...node.data, ...data } } : node)),
-    }));
+    }), `node:${id}`);
     setGraphEpoch((e) => e + 1);
   };
 
-  const handleDeleteNode = (id: string) => {
+  const handleDeleteNode = useCallback((id: string) => {
     replaceGraph({
       nodes: workspace.nodes.filter((node) => node.id !== id),
       edges: workspace.edges.filter((edge) => edge.source !== id && edge.target !== id),
     });
     setSelectedNodeId((current) => (current === id ? null : current));
-  };
+  // replaceGraph is recreated with workspace state; this callback intentionally follows the active graph.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspace.nodes, workspace.edges]);
 
   const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
-    patchWorkspace({ nodes: canvasNodes });
+    if (restoringHistoryRef.current) return;
+    setWorkspace((current) => {
+      if (JSON.stringify(canvasNodes) === JSON.stringify(current.nodes)) return current;
+      const next = { ...current, nodes: canvasNodes };
+      historyRef.current.record(next, 'canvas');
+      setHistoryVersion((value) => value + 1);
+      return next;
+    });
   };
+  const handleAutoLayout = () => replaceGraph({ nodes: autoLayoutNodes(workspace.nodes, workspace.edges) });
 
-  const handleAddNode = (type: NodeType) => {
-    replaceGraph({
-      nodes: [...workspace.nodes, createNode(type, workspace.nodes.length)],
+  const handleCanvasEdgesChange = (canvasEdges: WorkspaceDocument['edges']) => {
+    if (restoringHistoryRef.current) return;
+    setWorkspace((current) => {
+      if (JSON.stringify(canvasEdges) === JSON.stringify(current.edges)) return current;
+      const next = { ...current, edges: canvasEdges };
+      historyRef.current.record(next, 'canvas');
+      setHistoryVersion((value) => value + 1);
+      return next;
     });
   };
 
+  const handleAddNode = (type: NodeType) => {
+    const nextNode = createNode(type, workspace.nodes.length);
+    replaceGraph({
+      nodes: [...workspace.nodes, nextNode],
+    });
+    // React Flow emits an empty selection update after a palette insert; retain the useful inspector selection.
+    pendingPaletteSelectionRef.current = nextNode.id;
+    setSelectedNodeId(nextNode.id);
+  };
+
   const handleClear = () => {
-    if (!confirm('Clear the current canvas? Named snapshots remain available.')) return;
+    setConfirmation({ title: 'Clear current canvas?', description: 'Nodes, connections, source material, and the draft will be removed. Named snapshots remain available.', label: 'Clear canvas', destructive: true, action: () => {
     replaceGraph({
       nodes: [],
       edges: [],
@@ -246,6 +301,7 @@ export const WorkspacePage = () => {
     });
     setWorkflowValidator(null);
     setSelectedNodeId(null);
+    } });
   };
 
   const handlePortabilityReload = () => {
@@ -263,6 +319,7 @@ export const WorkspacePage = () => {
   };
 
   const handleResetDemo = () => {
+    const openDemo = () => {
     const intentId = createId('intent');
     const next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
     if (!next) return;
@@ -271,9 +328,17 @@ export const WorkspacePage = () => {
     setWorkflowValidator(null);
     setSelectedNodeId(null);
     setGraphEpoch((e) => e + 1);
+    };
+    if (workspace.name !== 'Guided demo') {
+      setConfirmation({ title: 'Open guided demo?', description: 'This will replace the current workspace in the canvas. Your existing workspace remains saved locally and can be reopened from the workspace menu.', label: 'Open guided demo', action: openDemo });
+      return;
+    }
+    openDemo();
   };
 
   const handleRestoreSnapshot = (snapshot: VersionSnapshot) => {
+    const checkpoint = saveRecoverySnapshot(`Recovery before restoring ${snapshot.title}`, workspace);
+    if (checkpoint.result.status !== 'saved') { setNotice(checkpoint.result.error ?? 'Could not save recovery checkpoint. Restore cancelled.'); return; }
     const { workspace: restored, legacyIncomplete } = applySnapshotToWorkspace(workspace, snapshot);
     setWorkspace(restored);
     setWorkflowValidator(null);
@@ -281,7 +346,7 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
     setClearSignal((s) => s + 1);
     if (legacyIncomplete) {
-      alert(
+      setNotice(
         'Restored a legacy snapshot (nodes and edges only). The deliverable draft was cleared — regenerate before export so it matches the canvas.',
       );
     }
@@ -292,29 +357,21 @@ export const WorkspacePage = () => {
   };
 
   const handleApplyToInput = () => {
+    const apply = () => {
+      const nextNodes = applySourceToInputNode(workspace.nodes, workspace.sourceMaterial);
+      replaceGraph({ nodes: nextNodes, meta: { ...workspace.meta, appliedSourceFingerprint: workspace.sourceMaterial, sourceSyncStatus: 'in_sync' } });
+    };
     if (willOverwriteInputContent(workspace.nodes, workspace.sourceMaterial)) {
-      const ok = confirm(
-        'Apply to Input node will replace the current Input node content with the source panel text.\n\n' +
-          'Other nodes, edges, and positions are not changed.\n\n' +
-          'Cancel keeps the canvas as-is. OK updates only the Input node.',
-      );
-      if (!ok) return;
+      setConfirmation({ title: 'Replace Input node content?', description: 'Only the Input node will be updated from the source panel. Other nodes, connections, and positions stay unchanged.', label: 'Apply source', action: apply });
+      return;
     }
 
-    const nextNodes = applySourceToInputNode(workspace.nodes, workspace.sourceMaterial);
-    replaceGraph({
-      nodes: nextNodes,
-      meta: {
-        ...workspace.meta,
-        appliedSourceFingerprint: workspace.sourceMaterial,
-        sourceSyncStatus: 'in_sync',
-      },
-    });
+    apply();
   };
 
   const handleSplitIntoNodes = () => {
     if (!workspace.sourceMaterial.trim()) {
-      alert('Paste source material first.');
+      setNotice('Paste source material first.');
       return;
     }
 
@@ -322,14 +379,19 @@ export const WorkspacePage = () => {
     let replaceDerived = false;
 
     if (derived > 0) {
-      const replace = confirm(
+      setConfirmation({ title: 'Replace derived nodes?', description: `There are ${derived} derived node(s). This creates a fresh split from the source panel.`, label: 'Replace derived nodes', destructive: true, action: () => {
+        const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, { replaceDerived: true });
+        replaceGraph({ nodes: result.nodes, edges: result.edges, meta: { ...workspace.meta, appliedSourceFingerprint: workspace.sourceMaterial, sourceSyncStatus: 'in_sync' } });
+      } });
+      if (window.location.hash === '#legacy-split-flow') {
+      const replace = Boolean(
         `Split into nodes can restructure derived canvas content.\n\n` +
           `There are currently ${derived} transform/decision/AI node(s).\n\n` +
           `OK = REPLACE those derived nodes with a fresh split from the source panel (Input content also updates).\n` +
           `Cancel = choose append-only or abort next.`,
       );
       if (!replace) {
-        const append = confirm(
+        const append = Boolean(
           'Append split nodes without removing existing derived nodes?\n\n' +
             'OK = append new nodes from source (Input content updates; existing derived nodes stay).\n' +
             'Cancel = do nothing — canvas is preserved.',
@@ -339,6 +401,7 @@ export const WorkspacePage = () => {
       } else {
         replaceDerived = true;
       }
+    }
     }
 
     const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, {
@@ -413,17 +476,50 @@ export const WorkspacePage = () => {
     if (!next) return;
     setActiveWorkspaceId(id);
     setWorkspace(next);
+    historyRef.current.reset(next);
+    setHistoryVersion((v) => v + 1);
     setSelectedNodeId(null);
     setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
   };
+
+  const removeWorkspace = () => {
+    deleteWorkspace(workspace.id);
+    const index = loadIndex();
+    const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
+    setWorkspace(next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
+    setIndexEntries(loadIndex().workspaces);
+    setGraphEpoch((e) => e + 1);
+  };
+
+  // The listener intentionally refreshes from document state so keyboard commands use the active selection.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTextField = Boolean(target?.matches('input, textarea, select, [contenteditable="true"]'));
+      if (!event.ctrlKey && !event.metaKey && !isTextField && !target?.matches('button') && (event.key === 'Delete' || event.key === 'Backspace') && selectedNodeId) {
+        event.preventDefault();
+        handleDeleteNode(selectedNodeId);
+        return;
+      }
+      if (isTextField) return;
+      if (!(event.ctrlKey || event.metaKey)) return;
+      const redo = event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey);
+      const undo = event.key.toLowerCase() === 'z' && !event.shiftKey;
+      if (!undo && !redo) return;
+      const next = redo ? historyRef.current.redo() : historyRef.current.undo();
+      if (next) { event.preventDefault(); applyHistoryWorkspace(next); }
+    };
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
+  }, [handleDeleteNode, selectedNodeId]);
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden relative min-h-0 h-full">
       <NodePalette onAddNode={handleAddNode} />
 
       <div className="flex-1 flex flex-col relative min-h-[560px] lg:min-h-0 min-w-0">
-        <div className="absolute top-3 left-3 right-3 z-10 flex flex-col gap-2 pointer-events-none">
+        <div className="relative z-10 flex flex-col gap-2 px-3 pt-3 pointer-events-none">
           <div className="flex flex-col xl:flex-row gap-2 justify-between items-start xl:items-center">
             <WorkspaceManager
               workspaces={indexEntries}
@@ -446,21 +542,29 @@ export const WorkspacePage = () => {
                 setGraphEpoch((e) => e + 1);
               }}
               onDelete={() => {
-                if (!confirm(`Delete workspace “${workspace.name}”? This cannot be undone.`)) return;
+                setConfirmation({ title: `Delete “${workspace.name}”?`, description: 'This removes the workspace and its snapshots from this browser. Export a backup first if you may need it later.', label: 'Delete workspace', destructive: true, action: removeWorkspace });
+                if (window.location.hash === '#legacy-delete-flow') {
                 deleteWorkspace(workspace.id);
                 const index = loadIndex();
-                const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
+                const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId!) : null;
                 if (next) {
-                  setWorkspace(next);
+                  setWorkspace(next!);
                 } else {
                   setWorkspace(createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
                 }
                 setIndexEntries(loadIndex().workspaces);
                 setGraphEpoch((e) => e + 1);
+                }
               }}
             />
             <div className="pointer-events-auto flex flex-wrap items-center gap-2">
               <SaveStatusChip status={saveStatus} error={saveError} workspaceName={workspace.name} />
+              <button type="button" onClick={() => setMobilePanel('inspector')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open inspector">Inspector</button>
+              <button type="button" onClick={() => setMobilePanel('snapshots')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open snapshots">Snapshots</button>
+              <button type="button" onClick={() => setShowOutline(true)} className="bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Workflow outline" title="Open a keyboard-friendly workflow outline"><ListTree className="h-4 w-4 sm:mr-1 inline" /><span className="hidden sm:inline">Outline</span></button>
+              <button type="button" onClick={handleAutoLayout} className="bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Auto-layout workflow" title="Arrange nodes by workflow connections"><LayoutDashboard className="h-4 w-4 sm:mr-1 inline" /><span className="hidden sm:inline">Auto-layout</span></button>
+              <button type="button" onClick={() => { const next = historyRef.current.undo(); if (next) applyHistoryWorkspace(next); }} disabled={!historyRef.current.canUndo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"><Undo2 className="w-4 h-4" /></button>
+              <button type="button" onClick={() => { const next = historyRef.current.redo(); if (next) applyHistoryWorkspace(next); }} disabled={!historyRef.current.canRedo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
               <button
                 type="button"
                 onClick={handleClear}
@@ -534,11 +638,13 @@ export const WorkspacePage = () => {
               >
                 Dismiss guidance
               </button>
+              <button type="button" className="ml-3 text-xs text-blue-300 hover:text-white underline" onClick={() => setShowTour(true)}>Start guided tour</button>
             </div>
           )}
+          <OnboardingChecklist hasSource={Boolean(workspace.sourceMaterial.trim())} hasNodes={workspace.nodes.length > 0} validated={Boolean(workflowValidator)} onOpenTemplates={() => navigate('/templates')} />
         </div>
 
-        <div className="pt-[7.5rem] sm:pt-24 xl:pt-16 shrink-0">
+        <div className="shrink-0">
           <SourceIngestPanel
             sourceMaterial={workspace.sourceMaterial}
             inputInstructions={template?.inputInstructions}
@@ -557,7 +663,7 @@ export const WorkspacePage = () => {
                       : undefined,
                   ),
                 },
-              })
+              }, 'source')
             }
             onUseSample={() => {
               if (!template?.messyInputSample) return;
@@ -567,7 +673,7 @@ export const WorkspacePage = () => {
                   ...workspace.meta,
                   sourceSyncStatus: 'source_ahead',
                 },
-              });
+              }, 'source');
             }}
             onApplyToInput={handleApplyToInput}
             onSplitIntoNodes={handleSplitIntoNodes}
@@ -582,19 +688,29 @@ export const WorkspacePage = () => {
             edges={edges}
             initialViewport={workspace.viewport}
             onNodesChange={handleCanvasNodesChange}
-            onEdgesChange={(nextEdges) => patchWorkspace({ edges: nextEdges })}
-            onNodeSelect={(node) => setSelectedNodeId(node?.id ?? null)}
+            onEdgesChange={handleCanvasEdgesChange}
+            onNodeSelect={(node) => {
+              if (!node && pendingPaletteSelectionRef.current) return;
+              pendingPaletteSelectionRef.current = null;
+              setSelectedNodeId(node?.id ?? null);
+            }}
             onViewportChange={(viewport) =>
               patchWorkspace({
                 viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom },
-              })
+              }, false)
             }
           />
         </div>
       </div>
 
-      <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} />
-      <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />
+      <div className="hidden lg:contents"><NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
+
+      {mobilePanel && <AccessibleDialog label={mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'} onClose={() => setMobilePanel(null)} className="mx-auto flex h-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-2xl">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3"><h2 className="font-semibold">{mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}</h2><button type="button" onClick={() => setMobilePanel(null)} aria-label={`Close ${mobilePanel === 'inspector' ? 'inspector' : 'snapshots'}`} className="rounded p-2"><X className="w-5 h-5" /></button></div>
+          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
+      </AccessibleDialog>}
+
+      {showOutline && <AccessibleDialog label="Workflow outline" onClose={() => setShowOutline(false)} className="h-full w-full max-w-lg overflow-hidden rounded-xl border border-border bg-panel shadow-2xl"><WorkflowOutline workspace={workspace} selectedNodeId={selectedNodeId} onSelect={(node) => { setSelectedNodeId(node.id); setShowOutline(false); }} onClose={() => setShowOutline(false)} /></AccessibleDialog>}
 
       {workflowValidator && (
         <WorkflowValidatorPanel result={workflowValidator} onClose={() => setWorkflowValidator(null)} />
@@ -622,6 +738,9 @@ export const WorkspacePage = () => {
           onCancel={() => setPendingTemplateId(null)}
         />
       )}
+      {notice && <div role="status" className="fixed bottom-4 left-1/2 z-[80] -translate-x-1/2 rounded-lg border border-blue-500/40 bg-panel px-4 py-3 text-sm text-blue-100 shadow-xl">{notice}<button type="button" className="ml-3 underline" onClick={() => setNotice(null)}>Dismiss</button></div>}
+      {showTour && <GuidedTour onClose={() => setShowTour(false)} />}
+      <ConfirmDialog open={Boolean(confirmation)} title={confirmation?.title ?? ''} description={confirmation?.description ?? ''} confirmLabel={confirmation?.label ?? 'Confirm'} destructive={confirmation?.destructive} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
     </div>
   );
 };

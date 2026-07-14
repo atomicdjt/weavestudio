@@ -5,7 +5,7 @@ import type { NodeData } from '../../../types';
 
 const BaseNode = ({ data, selected, type, icon, colorClass, borderClass }: { data: NodeData, selected?: boolean, type: string, icon: React.ReactNode, colorClass: string, borderClass: string }) => {
   return (
-    <div className={`rounded-xl shadow-lg border bg-panel text-white overflow-hidden w-[280px] transition-all ${borderClass} ${selected ? 'ring-2 ring-blue-500 shadow-blue-900/50 scale-[1.02]' : ''}`}>
+    <div role="group" aria-label={`${type}: ${data.title || 'Untitled node'}${selected ? ', selected' : ''}`} className={`rounded-xl shadow-lg border bg-panel text-white overflow-hidden w-[280px] transition-all ${borderClass} ${selected ? 'ring-2 ring-blue-500 shadow-blue-900/50 scale-[1.02]' : ''}`}>
       <div className={`px-4 py-2 flex items-center space-x-2 border-b ${colorClass} bg-opacity-20`}>
         <div className="shrink-0">{icon}</div>
         <div className="font-semibold text-sm truncate uppercase tracking-wider">{type}</div>

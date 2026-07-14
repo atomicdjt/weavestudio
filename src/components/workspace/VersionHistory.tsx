@@ -10,17 +10,17 @@ interface VersionHistoryProps {
 }
 
 export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHistoryProps) => {
-  const [versions, setVersions] = useState<VersionSnapshot[]>(getVersions());
+  const [versions, setVersions] = useState<VersionSnapshot[]>(() => getVersions().filter((v) => v.workspaceId === workspace.id));
   const [title, setTitle] = useState('');
 
   useEffect(() => {
-    setVersions(getVersions());
+    setVersions(getVersions().filter((v) => v.workspaceId === workspace.id));
   }, [clearSignal, workspace.id]);
 
   const handleSave = () => {
     if (!title.trim()) return;
     const v = saveVersion(title, workspace);
-    setVersions([...getVersions()]);
+    setVersions(getVersions().filter((snapshot) => snapshot.workspaceId === workspace.id));
     setTitle('');
     void v;
   };
@@ -55,6 +55,7 @@ export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHis
           <Save className="w-4 h-4" />
           <span>Save Snapshot</span>
         </button>
+        {!title.trim() && <p className="text-xs text-gray-500">Enter a name to save.</p>}
       </div>
 
       <div className="space-y-3">
@@ -68,6 +69,7 @@ export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHis
           <div key={v.id} className="bg-[#1e1e24] border border-gray-800 rounded-lg p-3">
             <h4 className="font-semibold text-sm text-gray-200 truncate">{v.title}</h4>
             <div className="text-xs text-gray-500 mt-1">{new Date(v.timestamp).toLocaleString()}</div>
+            <div className="text-xs text-gray-500 mt-1">{v.workspaceNameAtCreation ?? v.workspaceName ?? workspace.name}</div>
             <div className="text-[10px] text-gray-600 mt-1">
               {(v.snapshotVersion ?? 1) >= 2 ? 'Full workspace' : 'Legacy graph-only'}
             </div>

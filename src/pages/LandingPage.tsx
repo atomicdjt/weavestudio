@@ -74,7 +74,7 @@ export const LandingPage = () => {
           </span>
         </h1>
         <p className="text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed mb-10">
-          WeaveStudio is a visual canvas for professionals who need to move from messy notes, transcripts, logs, and
+          WeaveStudio is a visual canvas for consultants, freelancers, agencies, and operations teams who need to move from messy notes, transcripts, logs, and
           research fragments to a clear document — without accounts or a required cloud API.
         </p>
 
@@ -108,6 +108,27 @@ export const LandingPage = () => {
         <p className="text-xs text-gray-500">
           Golden path: template → paste source → structure nodes → validate → generate → export → reopen.
         </p>
+      </section>
+
+      <section className="max-w-6xl mx-auto px-6 pb-10" aria-labelledby="workflow-demo-title">
+        <div className="mb-6 text-center">
+          <h2 id="workflow-demo-title" className="text-2xl font-bold text-white">See the workflow take shape</h2>
+          <p className="mt-2 text-sm text-gray-400">A visual path from rough source material to a human-reviewed deliverable.</p>
+        </div>
+        <div className="overflow-hidden rounded-xl border border-border bg-[#0b0b10] shadow-2xl">
+          <div className="flex items-center justify-between border-b border-border bg-panel px-4 py-3">
+            <div className="flex gap-2 text-[10px] font-semibold uppercase tracking-wide text-blue-200"><span className="rounded border border-blue-500/30 bg-blue-500/10 px-2 py-1">Local-first</span><span className="rounded border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-emerald-200">Human-reviewed</span></div>
+            <span className="hidden sm:block text-xs text-emerald-300">Ready to validate</span>
+          </div>
+          <div className="relative min-h-[300px] overflow-hidden p-6 sm:p-10" style={{ backgroundImage: 'radial-gradient(#27272a 1px, transparent 1px)', backgroundSize: '22px 22px' }}>
+            <svg viewBox="0 0 1200 300" preserveAspectRatio="none" className="absolute inset-0 hidden h-full w-full md:block" aria-hidden="true"><path d="M 288 150 C 372 150, 384 150, 468 150" stroke="#3b82f6" strokeWidth="2" fill="none"/><path d="M 684 150 C 768 150, 780 150, 864 150" stroke="#3b82f6" strokeWidth="2" fill="none"/></svg>
+            <div className="relative z-10 grid gap-4 md:grid-cols-3 md:gap-14">
+              <div className="rounded-lg border border-emerald-500/30 bg-panel p-4 shadow-lg"><span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">Input</span><h3 className="mt-2 font-semibold text-white">Discovery notes</h3><p className="mt-2 rounded bg-[#1e1e24] p-2 font-mono text-xs text-gray-400">Leads drop after first contact. Quotes live in spreadsheets.</p></div>
+              <div className="rounded-lg border border-blue-500/30 bg-panel p-4 shadow-lg"><span className="text-[10px] font-bold uppercase tracking-wider text-blue-400">Transform</span><h3 className="mt-2 font-semibold text-white">Extract the plan</h3><p className="mt-2 rounded bg-[#1e1e24] p-2 font-mono text-xs text-gray-400">• standardize intake<br />• add quote follow-up<br />• document handoff</p></div>
+              <div className="rounded-lg border border-purple-500/40 bg-panel p-4 shadow-lg ring-1 ring-purple-500/30"><span className="text-[10px] font-bold uppercase tracking-wider text-purple-400">Review</span><h3 className="mt-2 font-semibold text-white">Proposal brief</h3><p className="mt-2 text-xs text-gray-400">Confirm the recommendation, then generate and export the final deliverable.</p></div>
+            </div>
+          </div>
+        </div>
       </section>
 
       <section className="max-w-4xl mx-auto px-6 py-8">

@@ -1,17 +1,21 @@
-import { StrictMode } from 'react'
+/* oxlint-disable react/only-export-components */
+import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App'
-import { LandingPage } from './pages/LandingPage'
-import { WorkspacePage } from './pages/WorkspacePage'
-import { TemplatesGallery } from './pages/TemplatesGallery'
-import { AcquirePage } from './pages/AcquirePage'
-import { DocsPage } from './pages/DocsPage'
+import { AppErrorBoundary } from './components/ui/AppErrorBoundary'
+
+const LandingPage = lazy(() => import('./pages/LandingPage').then((module) => ({ default: module.LandingPage })))
+const WorkspacePage = lazy(() => import('./pages/WorkspacePage').then((module) => ({ default: module.WorkspacePage })))
+const TemplatesGallery = lazy(() => import('./pages/TemplatesGallery').then((module) => ({ default: module.TemplatesGallery })))
+const AcquirePage = lazy(() => import('./pages/AcquirePage').then((module) => ({ default: module.AcquirePage })))
+const DocsPage = lazy(() => import('./pages/DocsPage').then((module) => ({ default: module.DocsPage })))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <AppErrorBoundary><BrowserRouter><Suspense fallback={<main className="grid min-h-screen place-items-center bg-canvas px-6 text-center text-gray-300" role="status" aria-label="Loading WeaveStudio"><div><div className="mx-auto mb-3 h-2 w-40 animate-pulse rounded bg-blue-500/30" /><p className="font-medium">Loading WeaveStudio…</p><p className="mt-1 text-xs text-gray-500">Preparing your local workspace.</p></div></main>}>
       <Routes>
         <Route path="/" element={<App />}>
           <Route index element={<LandingPage />} />
@@ -22,8 +26,9 @@ createRoot(document.getElementById('root')!).render(
           <Route path="buyer" element={<Navigate to="/acquire" replace />} />
           <Route path="exports" element={<Navigate to="/docs#exports" replace />} />
           <Route path="docs" element={<DocsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
-    </BrowserRouter>
+    </Suspense></BrowserRouter></AppErrorBoundary>
   </StrictMode>,
 )

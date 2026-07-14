@@ -4,7 +4,7 @@
 
 WeaveStudio is a local-first visual workflow canvas for turning messy notes, transcripts, logs, research fragments, and discovery inputs into reviewable, reusable deliverables.
 
-[Open the live production application](https://weavestudio-nine.vercel.app/)
+[Open the public demo](https://weavestudio-demo.vercel.app/) · [Acquisition overview](https://weavestudio-demo.vercel.app/acquire)
 
 **Release status:** v1.0.0
 
@@ -69,6 +69,10 @@ npm test
 npm run lint
 npm run typecheck
 npm run build
+npm run test:browser
+npm run package:acquisition
+# Full buyer release gate (all of the above)
+npm run verify:buyer
 ```
 
 To inspect the built application locally:
@@ -101,3 +105,9 @@ See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for full details.
 ## Production deployment
 
 Production is deployed from the authoritative `master` branch to [weavestudio-nine.vercel.app](https://weavestudio-nine.vercel.app/). `vercel.json` provides the SPA rewrite needed for direct route refreshes.
+
+## Buyer materials
+
+The acquisition-ready executive summary, architecture/maintenance guide, feature-reality matrix, outreach copy, and preview instructions are in [`docs/buyer/`](docs/buyer/). The package command builds a fresh ZIP and prints its SHA-256; generated release files are intentionally not committed.
+
+For a buyer transfer runbook and first-90-day operating plan, see [`docs/buyer/TRANSFER_CHECKLIST.md`](docs/buyer/TRANSFER_CHECKLIST.md) and [`docs/buyer/OPERATING_PLAN_90_DAYS.md`](docs/buyer/OPERATING_PLAN_90_DAYS.md).

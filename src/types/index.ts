@@ -21,7 +21,7 @@ export interface NodeData extends Record<string, unknown> {
   status?: 'pending' | 'running' | 'complete' | 'needs_review' | 'warning' | 'incomplete' | 'ready';
   category?: NodeCategory;
   reviewRequired?: boolean;
-  provider?: 'openai' | 'ollama';
+  provider?: 'openai' | 'gemini';
   baseUrl?: string;
   modelName?: string;
   promptInstruction?: string;
@@ -155,6 +155,8 @@ export interface VersionSnapshot {
   nodes: AppNode[];
   edges: AppEdge[];
   workspaceId?: string;
+  /** Immutable label captured at save time (workspaceName is retained for compatibility). */
+  workspaceNameAtCreation?: string;
   /** 2 = includes source, deliverable, template, viewport, sync meta */
   snapshotVersion?: number;
   sourceMaterial?: string;
