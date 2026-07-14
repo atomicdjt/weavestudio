@@ -4,6 +4,12 @@ All notable changes to WeaveStudio are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Bounded workspace undo/redo with toolbar and keyboard shortcuts.
+- Acquisition package builder, buyer executive summary, and claim-safe outreach copy.
+- Preview deployment workflow and a deterministic package manifest.
+
 ## [1.0.0] - 2026-07-10
 
 ### Added
