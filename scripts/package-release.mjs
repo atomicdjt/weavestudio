@@ -1,0 +1,12 @@
+import { createHash } from 'node:crypto';
+import { execFileSync } from 'node:child_process';
+import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
+const root = process.cwd(), out = join(root, 'release'), stage = join(out, 'weavestudio-acquisition-package'), zip = join(out, 'weavestudio-acquisition-package.zip');
+const excluded = new Set(['node_modules', '.git', 'dist', 'release', 'work', '.env', '.env.local']);
+const copy = (source, destination) => { const name = source.split(/[\\/]/).pop(); if (excluded.has(name) || name.endsWith('.log')) return; const info = statSync(source); if (info.isDirectory()) { mkdirSync(destination, { recursive: true }); for (const child of readdirSync(source)) copy(join(source, child), join(destination, child)); } else { mkdirSync(dirname(destination), { recursive: true }); cpSync(source, destination); } };
+rmSync(out, { recursive: true, force: true }); mkdirSync(stage, { recursive: true }); for (const name of readdirSync(root)) copy(join(root, name), join(stage, name));
+const files = []; const walk = (directory) => { for (const name of readdirSync(directory)) { const file = join(directory, name), info = statSync(file); if (info.isDirectory()) walk(file); else files.push({ path: relative(stage, file).replaceAll('\\', '/'), bytes: info.size, sha256: createHash('sha256').update(readFileSync(file)).digest('hex') }); } }; walk(stage);
+writeFileSync(join(stage, 'PACKAGE_MANIFEST.json'), JSON.stringify({ product: 'WeaveStudio', generatedAt: new Date().toISOString(), files }, null, 2));
+execFileSync('powershell.exe', ['-NoProfile', '-Command', `Compress-Archive -LiteralPath '${stage.replaceAll("'", "''")}\\*' -DestinationPath '${zip.replaceAll("'", "''")}' -Force`], { stdio: 'inherit' });
+console.log(JSON.stringify({ zip: relative(root, zip), fileCount: files.length + 1, zipBytes: statSync(zip).size, sha256: createHash('sha256').update(readFileSync(zip)).digest('hex') }, null, 2));

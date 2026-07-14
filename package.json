@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "package:acquisition": "node scripts/package-release.mjs"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.20",
