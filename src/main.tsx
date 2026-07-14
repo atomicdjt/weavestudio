@@ -15,7 +15,7 @@ const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((module) => 
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppErrorBoundary><BrowserRouter><Suspense fallback={<main className="grid min-h-screen place-items-center bg-canvas text-sm text-gray-300" role="status">Loading WeaveStudio…</main>}>
+    <AppErrorBoundary><BrowserRouter><Suspense fallback={<main className="grid min-h-screen place-items-center bg-canvas px-6 text-center text-gray-300" role="status" aria-label="Loading WeaveStudio"><div><div className="mx-auto mb-3 h-2 w-40 animate-pulse rounded bg-blue-500/30" /><p className="font-medium">Loading WeaveStudio…</p><p className="mt-1 text-xs text-gray-500">Preparing your local workspace.</p></div></main>}>
       <Routes>
         <Route path="/" element={<App />}>
           <Route index element={<LandingPage />} />

@@ -1,5 +1,17 @@
 import { expect, test } from '@playwright/test';
 
+test('landing page renders without browser console errors', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text());
+  });
+
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Open guided demo' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Start with a template' })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test('guided demo and invalid routes recover in the rendered app', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('open-guided-demo').click();
