@@ -285,6 +285,12 @@ export const getSnapshots = (): VersionSnapshot[] => {
   }
 };
 
+export const saveRecoverySnapshot = (title: string, workspace: WorkspaceDocument): { snapshot: VersionSnapshot; result: SaveResult } => {
+  const snapshot = saveSnapshot(title, workspace);
+  const saved = getSnapshots().some((item) => item.id === snapshot.id);
+  return { snapshot, result: saved ? { status: 'saved' } : { status: 'error', error: 'Could not save a recovery checkpoint.' } };
+};
+
 export const saveSnapshot = (
   title: string,
   workspace: WorkspaceDocument,
