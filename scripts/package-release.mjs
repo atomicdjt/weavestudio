@@ -8,5 +8,5 @@ const copy = (source, destination) => { const name = source.split(/[\\/]/).pop()
 rmSync(out, { recursive: true, force: true }); mkdirSync(stage, { recursive: true }); for (const name of readdirSync(root)) copy(join(root, name), join(stage, name));
 const files = []; const walk = (directory) => { for (const name of readdirSync(directory)) { const file = join(directory, name), info = statSync(file); if (info.isDirectory()) walk(file); else files.push({ path: relative(stage, file).replaceAll('\\', '/'), bytes: info.size, sha256: createHash('sha256').update(readFileSync(file)).digest('hex') }); } }; walk(stage);
 writeFileSync(join(stage, 'PACKAGE_MANIFEST.json'), JSON.stringify({ product: 'WeaveStudio', generatedAt: new Date().toISOString(), files }, null, 2));
-execFileSync('powershell.exe', ['-NoProfile', '-Command', `Compress-Archive -LiteralPath '${stage.replaceAll("'", "''")}\\*' -DestinationPath '${zip.replaceAll("'", "''")}' -Force`], { stdio: 'inherit' });
+execFileSync('powershell.exe', ['-NoProfile', '-Command', `Compress-Archive -Path '${stage.replaceAll("'", "''")}\\*' -DestinationPath '${zip.replaceAll("'", "''")}' -Force`], { stdio: 'inherit' });
 console.log(JSON.stringify({ zip: relative(root, zip), fileCount: files.length + 1, zipBytes: statSync(zip).size, sha256: createHash('sha256').update(readFileSync(zip)).digest('hex') }, null, 2));
