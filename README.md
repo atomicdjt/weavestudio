@@ -69,6 +69,7 @@ npm test
 npm run lint
 npm run typecheck
 npm run build
+npm run package:acquisition
 ```
 
 To inspect the built application locally:
@@ -101,3 +102,7 @@ See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for full details.
 ## Production deployment
 
 Production is deployed from the authoritative `master` branch to [weavestudio-nine.vercel.app](https://weavestudio-nine.vercel.app/). `vercel.json` provides the SPA rewrite needed for direct route refreshes.
+
+## Buyer materials
+
+The acquisition-ready executive summary, architecture/maintenance guide, feature-reality matrix, outreach copy, and preview instructions are in [`docs/buyer/`](docs/buyer/). The package command builds a fresh ZIP and prints its SHA-256; generated release files are intentionally not committed.
