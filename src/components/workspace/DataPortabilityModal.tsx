@@ -11,7 +11,7 @@ import {
   importProjectFile,
   restoreFullBrowserBackup,
 } from '../../lib/workspaceStore';
-import { formatStorageUsage, getStorageUsage } from '../../lib/storageUsage';
+import { formatStorageUsage, getStoragePressure, getStorageUsage } from '../../lib/storageUsage';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { AccessibleDialog } from '../ui/AccessibleDialog';
 
@@ -22,7 +22,7 @@ interface DataPortabilityModalProps {
 }
 
 export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPortabilityModalProps) => {
-  const [storageUsage, setStorageUsage] = useState<string>('Calculating...');
+  const [storageUsage, setStorageUsage] = useState<{ label: string; message: string; level: 'info' | 'advisory' | 'elevated' }>({ label: 'Calculating...', message: '', level: 'info' });
   const [clearOpen, setClearOpen] = useState(false);
   const [clearText, setClearText] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
@@ -33,8 +33,8 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
 
   useEffect(() => {
     const calculateStorage = async () => {
-      try { setStorageUsage(`${formatStorageUsage(getStorageUsage().bytes)} used (WeaveStudio only)`); } catch {
-        setStorageUsage('Unknown');
+      try { const usage = getStorageUsage(); const pressure = getStoragePressure(usage.bytes); setStorageUsage({ label: `${formatStorageUsage(usage.bytes)} used across ${usage.keys} WeaveStudio record(s)`, message: pressure.message, level: pressure.level }); } catch {
+        setStorageUsage({ label: 'Unknown', message: 'Could not measure browser storage. You can still export a backup.', level: 'info' });
       }
     };
     calculateStorage();
@@ -140,8 +140,9 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
             </p>
             <div className="flex items-center gap-2 mt-4 bg-[#1e1e24] border border-gray-800 p-3 rounded-lg text-xs font-mono">
               <span className="text-gray-500 uppercase font-bold tracking-wider">Local storage:</span>
-              <span className="text-emerald-400">{storageUsage}</span>
+              <span className={storageUsage.level === 'elevated' ? 'text-amber-300' : 'text-emerald-400'}>{storageUsage.label}</span>
             </div>
+            <p className="mt-2 text-xs text-gray-400">{storageUsage.message}</p>
             {message && <p className="mt-3 text-xs text-blue-300">{message}</p>}
           </div>
 
