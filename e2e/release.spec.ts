@@ -28,6 +28,19 @@ test('guided demo and invalid routes recover in the rendered app', async ({ page
   await expect(page.getByRole('heading', { name: /page not found/i })).toBeVisible();
 });
 
+test('guided-demo reset asks before replacing a non-demo workspace', async ({ page }) => {
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Guided demo', exact: true }).click();
+  const confirm = page.getByRole('dialog', { name: 'Open guided demo?' });
+  await expect(confirm).toBeVisible();
+  await expect(confirm.getByText(/replace the current workspace/i)).toBeVisible();
+  await confirm.getByRole('button', { name: 'Cancel' }).click();
+  await expect(page.getByRole('heading', { name: 'Source material' })).toBeHidden();
+  await page.getByRole('button', { name: 'Guided demo', exact: true }).click();
+  await confirm.getByRole('button', { name: /open guided demo/i }).click();
+  await expect(page.getByRole('heading', { name: 'Source material' })).toBeVisible();
+});
+
 test('AI provider request stays behind explicit consent', async ({ page }, testInfo) => {
   let requests = 0;
   await page.route(/api\.openai\.com|generativelanguage\.googleapis\.com/, async (route) => { requests += 1; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ choices: [{ message: { content: 'draft' } }] }) }); });

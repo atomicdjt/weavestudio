@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef } from 'react';
 import {
   Background,
   Controls,
+  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
@@ -201,6 +202,7 @@ const WorkflowCanvasInner = ({
       >
         <Background color="#27272a" gap={20} />
         <Controls className="bg-panel border-border fill-gray-400" />
+        <MiniMap ariaLabel="Workflow minimap" className="hidden md:block" nodeColor="#3b82f6" />
       </ReactFlow>
     </div>
   );

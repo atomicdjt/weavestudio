@@ -16,9 +16,9 @@ const palette: { type: NodeType; label: string; icon: React.ReactNode; color: st
 
 export const NodePalette = ({ onAddNode }: { onAddNode: (type: NodeType) => void }) => <aside className="w-full lg:w-64 bg-panel border-b lg:border-b-0 lg:border-r border-border p-4 overflow-y-auto"><h3 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-2">Node Palette</h3><p className="text-xs text-gray-400 mb-4">Drag a node to the canvas, or use add for keyboard-friendly creation.</p><div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-3">{palette.map((item) => <div key={item.type} draggable onDragStart={(event) => { event.dataTransfer.setData('application/reactflow', item.type); event.dataTransfer.effectAllowed = 'move'; }} className={`flex items-center gap-2 p-3 rounded-lg border border-gray-800 bg-[#1e1e24] cursor-grab ${item.color}`}><span>{item.icon}</span><span className="text-sm text-gray-200 flex-1">{item.label}</span><button type="button" onClick={() => onAddNode(item.type)} className="p-1 rounded bg-black/30" aria-label={`Add ${item.label} node`}><Plus className="w-4 h-4" /></button></div>)}</div></aside>;
 
-interface NodeInspectorProps { selectedNode: AppNode | null; onUpdate: (id: string, data: Partial<AppNode['data']>) => void; onDelete: (id: string) => void; }
+interface NodeInspectorProps { selectedNode: AppNode | null; onUpdate: (id: string, data: Partial<AppNode['data']>) => void; onDelete: (id: string) => void; onAddInput?: () => void; }
 
-export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspectorProps) => {
+export const NodeInspector = ({ selectedNode, onUpdate, onDelete, onAddInput }: NodeInspectorProps) => {
   const [keys, setKeys] = React.useState<Record<string, string>>({});
   const [consent, setConsent] = React.useState(false);
   const [running, setRunning] = React.useState(false);
@@ -27,7 +27,7 @@ export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspecto
   const [showKey, setShowKey] = React.useState(false);
   const abort = React.useRef<AbortController | null>(null);
 
-  if (!selectedNode) return <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 grid place-items-center text-center text-sm text-gray-500"><div><strong className="text-gray-300">No node selected</strong><p>Select a canvas node to edit it.</p></div></aside>;
+  if (!selectedNode) return <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 grid place-items-center text-center text-sm text-gray-500"><div><strong className="text-gray-300">No node selected</strong><p>Select a canvas node to edit it.</p>{onAddInput && <button type="button" onClick={onAddInput} className="mt-3 rounded border border-emerald-500/40 px-3 py-2 text-xs font-semibold text-emerald-200">Add Input node</button>}</div></aside>;
 
   const { data } = selectedNode;
   const provider = (data.provider || 'openai') as AIProviderId;

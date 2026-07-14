@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Database, Eye, ListTree, Redo2, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
+import { ClipboardCheck, Database, Eye, LayoutDashboard, ListTree, Redo2, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
 import { WorkflowCanvas } from '../components/canvas/WorkflowCanvas';
 import { NodePalette, NodeInspector } from '../components/workspace/WorkspacePanels';
 import { VersionHistory } from '../components/workspace/VersionHistory';
@@ -48,6 +48,7 @@ import {
 } from '../lib/workspaceStore';
 import { resolveWorkspaceFromNav, type LocationState } from '../lib/workspaceInit';
 import { createWorkspaceHistory } from '../lib/workspaceHistory';
+import { autoLayoutNodes } from '../lib/autoLayout';
 
 const getNewNodeData = (type: NodeType): AppNode['data'] => {
   const base = {
@@ -260,6 +261,7 @@ export const WorkspacePage = () => {
       return next;
     });
   };
+  const handleAutoLayout = () => replaceGraph({ nodes: autoLayoutNodes(workspace.nodes, workspace.edges) });
 
   const handleCanvasEdgesChange = (canvasEdges: WorkspaceDocument['edges']) => {
     if (restoringHistoryRef.current) return;
@@ -315,6 +317,7 @@ export const WorkspacePage = () => {
   };
 
   const handleResetDemo = () => {
+    const openDemo = () => {
     const intentId = createId('intent');
     const next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
     if (!next) return;
@@ -323,6 +326,12 @@ export const WorkspacePage = () => {
     setWorkflowValidator(null);
     setSelectedNodeId(null);
     setGraphEpoch((e) => e + 1);
+    };
+    if (workspace.name !== 'Guided demo') {
+      setConfirmation({ title: 'Open guided demo?', description: 'This will replace the current workspace in the canvas. Your existing workspace remains saved locally and can be reopened from the workspace menu.', label: 'Open guided demo', action: openDemo });
+      return;
+    }
+    openDemo();
   };
 
   const handleRestoreSnapshot = (snapshot: VersionSnapshot) => {
@@ -484,7 +493,13 @@ export const WorkspacePage = () => {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.matches('input, textarea, [contenteditable="true"]') || !(event.ctrlKey || event.metaKey)) return;
+      if (target?.matches('input, textarea, select, button, [contenteditable="true"]')) return;
+      if (!event.ctrlKey && !event.metaKey && (event.key === 'Delete' || event.key === 'Backspace') && selectedNodeId) {
+        event.preventDefault();
+        handleDeleteNode(selectedNodeId);
+        return;
+      }
+      if (!(event.ctrlKey || event.metaKey)) return;
       const redo = event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey);
       const undo = event.key.toLowerCase() === 'z' && !event.shiftKey;
       if (!undo && !redo) return;
@@ -493,7 +508,7 @@ export const WorkspacePage = () => {
     };
     document.addEventListener('keydown', onKeyDown, true);
     return () => document.removeEventListener('keydown', onKeyDown, true);
-  }, []);
+  }, [selectedNodeId, workspace.nodes, workspace.edges]);
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden relative min-h-0 h-full">
@@ -543,6 +558,7 @@ export const WorkspacePage = () => {
               <button type="button" onClick={() => setMobilePanel('inspector')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open inspector">Inspector</button>
               <button type="button" onClick={() => setMobilePanel('snapshots')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open snapshots">Snapshots</button>
               <button type="button" onClick={() => setShowOutline(true)} className="bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Workflow outline" title="Open a keyboard-friendly workflow outline"><ListTree className="h-4 w-4 sm:mr-1 inline" /><span className="hidden sm:inline">Outline</span></button>
+              <button type="button" onClick={handleAutoLayout} className="bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Auto-layout workflow" title="Arrange nodes by workflow connections"><LayoutDashboard className="h-4 w-4 sm:mr-1 inline" /><span className="hidden sm:inline">Auto-layout</span></button>
               <button type="button" onClick={() => { const next = historyRef.current.undo(); if (next) applyHistoryWorkspace(next); }} disabled={!historyRef.current.canUndo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"><Undo2 className="w-4 h-4" /></button>
               <button type="button" onClick={() => { const next = historyRef.current.redo(); if (next) applyHistoryWorkspace(next); }} disabled={!historyRef.current.canRedo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
               <button
@@ -683,11 +699,11 @@ export const WorkspacePage = () => {
         </div>
       </div>
 
-      <div className="hidden lg:contents"><NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
+      <div className="hidden lg:contents"><NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
 
       {mobilePanel && <AccessibleDialog label={mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'} onClose={() => setMobilePanel(null)} className="mx-auto flex h-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-2xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3"><h2 className="font-semibold">{mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}</h2><button type="button" onClick={() => setMobilePanel(null)} aria-label={`Close ${mobilePanel === 'inspector' ? 'inspector' : 'snapshots'}`} className="rounded p-2"><X className="w-5 h-5" /></button></div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
       </AccessibleDialog>}
 
       {showOutline && <AccessibleDialog label="Workflow outline" onClose={() => setShowOutline(false)} className="h-full w-full max-w-lg overflow-hidden rounded-xl border border-border bg-panel shadow-2xl"><WorkflowOutline workspace={workspace} selectedNodeId={selectedNodeId} onSelect={(node) => { setSelectedNodeId(node.id); setShowOutline(false); }} onClose={() => setShowOutline(false)} /></AccessibleDialog>}

@@ -40,6 +40,7 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
           <div className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
             <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Completeness</div>
             <div className="text-3xl font-bold text-white">{result.completenessScore}%</div>
+            <p className="mt-2 text-[11px] text-gray-400">Start with the first suggested fix below; the score reflects workflow structure, not fact accuracy.</p>
           </div>
           <div className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
             <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Issues Found</div>
