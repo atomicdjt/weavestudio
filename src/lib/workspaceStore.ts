@@ -404,6 +404,16 @@ export const clearAllLocalData = (): void => {
   keysToRemove.forEach((key) => localStorage.removeItem(key));
 };
 
+/** Export only WeaveStudio-owned records for a portable full-browser backup. */
+export const collectFullBrowserBackup = (): Record<string, string> => {
+  const backup: Record<string, string> = {};
+  for (let index = 0; index < localStorage.length; index += 1) {
+    const key = localStorage.key(index);
+    if (key?.startsWith('weavestudio_')) backup[key] = localStorage.getItem(key) ?? '';
+  }
+  return backup;
+};
+
 export const downloadProjectJson = (doc: WorkspaceDocument): void => {
   const payload = buildProjectExport(doc);
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });
