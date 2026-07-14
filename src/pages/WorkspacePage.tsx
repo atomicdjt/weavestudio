@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Database, Eye, RotateCcw, Trash2 } from 'lucide-react';
+import { ClipboardCheck, Database, Eye, Redo2, RotateCcw, Trash2, Undo2 } from 'lucide-react';
 import { WorkflowCanvas } from '../components/canvas/WorkflowCanvas';
 import { NodePalette, NodeInspector } from '../components/workspace/WorkspacePanels';
 import { VersionHistory } from '../components/workspace/VersionHistory';
@@ -41,6 +41,7 @@ import {
   setActiveWorkspaceId,
 } from '../lib/workspaceStore';
 import { resolveWorkspaceFromNav, type LocationState } from '../lib/workspaceInit';
+import { createWorkspaceHistory } from '../lib/workspaceHistory';
 
 const getNewNodeData = (type: NodeType): AppNode['data'] => {
   const base = {
@@ -104,6 +105,8 @@ export const WorkspacePage = () => {
     const fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
     return fromNav ?? defaultWorkspace();
   });
+  const historyRef = useRef(createWorkspaceHistory(workspace));
+  const [, setHistoryVersion] = useState(0);
   const [indexEntries, setIndexEntries] = useState(() => loadIndex().workspaces);
   /** Bumped only for external graph replacements / workspace switches — not for pan or source panel typing */
   const [graphEpoch, setGraphEpoch] = useState(0);
@@ -192,8 +195,13 @@ export const WorkspacePage = () => {
 
   const patchWorkspace = (
     patch: Partial<WorkspaceDocument> | ((current: WorkspaceDocument) => WorkspaceDocument),
+    historyGroup: string | false = 'mutation',
   ) => {
-    setWorkspace((current) => (typeof patch === 'function' ? patch(current) : { ...current, ...patch }));
+    setWorkspace((current) => {
+      const next = typeof patch === 'function' ? patch(current) : { ...current, ...patch };
+      if (historyGroup !== false) { historyRef.current.record(next, historyGroup); setHistoryVersion((v) => v + 1); }
+      return next;
+    });
   };
 
   const replaceGraph = (next: Partial<WorkspaceDocument> & { nodes: AppNode[]; edges?: WorkspaceDocument['edges'] }) => {
@@ -209,7 +217,7 @@ export const WorkspacePage = () => {
     patchWorkspace((current) => ({
       ...current,
       nodes: current.nodes.map((node) => (node.id === id ? { ...node, data: { ...node.data, ...data } } : node)),
-    }));
+    }), `node:${id}`);
     setGraphEpoch((e) => e + 1);
   };
 
@@ -222,7 +230,7 @@ export const WorkspacePage = () => {
   };
 
   const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
-    patchWorkspace({ nodes: canvasNodes });
+    patchWorkspace({ nodes: canvasNodes }, 'canvas');
   };
 
   const handleAddNode = (type: NodeType) => {
@@ -413,10 +421,26 @@ export const WorkspacePage = () => {
     if (!next) return;
     setActiveWorkspaceId(id);
     setWorkspace(next);
+    historyRef.current.reset(next);
+    setHistoryVersion((v) => v + 1);
     setSelectedNodeId(null);
     setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches('input, textarea, [contenteditable="true"]') || !(event.ctrlKey || event.metaKey)) return;
+      const redo = event.key.toLowerCase() === 'y' || (event.key.toLowerCase() === 'z' && event.shiftKey);
+      const undo = event.key.toLowerCase() === 'z' && !event.shiftKey;
+      if (!undo && !redo) return;
+      const next = redo ? historyRef.current.redo() : historyRef.current.undo();
+      if (next) { event.preventDefault(); setWorkspace(next); setGraphEpoch((value) => value + 1); setHistoryVersion((value) => value + 1); }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row overflow-auto lg:overflow-hidden relative min-h-0 h-full">
@@ -461,6 +485,8 @@ export const WorkspacePage = () => {
             />
             <div className="pointer-events-auto flex flex-wrap items-center gap-2">
               <SaveStatusChip status={saveStatus} error={saveError} workspaceName={workspace.name} />
+              <button type="button" onClick={() => { const next = historyRef.current.undo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canUndo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"><Undo2 className="w-4 h-4" /></button>
+              <button type="button" onClick={() => { const next = historyRef.current.redo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canRedo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
               <button
                 type="button"
                 onClick={handleClear}
@@ -557,7 +583,7 @@ export const WorkspacePage = () => {
                       : undefined,
                   ),
                 },
-              })
+              }, 'source')
             }
             onUseSample={() => {
               if (!template?.messyInputSample) return;
@@ -567,7 +593,7 @@ export const WorkspacePage = () => {
                   ...workspace.meta,
                   sourceSyncStatus: 'source_ahead',
                 },
-              });
+              }, 'source');
             }}
             onApplyToInput={handleApplyToInput}
             onSplitIntoNodes={handleSplitIntoNodes}
@@ -587,7 +613,7 @@ export const WorkspacePage = () => {
             onViewportChange={(viewport) =>
               patchWorkspace({
                 viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom },
-              })
+              }, false)
             }
           />
         </div>
