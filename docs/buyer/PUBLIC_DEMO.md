@@ -2,7 +2,9 @@
 
 The preview deployment generated from the hardening branch is intentionally not production. Vercel reports it as Ready at:
 
-`https://weavestudio-iwhgi2r0x-atomicdjts-projects.vercel.app`
+`https://weavestudio-6x6gmejbj-atomicdjts-projects.vercel.app`
+
+Anonymous verification on 2026-07-13 redirected to Vercel `/login` (`X-Matched-Path: /login`). The preview is therefore deployed but not anonymously accessible until the account-level preview protection setting is changed.
 
 The team currently applies Vercel Deployment Protection to preview URLs. To share this demo publicly without touching production, an authorized account owner must open the Vercel project **weavestudio**, open **Settings → Deployment Protection**, and allow public access for preview deployments (or create a bypass/share link), then verify the URL in an unsigned-out browser. Do not promote the deployment and do not modify `master`.
 

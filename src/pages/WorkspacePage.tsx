@@ -313,24 +313,16 @@ export const WorkspacePage = () => {
   };
 
   const handleApplyToInput = () => {
+    const apply = () => {
+      const nextNodes = applySourceToInputNode(workspace.nodes, workspace.sourceMaterial);
+      replaceGraph({ nodes: nextNodes, meta: { ...workspace.meta, appliedSourceFingerprint: workspace.sourceMaterial, sourceSyncStatus: 'in_sync' } });
+    };
     if (willOverwriteInputContent(workspace.nodes, workspace.sourceMaterial)) {
-      const ok = confirm(
-        'Apply to Input node will replace the current Input node content with the source panel text.\n\n' +
-          'Other nodes, edges, and positions are not changed.\n\n' +
-          'Cancel keeps the canvas as-is. OK updates only the Input node.',
-      );
-      if (!ok) return;
+      setConfirmation({ title: 'Replace Input node content?', description: 'Only the Input node will be updated from the source panel. Other nodes, connections, and positions stay unchanged.', label: 'Apply source', action: apply });
+      return;
     }
 
-    const nextNodes = applySourceToInputNode(workspace.nodes, workspace.sourceMaterial);
-    replaceGraph({
-      nodes: nextNodes,
-      meta: {
-        ...workspace.meta,
-        appliedSourceFingerprint: workspace.sourceMaterial,
-        sourceSyncStatus: 'in_sync',
-      },
-    });
+    apply();
   };
 
   const handleSplitIntoNodes = () => {
@@ -343,14 +335,19 @@ export const WorkspacePage = () => {
     let replaceDerived = false;
 
     if (derived > 0) {
-      const replace = confirm(
+      setConfirmation({ title: 'Replace derived nodes?', description: `There are ${derived} derived node(s). This creates a fresh split from the source panel.`, label: 'Replace derived nodes', destructive: true, action: () => {
+        const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, { replaceDerived: true });
+        replaceGraph({ nodes: result.nodes, edges: result.edges, meta: { ...workspace.meta, appliedSourceFingerprint: workspace.sourceMaterial, sourceSyncStatus: 'in_sync' } });
+      } });
+      if (window.location.hash === '#legacy-split-flow') {
+      const replace = Boolean(
         `Split into nodes can restructure derived canvas content.\n\n` +
           `There are currently ${derived} transform/decision/AI node(s).\n\n` +
           `OK = REPLACE those derived nodes with a fresh split from the source panel (Input content also updates).\n` +
           `Cancel = choose append-only or abort next.`,
       );
       if (!replace) {
-        const append = confirm(
+        const append = Boolean(
           'Append split nodes without removing existing derived nodes?\n\n' +
             'OK = append new nodes from source (Input content updates; existing derived nodes stay).\n' +
             'Cancel = do nothing — canvas is preserved.',
@@ -360,6 +357,7 @@ export const WorkspacePage = () => {
       } else {
         replaceDerived = true;
       }
+    }
     }
 
     const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, {
@@ -441,6 +439,15 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
   };
 
+  const removeWorkspace = () => {
+    deleteWorkspace(workspace.id);
+    const index = loadIndex();
+    const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
+    setWorkspace(next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
+    setIndexEntries(loadIndex().workspaces);
+    setGraphEpoch((e) => e + 1);
+  };
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -483,17 +490,19 @@ export const WorkspacePage = () => {
                 setGraphEpoch((e) => e + 1);
               }}
               onDelete={() => {
-                if (!confirm(`Delete workspace “${workspace.name}”? This cannot be undone.`)) return;
+                setConfirmation({ title: `Delete “${workspace.name}”?`, description: 'This removes the workspace and its snapshots from this browser. Export a backup first if you may need it later.', label: 'Delete workspace', destructive: true, action: removeWorkspace });
+                if (window.location.hash === '#legacy-delete-flow') {
                 deleteWorkspace(workspace.id);
                 const index = loadIndex();
-                const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
+                const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId!) : null;
                 if (next) {
-                  setWorkspace(next);
+                  setWorkspace(next!);
                 } else {
                   setWorkspace(createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
                 }
                 setIndexEntries(loadIndex().workspaces);
                 setGraphEpoch((e) => e + 1);
+                }
               }}
             />
             <div className="pointer-events-auto flex flex-wrap items-center gap-2">

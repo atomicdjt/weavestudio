@@ -1,8 +1,13 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { useEffect } from 'react';
 import { HelpCircle, Home, Layers, Workflow } from 'lucide-react';
 
 function App() {
   const location = useLocation();
+  useEffect(() => {
+    const titles: Record<string, string> = { '/': 'WeaveStudio — Local-first workflow canvas', '/app': 'Workspace — WeaveStudio', '/templates': 'Templates — WeaveStudio', '/docs': 'Docs — WeaveStudio', '/acquire': 'Acquire WeaveStudio' };
+    document.title = titles[location.pathname] ?? 'Page not found — WeaveStudio';
+  }, [location.pathname]);
 
   const navItems = [
     { name: 'Home', path: '/', icon: <Home className="w-4 h-4" /> },

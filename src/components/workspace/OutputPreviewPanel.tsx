@@ -9,6 +9,7 @@ import {
 import { composeDeliverableMarkdown } from '../../lib/deliverableEngine';
 import { FileText, FileJson, FileDown, X, Code2, Eye, RefreshCw } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface OutputPreviewPanelProps {
   workspace: WorkspaceDocument;
@@ -32,6 +33,7 @@ export const OutputPreviewPanel = ({
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
+  const [confirmRegenerate, setConfirmRegenerate] = useState(false);
 
   const generated = useMemo(
     () =>
@@ -74,11 +76,14 @@ export const OutputPreviewPanel = ({
 
   const handleRegenerate = () => {
     if (userEdited) {
-      const ok = confirm(
-        'Regenerate from canvas will replace your manually edited deliverable draft. This cannot be undone from this dialog.\n\nCancel keeps your edited draft. OK replaces it with a fresh composition from the canvas.',
-      );
-      if (!ok) return;
+      setConfirmRegenerate(true);
+      return;
     }
+
+    regenerate();
+  };
+
+  const regenerate = () => {
 
     const next = composeDeliverableMarkdown(workspace.nodes, workspace.edges, {
       title,
@@ -304,6 +309,7 @@ export const OutputPreviewPanel = ({
           </div>
         </div>
       </div>
+      <ConfirmDialog open={confirmRegenerate} title="Replace manual deliverable edits?" description="Regenerating replaces the edited draft with a fresh composition from the canvas." confirmLabel="Regenerate draft" destructive onCancel={() => setConfirmRegenerate(false)} onConfirm={() => { setConfirmRegenerate(false); regenerate(); }} />
     </div>
   );
 };
