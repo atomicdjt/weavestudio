@@ -1,5 +1,6 @@
 import type { WorkflowValidatorResult, workflowValidatorStatus } from '../../types';
 import { AlertTriangle, CheckCircle2, CircleDashed, ClipboardCheck, X } from 'lucide-react';
+import { AccessibleDialog } from '../ui/AccessibleDialog';
 
 interface WorkflowValidatorPanelProps {
   result: WorkflowValidatorResult;
@@ -23,11 +24,11 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
   const isReady = result.exportReadiness === 'Ready';
 
   return (
-    <div className="absolute top-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-3xl bg-panel border border-border rounded-lg shadow-2xl z-50 overflow-hidden flex flex-col max-h-[84vh]">
+    <AccessibleDialog label="Workflow Validator" labelledBy="workflow-validator-title" onClose={onClose} className="w-full max-w-3xl overflow-hidden rounded-lg border border-border bg-panel shadow-2xl max-h-[84vh] flex flex-col">
       <div className="flex items-center justify-between px-4 py-3 bg-[#1e1e24] border-b border-gray-800">
         <div className="flex items-center gap-2">
           <ClipboardCheck className="w-4 h-4 text-blue-300" />
-          <h3 className="font-bold text-sm uppercase tracking-wider text-white">Workflow Validator</h3>
+          <h3 id="workflow-validator-title" className="font-bold text-sm uppercase tracking-wider text-white">Workflow Validator</h3>
         </div>
         <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-white transition-colors" aria-label="Close Workflow Validator">
           <X className="w-4 h-4" />
@@ -108,6 +109,6 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
           <span>Workflow Validator is deterministic and local. It validates workflow structure; it does not verify facts.</span>
         </div>
       </div>
-    </div>
+    </AccessibleDialog>
   );
 };

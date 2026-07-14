@@ -74,7 +74,7 @@ export const LandingPage = () => {
           </span>
         </h1>
         <p className="text-lg text-gray-400 max-w-3xl mx-auto leading-relaxed mb-10">
-          WeaveStudio is a visual canvas for professionals who need to move from messy notes, transcripts, logs, and
+          WeaveStudio is a visual canvas for consultants, freelancers, agencies, and operations teams who need to move from messy notes, transcripts, logs, and
           research fragments to a clear document — without accounts or a required cloud API.
         </p>
 

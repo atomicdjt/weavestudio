@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Database, Eye, Redo2, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
+import { ClipboardCheck, Database, Eye, ListTree, Redo2, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
 import { WorkflowCanvas } from '../components/canvas/WorkflowCanvas';
 import { NodePalette, NodeInspector } from '../components/workspace/WorkspacePanels';
 import { VersionHistory } from '../components/workspace/VersionHistory';
@@ -13,6 +13,9 @@ import { WorkspaceManager } from '../components/workspace/WorkspaceManager';
 import { SaveStatusChip } from '../components/workspace/SaveStatus';
 import { OnboardingChecklist } from '../components/workspace/OnboardingChecklist';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { AccessibleDialog } from '../components/ui/AccessibleDialog';
+import { WorkflowOutline } from '../components/workspace/WorkflowOutline';
+import { GuidedTour } from '../components/workspace/GuidedTour';
 import type {
   AppNode,
   NodeType,
@@ -117,6 +120,7 @@ export const WorkspacePage = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const pendingPaletteSelectionRef = useRef<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showOutline, setShowOutline] = useState(false);
   const [mobilePanel, setMobilePanel] = useState<'inspector' | 'snapshots' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ title: string; description: string; label: string; destructive?: boolean; action: () => void } | null>(null);
@@ -132,6 +136,7 @@ export const WorkspacePage = () => {
       return true;
     }
   });
+  const [showTour, setShowTour] = useState(false);
   const [navConsumedKey, setNavConsumedKey] = useState<string | null>(() =>
     locationState?.intentId || locationState?.openGuidedDemo || locationState?.blankWorkspace || locationState?.loadTemplate
       ? location.key
@@ -510,6 +515,7 @@ export const WorkspacePage = () => {
               <SaveStatusChip status={saveStatus} error={saveError} workspaceName={workspace.name} />
               <button type="button" onClick={() => setMobilePanel('inspector')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open inspector">Inspector</button>
               <button type="button" onClick={() => setMobilePanel('snapshots')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open snapshots">Snapshots</button>
+              <button type="button" onClick={() => setShowOutline(true)} className="bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Workflow outline" title="Open a keyboard-friendly workflow outline"><ListTree className="h-4 w-4 sm:mr-1 inline" /><span className="hidden sm:inline">Outline</span></button>
               <button type="button" onClick={() => { const next = historyRef.current.undo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canUndo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"><Undo2 className="w-4 h-4" /></button>
               <button type="button" onClick={() => { const next = historyRef.current.redo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canRedo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
               <button
@@ -585,6 +591,7 @@ export const WorkspacePage = () => {
               >
                 Dismiss guidance
               </button>
+              <button type="button" className="ml-3 text-xs text-blue-300 hover:text-white underline" onClick={() => setShowTour(true)}>Start guided tour</button>
             </div>
           )}
           <OnboardingChecklist hasSource={Boolean(workspace.sourceMaterial.trim())} hasNodes={workspace.nodes.length > 0} validated={Boolean(workflowValidator)} onOpenTemplates={() => navigate('/templates')} />
@@ -651,12 +658,12 @@ export const WorkspacePage = () => {
 
       <div className="hidden lg:contents"><NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
 
-      {mobilePanel && <div className="lg:hidden fixed inset-0 z-[65] bg-black/70 p-3" role="dialog" aria-modal="true" aria-label={mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}>
-        <div className="mx-auto flex h-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-2xl">
+      {mobilePanel && <AccessibleDialog label={mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'} onClose={() => setMobilePanel(null)} className="mx-auto flex h-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-2xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3"><h2 className="font-semibold">{mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}</h2><button type="button" onClick={() => setMobilePanel(null)} aria-label={`Close ${mobilePanel === 'inspector' ? 'inspector' : 'snapshots'}`} className="rounded p-2"><X className="w-5 h-5" /></button></div>
           <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
-        </div>
-      </div>}
+      </AccessibleDialog>}
+
+      {showOutline && <AccessibleDialog label="Workflow outline" onClose={() => setShowOutline(false)} className="h-full w-full max-w-lg overflow-hidden rounded-xl border border-border bg-panel shadow-2xl"><WorkflowOutline workspace={workspace} selectedNodeId={selectedNodeId} onSelect={(node) => { setSelectedNodeId(node.id); setShowOutline(false); }} onClose={() => setShowOutline(false)} /></AccessibleDialog>}
 
       {workflowValidator && (
         <WorkflowValidatorPanel result={workflowValidator} onClose={() => setWorkflowValidator(null)} />
@@ -685,6 +692,7 @@ export const WorkspacePage = () => {
         />
       )}
       {notice && <div role="status" className="fixed bottom-4 left-1/2 z-[80] -translate-x-1/2 rounded-lg border border-blue-500/40 bg-panel px-4 py-3 text-sm text-blue-100 shadow-xl">{notice}<button type="button" className="ml-3 underline" onClick={() => setNotice(null)}>Dismiss</button></div>}
+      {showTour && <GuidedTour onClose={() => setShowTour(false)} />}
       <ConfirmDialog open={Boolean(confirmation)} title={confirmation?.title ?? ''} description={confirmation?.description ?? ''} confirmLabel={confirmation?.label ?? 'Confirm'} destructive={confirmation?.destructive} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
     </div>
   );

@@ -92,6 +92,11 @@ export const AcquirePage = () => {
           points and an optional BYOK AI integration pattern. Complete source and documentation are available for
           acquisition and customization.
         </p>
+        <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 max-w-3xl">
+          <h2 className="font-semibold text-emerald-100">Request the acquisition brief</h2>
+          <p className="mt-2 text-sm leading-relaxed text-emerald-50/80">Request source/IP inventory, the verified buyer package, and transfer checklist. Pricing is discussed privately after scope and handover needs are understood.</p>
+          <a href="mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry" aria-label="Email davidelsey9513@gmail.com for acquisition inquiries" className="mt-4 inline-flex rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">Email acquisition inquiries</a>
+        </div>
       </div>
 
       <div className="space-y-12">

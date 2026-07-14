@@ -13,6 +13,7 @@ import {
 } from '../../lib/workspaceStore';
 import { formatStorageUsage, getStorageUsage } from '../../lib/storageUsage';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { AccessibleDialog } from '../ui/AccessibleDialog';
 
 interface DataPortabilityModalProps {
   workspace: WorkspaceDocument;
@@ -121,13 +122,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div
-        className="bg-panel border border-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Data portability"
-      >
+    <AccessibleDialog label="Data portability" onClose={onClose} className="relative bg-panel border border-border rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
         <div className="flex items-center justify-between p-4 border-b border-border bg-[#18181b]">
           <h2 className="font-bold text-white flex items-center gap-2">
             <HardDrive className="w-5 h-5 text-emerald-400" />
@@ -224,7 +219,6 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
         </div>}
         <ConfirmDialog open={Boolean(importFile)} title="Import project as a new workspace?" description="The current workspace will remain unchanged. Full browser backups must use the dedicated restore flow." confirmLabel="Import new workspace" onCancel={() => { setImportFile(null); if (projectFileInputRef.current) projectFileInputRef.current.value = ''; }} onConfirm={completeImport} />
         <ConfirmDialog open={Boolean(restoreFile)} title="Restore full browser backup?" description="The file will be validated before any change. A restore replaces only WeaveStudio-owned browser records; unrelated site data stays untouched." confirmLabel="Restore validated backup" destructive onCancel={() => { setRestoreFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} onConfirm={completeRestore} />
-      </div>
-    </div>
+    </AccessibleDialog>
   );
 };

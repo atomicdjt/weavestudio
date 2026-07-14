@@ -10,7 +10,7 @@ export const DocsPage = () => {
       </p>
 
       <div className="space-y-8 text-gray-300">
-        <section className="bg-panel border border-border rounded-lg p-6">
+        <section id="privacy" className="bg-panel border border-border rounded-lg p-6">
           <h2 className="text-xl font-bold text-white mb-4">Golden path</h2>
           <ol className="list-decimal list-inside space-y-2 text-sm">
             <li>
@@ -39,6 +39,11 @@ export const DocsPage = () => {
               API keys stay in session memory only and are not written to localStorage.
             </li>
           </ul>
+        </section>
+
+        <section className="bg-panel border border-border rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Recovery and portability</h2>
+          <p className="text-sm leading-relaxed">Use the workspace Data portability control to export either the current project or every WeaveStudio-owned browser record. Full-backup restore validates the file before replacing only WeaveStudio records. Browser storage can still be cleared by browser settings, so export important work before clearing site data or changing browsers.</p>
         </section>
 
         <section className="bg-panel border border-border rounded-lg p-6">
@@ -72,6 +77,21 @@ export const DocsPage = () => {
               <strong>Project JSON:</strong> Full workspace for re-import (nodes, edges, source, draft, template id).
             </li>
           </ul>
+        </section>
+
+        <section className="bg-panel border border-border rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Keyboard and outline navigation</h2>
+          <ul className="list-disc list-inside space-y-2 text-sm"><li><strong>Undo:</strong> Ctrl/Cmd+Z. <strong>Redo:</strong> Ctrl/Cmd+Shift+Z or Ctrl/Cmd+Y.</li><li><strong>Dialogs:</strong> Escape closes them and focus returns to the trigger.</li><li><strong>Workflow Outline:</strong> use the toolbar Outline control for a linear, keyboard-friendly reading order with connection counts.</li></ul>
+        </section>
+
+        <section className="bg-panel border border-border rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Quality and release evidence</h2>
+          <p className="text-sm leading-relaxed">The source release includes TypeScript checks, linting, unit tests, browser-level regression tests, a production build, and deterministic acquisition-package validation. Run <code className="text-blue-300">npm run verify:buyer</code> from the source checkout to reproduce the release verification. This is engineering evidence, not a claim of certification or guaranteed fitness for a particular use.</p>
+        </section>
+
+        <section id="license" className="bg-panel border border-border rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">License and acquisition inquiries</h2>
+          <p className="text-sm leading-relaxed">This build is distributed as proprietary source/IP for evaluation and acquisition discussions; no public redistribution license is granted by this preview. For source/IP acquisition, request the current scope and transfer materials at <a className="text-blue-300 hover:underline" href="mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry">davidelsey9513@gmail.com</a>.</p>
         </section>
 
         <section className="bg-panel border border-border rounded-lg p-6">
