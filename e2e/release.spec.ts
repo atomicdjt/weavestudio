@@ -99,6 +99,9 @@ test('acquisition page provides an accessible recorded workflow walkthrough', as
   await expect(walkthrough).toBeVisible();
   await expect(walkthrough.getByRole('button', { name: /play guided demo walkthrough/i })).toBeVisible();
   await expect(walkthrough.getByText(/no account, API key, or live provider call is used/i)).toBeVisible();
+  const video = walkthrough.getByLabel(/guided demo walkthrough/i);
+  await expect(video).toBeVisible();
+  await expect.poll(() => video.evaluate((element) => element.duration)).toBeGreaterThanOrEqual(25);
 });
 
 test('keyboard undo and redo restore a canvas mutation', async ({ page }, testInfo) => {
