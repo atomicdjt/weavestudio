@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 
-test('guided demo walkthrough', async ({ page }) => {
+test('guided demo walkthrough', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'The recorded artifact is intentionally framed for desktop review.');
   await page.goto('/');
   await page.getByTestId('open-guided-demo').click();
   await expect(page.getByRole('heading', { name: 'Source material' })).toBeVisible();
