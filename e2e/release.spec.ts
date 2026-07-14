@@ -147,6 +147,7 @@ test('canvas navigation controls are reachable without changing text-field short
   test.skip(testInfo.project.name !== 'desktop', 'Minimap is intentionally hidden on compact viewports.');
   await page.goto('/app');
   await expect(page.getByLabel('Workflow minimap')).toBeVisible();
+  await expect(page.locator('.react-flow__minimap')).toHaveCSS('background-color', 'rgb(15, 23, 42)');
   await page.getByLabel('Add Input node', { exact: true }).click();
   await page.getByRole('button', { name: 'Auto-layout workflow' }).click();
   await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled();
