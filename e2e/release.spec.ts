@@ -35,7 +35,7 @@ test('guided-demo reset asks before replacing a non-demo workspace', async ({ pa
   await expect(confirm).toBeVisible();
   await expect(confirm.getByText(/replace the current workspace/i)).toBeVisible();
   await confirm.getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.getByRole('heading', { name: 'Source material' })).toBeHidden();
+  await expect(confirm).toBeHidden();
   await page.getByRole('button', { name: 'Guided demo', exact: true }).click();
   await confirm.getByRole('button', { name: /open guided demo/i }).click();
   await expect(page.getByRole('heading', { name: 'Source material' })).toBeVisible();
