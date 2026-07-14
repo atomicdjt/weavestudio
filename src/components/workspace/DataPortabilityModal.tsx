@@ -9,6 +9,7 @@ import {
   importProjectFile,
 } from '../../lib/workspaceStore';
 import { formatStorageUsage, getStorageUsage } from '../../lib/storageUsage';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface DataPortabilityModalProps {
   workspace: WorkspaceDocument;
@@ -20,6 +21,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
   const [storageUsage, setStorageUsage] = useState<string>('Calculating...');
   const [clearOpen, setClearOpen] = useState(false);
   const [clearText, setClearText] = useState('');
+  const [importFile, setImportFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -69,11 +71,11 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!confirm('Import this file as a new workspace (recommended)? Click Cancel to abort.')) {
-      if (fileInputRef.current) fileInputRef.current.value = '';
-      return;
-    }
-
+    setImportFile(file);
+  };
+  const completeImport = () => {
+    const file = importFile;
+    if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       try {
@@ -92,6 +94,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
       }
     };
     reader.readAsText(file);
+    setImportFile(null);
   };
 
   const handleClear = () => {
@@ -197,6 +200,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
             <div className="mt-4 flex gap-2"><button type="button" onClick={handleDownloadAll} className="rounded border border-border px-3 py-2 text-sm text-blue-300">Download backup first</button><button type="button" onClick={() => { setClearOpen(false); setClearText(''); }} className="rounded border border-border px-3 py-2 text-sm text-gray-200">Cancel</button><button type="button" disabled={clearText !== 'CLEAR'} onClick={handleClear} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Permanently clear data</button></div>
           </div>
         </div>}
+        <ConfirmDialog open={Boolean(importFile)} title="Import project as a new workspace?" description="The current workspace will remain unchanged. Full browser backups must use the dedicated restore flow." confirmLabel="Import new workspace" onCancel={() => { setImportFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} onConfirm={completeImport} />
       </div>
     </div>
   );
