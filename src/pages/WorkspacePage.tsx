@@ -112,6 +112,7 @@ export const WorkspacePage = () => {
     return fromNav ?? defaultWorkspace();
   });
   const historyRef = useRef(createWorkspaceHistory(workspace));
+  const restoringHistoryRef = useRef(false);
   const [, setHistoryVersion] = useState(0);
   const [indexEntries, setIndexEntries] = useState(() => loadIndex().workspaces);
   /** Bumped only for external graph replacements / workspace switches — not for pan or source panel typing */
@@ -216,6 +217,14 @@ export const WorkspacePage = () => {
     });
   };
 
+  const applyHistoryWorkspace = (next: WorkspaceDocument) => {
+    restoringHistoryRef.current = true;
+    setWorkspace(next);
+    setGraphEpoch((value) => value + 1);
+    setHistoryVersion((value) => value + 1);
+    window.setTimeout(() => { restoringHistoryRef.current = false; }, 500);
+  };
+
   const replaceGraph = (next: Partial<WorkspaceDocument> & { nodes: AppNode[]; edges?: WorkspaceDocument['edges'] }) => {
     patchWorkspace((current) => ({
       ...current,
@@ -242,7 +251,25 @@ export const WorkspacePage = () => {
   };
 
   const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
-    patchWorkspace({ nodes: canvasNodes }, 'canvas');
+    if (restoringHistoryRef.current) return;
+    setWorkspace((current) => {
+      if (JSON.stringify(canvasNodes) === JSON.stringify(current.nodes)) return current;
+      const next = { ...current, nodes: canvasNodes };
+      historyRef.current.record(next, 'canvas');
+      setHistoryVersion((value) => value + 1);
+      return next;
+    });
+  };
+
+  const handleCanvasEdgesChange = (canvasEdges: WorkspaceDocument['edges']) => {
+    if (restoringHistoryRef.current) return;
+    setWorkspace((current) => {
+      if (JSON.stringify(canvasEdges) === JSON.stringify(current.edges)) return current;
+      const next = { ...current, edges: canvasEdges };
+      historyRef.current.record(next, 'canvas');
+      setHistoryVersion((value) => value + 1);
+      return next;
+    });
   };
 
   const handleAddNode = (type: NodeType) => {
@@ -462,10 +489,10 @@ export const WorkspacePage = () => {
       const undo = event.key.toLowerCase() === 'z' && !event.shiftKey;
       if (!undo && !redo) return;
       const next = redo ? historyRef.current.redo() : historyRef.current.undo();
-      if (next) { event.preventDefault(); setWorkspace(next); setGraphEpoch((value) => value + 1); setHistoryVersion((value) => value + 1); }
+      if (next) { event.preventDefault(); applyHistoryWorkspace(next); }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    document.addEventListener('keydown', onKeyDown, true);
+    return () => document.removeEventListener('keydown', onKeyDown, true);
   }, []);
 
   return (
@@ -516,8 +543,8 @@ export const WorkspacePage = () => {
               <button type="button" onClick={() => setMobilePanel('inspector')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open inspector">Inspector</button>
               <button type="button" onClick={() => setMobilePanel('snapshots')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open snapshots">Snapshots</button>
               <button type="button" onClick={() => setShowOutline(true)} className="bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Workflow outline" title="Open a keyboard-friendly workflow outline"><ListTree className="h-4 w-4 sm:mr-1 inline" /><span className="hidden sm:inline">Outline</span></button>
-              <button type="button" onClick={() => { const next = historyRef.current.undo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canUndo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"><Undo2 className="w-4 h-4" /></button>
-              <button type="button" onClick={() => { const next = historyRef.current.redo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canRedo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
+              <button type="button" onClick={() => { const next = historyRef.current.undo(); if (next) applyHistoryWorkspace(next); }} disabled={!historyRef.current.canUndo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"><Undo2 className="w-4 h-4" /></button>
+              <button type="button" onClick={() => { const next = historyRef.current.redo(); if (next) applyHistoryWorkspace(next); }} disabled={!historyRef.current.canRedo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
               <button
                 type="button"
                 onClick={handleClear}
@@ -641,7 +668,7 @@ export const WorkspacePage = () => {
             edges={edges}
             initialViewport={workspace.viewport}
             onNodesChange={handleCanvasNodesChange}
-            onEdgesChange={(nextEdges) => patchWorkspace({ edges: nextEdges })}
+            onEdgesChange={handleCanvasEdgesChange}
             onNodeSelect={(node) => {
               if (!node && pendingPaletteSelectionRef.current) return;
               pendingPaletteSelectionRef.current = null;

@@ -92,3 +92,34 @@ test('mobile navigation, guided tour, and acquisition inquiry remain reachable',
   await page.getByRole('button', { name: /start guided tour/i }).click();
   await expect(page.getByRole('dialog', { name: /weavestudio quick tour/i })).toBeVisible();
 });
+
+test('acquisition page provides an accessible recorded workflow walkthrough', async ({ page }) => {
+  await page.goto('/acquire');
+  const walkthrough = page.getByRole('region', { name: /recorded workflow walkthrough/i });
+  await expect(walkthrough).toBeVisible();
+  await expect(walkthrough.getByRole('button', { name: /play guided demo walkthrough/i })).toBeVisible();
+  await expect(walkthrough.getByText(/no account, API key, or live provider call is used/i)).toBeVisible();
+});
+
+test('keyboard undo and redo restore a canvas mutation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Shortcut labels and canvas controls are desktop-first.');
+  await page.goto('/app');
+  const undo = page.getByRole('button', { name: 'Undo' });
+  const redo = page.getByRole('button', { name: 'Redo' });
+  await page.getByRole('button', { name: 'Add Input node' }).click();
+  await expect(undo).toBeEnabled();
+  await page.keyboard.press('Control+z');
+  await expect(redo).toBeEnabled();
+  await page.keyboard.press('Control+Shift+z');
+  await expect(undo).toBeEnabled();
+});
+
+test('corrupt project import reports an error without leaving the recovery flow', async ({ page }) => {
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Data portability' }).click();
+  const portability = page.getByRole('dialog', { name: 'Data portability' });
+  await portability.locator('input[type=file]').nth(0).setInputFiles({ name: 'corrupt.weavestudio.json', mimeType: 'application/json', buffer: Buffer.from('{not valid json') });
+  await expect(page.getByRole('dialog', { name: /import project as a new workspace/i })).toBeVisible();
+  await page.getByRole('button', { name: 'Import new workspace' }).click();
+  await expect(portability.getByText(/failed to parse import file/i)).toBeVisible();
+});
