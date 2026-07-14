@@ -4,8 +4,11 @@ import type { WorkspaceDocument } from '../../types';
 import {
   clearAllLocalData,
   downloadProjectJson,
+  getSnapshots,
+  loadIndex,
   importProjectFile,
 } from '../../lib/workspaceStore';
+import { formatStorageUsage, getStorageUsage } from '../../lib/storageUsage';
 
 interface DataPortabilityModalProps {
   workspace: WorkspaceDocument;
@@ -15,27 +18,14 @@ interface DataPortabilityModalProps {
 
 export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPortabilityModalProps) => {
   const [storageUsage, setStorageUsage] = useState<string>('Calculating...');
+  const [clearOpen, setClearOpen] = useState(false);
+  const [clearText, setClearText] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const calculateStorage = async () => {
-      try {
-        if (navigator.storage?.estimate) {
-          const estimate = await navigator.storage.estimate();
-          if (estimate.usage !== undefined) {
-            setStorageUsage(`${(estimate.usage / 1024).toFixed(1)} KB used`);
-            return;
-          }
-        }
-        let total = 0;
-        for (const key in localStorage) {
-          if (Object.prototype.hasOwnProperty.call(localStorage, key)) {
-            total += (localStorage[key].length + key.length) * 2;
-          }
-        }
-        setStorageUsage(`${(total / 1024).toFixed(1)} KB used`);
-      } catch {
+      try { setStorageUsage(`${formatStorageUsage(getStorageUsage().bytes)} used (WeaveStudio only)`); } catch {
         setStorageUsage('Unknown');
       }
     };
@@ -105,12 +95,10 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
   };
 
   const handleClear = () => {
-    if (!confirm('Clear ALL WeaveStudio data from this browser? Export a backup first. This cannot be undone.')) {
-      return;
-    }
     clearAllLocalData();
+    setMessage('All WeaveStudio browser data was cleared.');
     onReload();
-    onClose();
+    setClearOpen(false);
   };
 
   return (
@@ -189,7 +177,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
 
             <button
               type="button"
-              onClick={handleClear}
+              onClick={() => setClearOpen(true)}
               className="w-full bg-panel hover:bg-red-900/20 text-gray-200 border border-border p-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-3"
             >
               <DatabaseX className="w-4 h-4 text-red-400" />
@@ -200,6 +188,15 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
             </button>
           </div>
         </div>
+        {clearOpen && <div className="absolute inset-0 z-10 flex items-center bg-black/75 p-5">
+          <div className="w-full rounded-xl border border-red-500/40 bg-[#18181b] p-5" role="alertdialog" aria-modal="true" aria-labelledby="clear-title">
+            <h3 id="clear-title" className="font-bold text-white">Clear all local data?</h3>
+            <p className="mt-2 text-sm text-gray-300">This permanently removes {loadIndex().workspaces.length} workspace(s), {getSnapshots().length} snapshot(s), and about {formatStorageUsage(getStorageUsage().bytes)} of WeaveStudio data. This cannot be undone.</p>
+            <p className="mt-2 text-xs text-amber-200">Download a backup first. Type <strong>CLEAR</strong> to enable deletion.</p>
+            <input autoFocus value={clearText} onChange={(e) => setClearText(e.target.value)} aria-label="Type CLEAR to confirm" className="mt-3 w-full rounded border border-gray-700 bg-[#1e1e24] px-3 py-2 text-white" />
+            <div className="mt-4 flex gap-2"><button type="button" onClick={handleDownloadAll} className="rounded border border-border px-3 py-2 text-sm text-blue-300">Download backup first</button><button type="button" onClick={() => { setClearOpen(false); setClearText(''); }} className="rounded border border-border px-3 py-2 text-sm text-gray-200">Cancel</button><button type="button" disabled={clearText !== 'CLEAR'} onClick={handleClear} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Permanently clear data</button></div>
+          </div>
+        </div>}
       </div>
     </div>
   );

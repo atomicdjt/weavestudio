@@ -107,6 +107,24 @@ export const createWorkspace = (options?: {
   return doc;
 };
 
+/** Stable, idempotent guided-demo creation. Existing user duplicates are intentionally preserved. */
+export const getOrCreateGuidedDemo = (factory: () => WorkspaceDocument): WorkspaceDocument => {
+  const index = loadIndex();
+  for (const entry of index.workspaces) {
+    const existing = loadWorkspaceById(entry.id);
+    if (existing?.meta?.guidedDemo === true) {
+      setActiveWorkspaceId(existing.id);
+      return existing;
+    }
+  }
+  const demo = factory();
+  return createWorkspace({
+    id: 'weavestudio-guided-demo', name: demo.name, templateId: demo.templateId,
+    nodes: demo.nodes, edges: demo.edges, sourceMaterial: demo.sourceMaterial,
+    deliverableDraft: demo.deliverableDraft, meta: { ...demo.meta, guidedDemo: true },
+  });
+};
+
 export const saveWorkspaceDocument = (doc: WorkspaceDocument): SaveResult => {
   const updated: WorkspaceDocument = {
     ...doc,
@@ -278,6 +296,7 @@ export const saveSnapshot = (
     snapshotVersion: SNAPSHOT_FORMAT_VERSION,
     workspaceId: workspace.id,
     workspaceName: workspace.name,
+    workspaceNameAtCreation: workspace.name,
     nodes: structuredClone(workspace.nodes),
     edges: structuredClone(workspace.edges),
     sourceMaterial: workspace.sourceMaterial,
@@ -310,6 +329,9 @@ export const applySnapshotToWorkspace = (
   workspace: WorkspaceDocument,
   snapshot: VersionSnapshot,
 ): { workspace: WorkspaceDocument; legacyIncomplete: boolean } => {
+  if (snapshot.workspaceId && snapshot.workspaceId !== workspace.id) {
+    throw new Error('This snapshot belongs to another workspace. Create a workspace from it instead.');
+  }
   const isFull =
     (snapshot.snapshotVersion ?? 1) >= SNAPSHOT_FORMAT_VERSION ||
     snapshot.sourceMaterial !== undefined ||

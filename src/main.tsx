@@ -8,6 +8,7 @@ import { WorkspacePage } from './pages/WorkspacePage'
 import { TemplatesGallery } from './pages/TemplatesGallery'
 import { AcquirePage } from './pages/AcquirePage'
 import { DocsPage } from './pages/DocsPage'
+import { NotFoundPage } from './pages/NotFoundPage'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -22,6 +23,7 @@ createRoot(document.getElementById('root')!).render(
           <Route path="buyer" element={<Navigate to="/acquire" replace />} />
           <Route path="exports" element={<Navigate to="/docs#exports" replace />} />
           <Route path="docs" element={<DocsPage />} />
+          <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
