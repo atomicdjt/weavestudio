@@ -414,6 +414,44 @@ export const collectFullBrowserBackup = (): Record<string, string> => {
   return backup;
 };
 
+export type FullBrowserBackup = { records: Record<string, string>; workspaceCount: number; snapshotCount: number };
+
+/** Validate every owned record before a restore can mutate browser storage. */
+export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBrowserBackup } | { ok: false; error: string } => {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { ok: false, error: 'Backup must be a JSON object.' };
+  const records = raw as Record<string, unknown>;
+  const keys = Object.keys(records);
+  if (!keys.length || keys.some((key) => !key.startsWith('weavestudio_') || typeof records[key] !== 'string')) {
+    return { ok: false, error: 'Backup contains invalid or non-WeaveStudio records.' };
+  }
+  const parsed: Record<string, unknown> = {};
+  try { for (const key of keys) parsed[key] = JSON.parse(records[key] as string); } catch { return { ok: false, error: 'Backup contains invalid JSON and was not restored.' }; }
+  if (parsed[INDEX_KEY]) {
+    const index = validateWorkspaceIndex(parsed[INDEX_KEY]);
+    if (!index.ok) return { ok: false, error: `Backup index is invalid: ${index.error}` };
+    for (const entry of index.data.workspaces) {
+      const document = parsed[workspaceKey(entry.id)];
+      const valid = validateWorkspaceDocument(document);
+      if (!valid.ok) return { ok: false, error: `Workspace “${entry.name}” is invalid: ${valid.error}` };
+    }
+  }
+  const snapshots = parsed[SNAPSHOTS_KEY] ?? parsed[LEGACY_VERSIONS_KEY];
+  if (snapshots !== undefined && !Array.isArray(snapshots)) return { ok: false, error: 'Backup snapshots are invalid.' };
+  const workspaceCount = parsed[INDEX_KEY] ? (validateWorkspaceIndex(parsed[INDEX_KEY]).ok ? (validateWorkspaceIndex(parsed[INDEX_KEY]) as { ok: true; data: WorkspaceIndex }).data.workspaces.length : 0) : 0;
+  return { ok: true, data: { records: records as Record<string, string>, workspaceCount, snapshotCount: Array.isArray(snapshots) ? snapshots.length : 0 } };
+};
+
+/** Replace only owned keys after a successful staged inspection. */
+export const restoreFullBrowserBackup = (backup: FullBrowserBackup): { ok: true } | { ok: false; error: string } => {
+  try {
+    clearAllLocalData();
+    for (const [key, value] of Object.entries(backup.records)) localStorage.setItem(key, value);
+    return { ok: true };
+  } catch {
+    return { ok: false, error: 'Could not write the backup to browser storage.' };
+  }
+};
+
 export const downloadProjectJson = (doc: WorkspaceDocument): void => {
   const payload = buildProjectExport(doc);
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json;charset=utf-8' });

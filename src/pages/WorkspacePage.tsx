@@ -12,6 +12,7 @@ import { SourceIngestPanel } from '../components/workspace/SourceIngestPanel';
 import { WorkspaceManager } from '../components/workspace/WorkspaceManager';
 import { SaveStatusChip } from '../components/workspace/SaveStatus';
 import { OnboardingChecklist } from '../components/workspace/OnboardingChecklist';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import type {
   AppNode,
   NodeType,
@@ -40,6 +41,7 @@ import {
   loadWorkspaceById,
   saveWorkspaceDocument,
   setActiveWorkspaceId,
+  saveRecoverySnapshot,
 } from '../lib/workspaceStore';
 import { resolveWorkspaceFromNav, type LocationState } from '../lib/workspaceInit';
 import { createWorkspaceHistory } from '../lib/workspaceHistory';
@@ -113,7 +115,10 @@ export const WorkspacePage = () => {
   const [graphEpoch, setGraphEpoch] = useState(0);
   const [clearSignal, setClearSignal] = useState(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const pendingPaletteSelectionRef = useRef<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [confirmation, setConfirmation] = useState<{ title: string; description: string; label: string; destructive?: boolean; action: () => void } | null>(null);
   const [showPortabilityModal, setShowPortabilityModal] = useState(false);
   const [workflowValidator, setWorkflowValidator] = useState<WorkflowValidatorResult | null>(null);
   const [pendingTemplateId, setPendingTemplateId] = useState<string | null>(null);
@@ -235,13 +240,17 @@ export const WorkspacePage = () => {
   };
 
   const handleAddNode = (type: NodeType) => {
+    const nextNode = createNode(type, workspace.nodes.length);
     replaceGraph({
-      nodes: [...workspace.nodes, createNode(type, workspace.nodes.length)],
+      nodes: [...workspace.nodes, nextNode],
     });
+    // React Flow emits an empty selection update after a palette insert; retain the useful inspector selection.
+    pendingPaletteSelectionRef.current = nextNode.id;
+    setSelectedNodeId(nextNode.id);
   };
 
   const handleClear = () => {
-    if (!confirm('Clear the current canvas? Named snapshots remain available.')) return;
+    setConfirmation({ title: 'Clear current canvas?', description: 'Nodes, connections, source material, and the draft will be removed. Named snapshots remain available.', label: 'Clear canvas', destructive: true, action: () => {
     replaceGraph({
       nodes: [],
       edges: [],
@@ -255,6 +264,7 @@ export const WorkspacePage = () => {
     });
     setWorkflowValidator(null);
     setSelectedNodeId(null);
+    } });
   };
 
   const handlePortabilityReload = () => {
@@ -283,6 +293,8 @@ export const WorkspacePage = () => {
   };
 
   const handleRestoreSnapshot = (snapshot: VersionSnapshot) => {
+    const checkpoint = saveRecoverySnapshot(`Recovery before restoring ${snapshot.title}`, workspace);
+    if (checkpoint.result.status !== 'saved') { setNotice(checkpoint.result.error ?? 'Could not save recovery checkpoint. Restore cancelled.'); return; }
     const { workspace: restored, legacyIncomplete } = applySnapshotToWorkspace(workspace, snapshot);
     setWorkspace(restored);
     setWorkflowValidator(null);
@@ -290,7 +302,7 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
     setClearSignal((s) => s + 1);
     if (legacyIncomplete) {
-      alert(
+      setNotice(
         'Restored a legacy snapshot (nodes and edges only). The deliverable draft was cleared — regenerate before export so it matches the canvas.',
       );
     }
@@ -323,7 +335,7 @@ export const WorkspacePage = () => {
 
   const handleSplitIntoNodes = () => {
     if (!workspace.sourceMaterial.trim()) {
-      alert('Paste source material first.');
+      setNotice('Paste source material first.');
       return;
     }
 
@@ -611,7 +623,11 @@ export const WorkspacePage = () => {
             initialViewport={workspace.viewport}
             onNodesChange={handleCanvasNodesChange}
             onEdgesChange={(nextEdges) => patchWorkspace({ edges: nextEdges })}
-            onNodeSelect={(node) => setSelectedNodeId(node?.id ?? null)}
+            onNodeSelect={(node) => {
+              if (!node && pendingPaletteSelectionRef.current) return;
+              pendingPaletteSelectionRef.current = null;
+              setSelectedNodeId(node?.id ?? null);
+            }}
             onViewportChange={(viewport) =>
               patchWorkspace({
                 viewport: { x: viewport.x, y: viewport.y, zoom: viewport.zoom },
@@ -650,6 +666,8 @@ export const WorkspacePage = () => {
           onCancel={() => setPendingTemplateId(null)}
         />
       )}
+      {notice && <div role="status" className="fixed bottom-4 left-1/2 z-[80] -translate-x-1/2 rounded-lg border border-blue-500/40 bg-panel px-4 py-3 text-sm text-blue-100 shadow-xl">{notice}<button type="button" className="ml-3 underline" onClick={() => setNotice(null)}>Dismiss</button></div>}
+      <ConfirmDialog open={Boolean(confirmation)} title={confirmation?.title ?? ''} description={confirmation?.description ?? ''} confirmLabel={confirmation?.label ?? 'Confirm'} destructive={confirmation?.destructive} onCancel={() => setConfirmation(null)} onConfirm={() => { const action = confirmation?.action; setConfirmation(null); action?.(); }} />
     </div>
   );
 };

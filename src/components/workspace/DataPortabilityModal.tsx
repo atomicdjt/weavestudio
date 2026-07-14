@@ -3,10 +3,13 @@ import { DatabaseX, Download, Upload, X, HardDrive } from 'lucide-react';
 import type { WorkspaceDocument } from '../../types';
 import {
   clearAllLocalData,
+  collectFullBrowserBackup,
   downloadProjectJson,
   getSnapshots,
+  inspectFullBrowserBackup,
   loadIndex,
   importProjectFile,
+  restoreFullBrowserBackup,
 } from '../../lib/workspaceStore';
 import { formatStorageUsage, getStorageUsage } from '../../lib/storageUsage';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
@@ -22,8 +25,10 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
   const [clearOpen, setClearOpen] = useState(false);
   const [clearText, setClearText] = useState('');
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [restoreFile, setRestoreFile] = useState<File | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const projectFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const calculateStorage = async () => {
@@ -45,13 +50,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
 
   const handleDownloadAll = () => {
     try {
-      const allData: Record<string, string> = {};
-      for (let i = 0; i < localStorage.length; i += 1) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('weavestudio_')) {
-          allData[key] = localStorage.getItem(key) || '';
-        }
-      }
+      const allData = collectFullBrowserBackup();
       const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -95,6 +94,23 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
     };
     reader.readAsText(file);
     setImportFile(null);
+  };
+
+  const completeRestore = () => {
+    const file = restoreFile;
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const inspected = inspectFullBrowserBackup(JSON.parse(String(event.target?.result ?? '')));
+        if (!inspected.ok) { setMessage(inspected.error); return; }
+        const restored = restoreFullBrowserBackup(inspected.data);
+        if (!restored.ok) { setMessage(restored.error); return; }
+        setMessage(`Restored ${inspected.data.workspaceCount} workspace(s) and ${inspected.data.snapshotCount} snapshot(s).`);
+        setRestoreFile(null); onReload();
+      } catch { setMessage('Failed to parse backup. No browser data was changed.'); }
+    };
+    reader.readAsText(file);
   };
 
   const handleClear = () => {
@@ -147,6 +163,11 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
               </div>
             </button>
 
+            <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full bg-panel hover:bg-gray-800 text-gray-200 border border-border p-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-3">
+              <Upload className="w-4 h-4 text-cyan-400" />
+              <div className="text-left"><div className="text-cyan-300">Restore full browser backup</div><div className="text-xs text-gray-500 font-normal">Validates first, then replaces WeaveStudio records only</div></div>
+            </button>
+
             <button
               type="button"
               onClick={handleDownloadAll}
@@ -161,7 +182,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
 
             <button
               type="button"
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => projectFileInputRef.current?.click()}
               className="w-full bg-panel hover:bg-gray-800 text-gray-200 border border-border p-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-3"
             >
               <Upload className="w-4 h-4 text-amber-400" />
@@ -172,11 +193,12 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
               <input
                 type="file"
                 accept="application/json,.json,.weavestudio.json"
-                ref={fileInputRef}
+                ref={projectFileInputRef}
                 className="hidden"
                 onChange={handleImport}
               />
             </button>
+            <input type="file" accept="application/json,.json" className="hidden" ref={fileInputRef} onChange={(event) => { const file = event.target.files?.[0]; if (file) setRestoreFile(file); }} />
 
             <button
               type="button"
@@ -200,7 +222,8 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
             <div className="mt-4 flex gap-2"><button type="button" onClick={handleDownloadAll} className="rounded border border-border px-3 py-2 text-sm text-blue-300">Download backup first</button><button type="button" onClick={() => { setClearOpen(false); setClearText(''); }} className="rounded border border-border px-3 py-2 text-sm text-gray-200">Cancel</button><button type="button" disabled={clearText !== 'CLEAR'} onClick={handleClear} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Permanently clear data</button></div>
           </div>
         </div>}
-        <ConfirmDialog open={Boolean(importFile)} title="Import project as a new workspace?" description="The current workspace will remain unchanged. Full browser backups must use the dedicated restore flow." confirmLabel="Import new workspace" onCancel={() => { setImportFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} onConfirm={completeImport} />
+        <ConfirmDialog open={Boolean(importFile)} title="Import project as a new workspace?" description="The current workspace will remain unchanged. Full browser backups must use the dedicated restore flow." confirmLabel="Import new workspace" onCancel={() => { setImportFile(null); if (projectFileInputRef.current) projectFileInputRef.current.value = ''; }} onConfirm={completeImport} />
+        <ConfirmDialog open={Boolean(restoreFile)} title="Restore full browser backup?" description="The file will be validated before any change. A restore replaces only WeaveStudio-owned browser records; unrelated site data stays untouched." confirmLabel="Restore validated backup" destructive onCancel={() => { setRestoreFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }} onConfirm={completeRestore} />
       </div>
     </div>
   );
