@@ -423,7 +423,7 @@ export const WorkspacePage = () => {
       <NodePalette onAddNode={handleAddNode} />
 
       <div className="flex-1 flex flex-col relative min-h-[560px] lg:min-h-0 min-w-0">
-        <div className="absolute top-3 left-3 right-3 z-10 flex flex-col gap-2 pointer-events-none">
+        <div className="relative z-10 flex flex-col gap-2 px-3 pt-3 pointer-events-none">
           <div className="flex flex-col xl:flex-row gap-2 justify-between items-start xl:items-center">
             <WorkspaceManager
               workspaces={indexEntries}
@@ -538,7 +538,7 @@ export const WorkspacePage = () => {
           )}
         </div>
 
-        <div className="pt-[7.5rem] sm:pt-24 xl:pt-16 shrink-0">
+        <div className="shrink-0">
           <SourceIngestPanel
             sourceMaterial={workspace.sourceMaterial}
             inputInstructions={template?.inputInstructions}
