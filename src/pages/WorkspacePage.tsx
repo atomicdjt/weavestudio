@@ -11,6 +11,7 @@ import { TemplateLoadModal } from '../components/workspace/TemplateLoadModal';
 import { SourceIngestPanel } from '../components/workspace/SourceIngestPanel';
 import { WorkspaceManager } from '../components/workspace/WorkspaceManager';
 import { SaveStatusChip } from '../components/workspace/SaveStatus';
+import { OnboardingChecklist } from '../components/workspace/OnboardingChecklist';
 import type {
   AppNode,
   NodeType,
@@ -562,6 +563,7 @@ export const WorkspacePage = () => {
               </button>
             </div>
           )}
+          <OnboardingChecklist hasSource={Boolean(workspace.sourceMaterial.trim())} hasNodes={workspace.nodes.length > 0} validated={Boolean(workflowValidator)} onOpenTemplates={() => navigate('/templates')} />
         </div>
 
         <div className="shrink-0">
