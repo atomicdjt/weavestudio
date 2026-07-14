@@ -1,19 +1,20 @@
-import { StrictMode } from 'react'
+import { StrictMode, Suspense, lazy } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Navigate, Routes, Route } from 'react-router-dom'
 import './index.css'
 import App from './App'
-import { LandingPage } from './pages/LandingPage'
-import { WorkspacePage } from './pages/WorkspacePage'
-import { TemplatesGallery } from './pages/TemplatesGallery'
-import { AcquirePage } from './pages/AcquirePage'
-import { DocsPage } from './pages/DocsPage'
-import { NotFoundPage } from './pages/NotFoundPage'
 import { AppErrorBoundary } from './components/ui/AppErrorBoundary'
+
+const LandingPage = lazy(() => import('./pages/LandingPage').then((module) => ({ default: module.LandingPage })))
+const WorkspacePage = lazy(() => import('./pages/WorkspacePage').then((module) => ({ default: module.WorkspacePage })))
+const TemplatesGallery = lazy(() => import('./pages/TemplatesGallery').then((module) => ({ default: module.TemplatesGallery })))
+const AcquirePage = lazy(() => import('./pages/AcquirePage').then((module) => ({ default: module.AcquirePage })))
+const DocsPage = lazy(() => import('./pages/DocsPage').then((module) => ({ default: module.DocsPage })))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage').then((module) => ({ default: module.NotFoundPage })))
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AppErrorBoundary><BrowserRouter>
+    <AppErrorBoundary><BrowserRouter><Suspense fallback={<main className="grid min-h-screen place-items-center bg-canvas text-sm text-gray-300" role="status">Loading WeaveStudio…</main>}>
       <Routes>
         <Route path="/" element={<App />}>
           <Route index element={<LandingPage />} />
@@ -27,6 +28,6 @@ createRoot(document.getElementById('root')!).render(
           <Route path="*" element={<NotFoundPage />} />
         </Route>
       </Routes>
-    </BrowserRouter></AppErrorBoundary>
+    </Suspense></BrowserRouter></AppErrorBoundary>
   </StrictMode>,
 )

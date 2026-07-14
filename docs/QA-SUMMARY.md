@@ -3,7 +3,7 @@
 ## Verified release evidence
 
 - **Automated tests:** 38 passing Vitest tests across 10 files.
-- **Browser tests:** Playwright desktop consent coverage plus desktop/mobile route and mobile-sheet interaction coverage; provider requests are mocked.
+- **Browser tests:** Playwright desktop and mobile consent coverage plus desktop/mobile route and mobile-sheet interaction coverage; provider requests are mocked.
 - **Lint and typecheck:** clean on the hardening branch.
 - **Production build and buyer package:** successful via `npm run verify:buyer`.
 - **Preview:** non-production Vercel preview only. Anonymous access is currently blocked by project-level Deployment Protection; see `docs/buyer/PUBLIC_DEMO.md`.
@@ -18,6 +18,7 @@
 - Markdown, PDF, and Project JSON export work; Project JSON round-trips workspace state.
 - The standard local-first workflow does not make hidden OpenAI or Ollama provider calls.
 - Direct application routes recover through the SPA rewrite in local browser tests.
+- Route-level code splitting keeps the initial application chunk at about 232 KB minified; the workspace and PDF tooling load separately.
 
 ## Expected limitations
 

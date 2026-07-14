@@ -17,13 +17,14 @@ test('guided demo and invalid routes recover in the rendered app', async ({ page
 });
 
 test('AI provider request stays behind explicit consent', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name === 'mobile', 'Consent interaction is covered in desktop; the mobile project is a layout smoke test.');
   let requests = 0;
   await page.route(/api\.openai\.com|generativelanguage\.googleapis\.com/, async (route) => { requests += 1; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ choices: [{ message: { content: 'draft' } }] }) }); });
   await page.goto('/app');
   await page.getByRole('button', { name: 'Add AI Assist node' }).click();
-  await page.getByLabel('API key (memory only)').fill('test-key');
-  await page.getByRole('button', { name: /run live provider/i }).click();
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Open inspector' }).click();
+  const inspector = testInfo.project.name === 'mobile' ? page.getByRole('dialog', { name: 'Inspector' }) : page;
+  await inspector.getByLabel('API key (memory only)').fill('test-key');
+  await inspector.getByRole('button', { name: /run live provider/i }).click();
   await expect(page.getByRole('dialog', { name: /confirm external ai request/i })).toBeVisible();
   expect(requests).toBe(0);
   await page.getByRole('button', { name: 'Cancel' }).last().click();
