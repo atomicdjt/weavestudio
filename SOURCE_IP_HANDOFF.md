@@ -13,7 +13,7 @@ WeaveStudio enables professionals to turn variable real-world inputs into struct
 - React, TypeScript, Vite, Tailwind v4, and `@xyflow/react` source code.
 - Local-first workflow canvas with draggable and connectable nodes.
 - Standard nodes: Input, Transform, Decision, Review, Output.
-- Optional AI Assist Blueprint node for future BYOK provider adapters.
+- Optional OpenAI/Gemini BYOK assistance with explicit per-request consent and human review before applying a draft.
 - Starter templates for proposals, meetings, incidents, research, SOPs, specs, and feedback.
 - Local autosave and version snapshots backed by browser localStorage.
 - Deterministic Workflow Validator for workflow completeness and export-readiness.
@@ -26,7 +26,7 @@ WeaveStudio enables professionals to turn variable real-world inputs into struct
 - No backend, authentication, account system, external API, cloud sync, or database.
 - Canvas uses `@xyflow/react` (current maintained package).
 - PDF export uses lazy `jspdf` import to keep the initial app bundle smaller.
-- AI Assist Blueprint includes no API keys and does not make provider calls by default.
+- AI Assist includes no API keys and makes no provider call until a user confirms that individual request.
 
 ## Technical Foundation
 
@@ -40,7 +40,7 @@ WeaveStudio enables professionals to turn variable real-world inputs into struct
 
 ## AI Assist Extension Path
 
-A buyer can wire provider-specific API calls into the AI Assist Blueprint later by adding an adapter module, adding secure BYOK input handling, and routing returned draft content back through a Review node. Suggested extension points:
+A buyer can add a secure server-side provider proxy later by adding authentication, rate limiting, and audit controls. The shipped browser BYOK adapters intentionally remain explicit-consent and human-review-first. Suggested extension points:
 
 - `src/types/index.ts` for adapter metadata and node fields.
 - `src/components/workspace/WorkspacePanels.tsx` for settings and inspector controls.
@@ -48,7 +48,7 @@ A buyer can wire provider-specific API calls into the AI Assist Blueprint later 
 - `src/lib/processCheck.ts` for readiness rules.
 - `src/lib/exporter.ts` if AI-assisted provenance needs to appear in exports.
 
-The current release remains deterministic and local-first because no live AI provider is required for the product to run.
+The current release remains local-first because no live AI provider is required for the product to run.
 
 ## Buyer Fit
 

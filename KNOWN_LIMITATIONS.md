@@ -33,4 +33,4 @@
 ## Scope
 
 - WeaveStudio is not legal, medical, financial, compliance, or security software.
-- The canvas is desktop-oriented; mobile access is supported but constrained.
+- The canvas is most efficient on desktop. Mobile includes dedicated Inspector and Snapshot sheets, but dense graph editing is still best completed on a larger screen.

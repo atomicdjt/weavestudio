@@ -69,7 +69,10 @@ npm test
 npm run lint
 npm run typecheck
 npm run build
+npm run test:browser
 npm run package:acquisition
+# Full buyer release gate (all of the above)
+npm run verify:buyer
 ```
 
 To inspect the built application locally:
@@ -106,3 +109,5 @@ Production is deployed from the authoritative `master` branch to [weavestudio-ni
 ## Buyer materials
 
 The acquisition-ready executive summary, architecture/maintenance guide, feature-reality matrix, outreach copy, and preview instructions are in [`docs/buyer/`](docs/buyer/). The package command builds a fresh ZIP and prints its SHA-256; generated release files are intentionally not committed.
+
+For a buyer transfer runbook and first-90-day operating plan, see [`docs/buyer/TRANSFER_CHECKLIST.md`](docs/buyer/TRANSFER_CHECKLIST.md) and [`docs/buyer/OPERATING_PLAN_90_DAYS.md`](docs/buyer/OPERATING_PLAN_90_DAYS.md).

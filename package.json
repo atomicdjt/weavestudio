@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "typecheck": "tsc -b",
     "package:acquisition": "node scripts/package-release.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "verify:buyer": "node scripts/verify-buyer.mjs"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.20",

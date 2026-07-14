@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { ClipboardCheck, Database, Eye, Redo2, RotateCcw, Trash2, Undo2 } from 'lucide-react';
+import { ClipboardCheck, Database, Eye, Redo2, RotateCcw, Trash2, Undo2, X } from 'lucide-react';
 import { WorkflowCanvas } from '../components/canvas/WorkflowCanvas';
 import { NodePalette, NodeInspector } from '../components/workspace/WorkspacePanels';
 import { VersionHistory } from '../components/workspace/VersionHistory';
@@ -117,6 +117,7 @@ export const WorkspacePage = () => {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const pendingPaletteSelectionRef = useRef<string | null>(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [mobilePanel, setMobilePanel] = useState<'inspector' | 'snapshots' | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirmation, setConfirmation] = useState<{ title: string; description: string; label: string; destructive?: boolean; action: () => void } | null>(null);
   const [showPortabilityModal, setShowPortabilityModal] = useState(false);
@@ -507,6 +508,8 @@ export const WorkspacePage = () => {
             />
             <div className="pointer-events-auto flex flex-wrap items-center gap-2">
               <SaveStatusChip status={saveStatus} error={saveError} workspaceName={workspace.name} />
+              <button type="button" onClick={() => setMobilePanel('inspector')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open inspector">Inspector</button>
+              <button type="button" onClick={() => setMobilePanel('snapshots')} className="lg:hidden bg-panel border border-border px-3 py-2 rounded-lg text-sm" aria-label="Open snapshots">Snapshots</button>
               <button type="button" onClick={() => { const next = historyRef.current.undo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canUndo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Undo" title="Undo (Ctrl/Cmd+Z)"><Undo2 className="w-4 h-4" /></button>
               <button type="button" onClick={() => { const next = historyRef.current.redo(); if (next) { setWorkspace(next); setGraphEpoch((v) => v + 1); setHistoryVersion((v) => v + 1); } }} disabled={!historyRef.current.canRedo()} className="bg-panel border border-border p-2 rounded-lg disabled:opacity-40" aria-label="Redo" title="Redo (Ctrl/Cmd+Shift+Z)"><Redo2 className="w-4 h-4" /></button>
               <button
@@ -646,8 +649,14 @@ export const WorkspacePage = () => {
         </div>
       </div>
 
-      <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} />
-      <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />
+      <div className="hidden lg:contents"><NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
+
+      {mobilePanel && <div className="lg:hidden fixed inset-0 z-[65] bg-black/70 p-3" role="dialog" aria-modal="true" aria-label={mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}>
+        <div className="mx-auto flex h-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-2xl">
+          <div className="flex items-center justify-between border-b border-border px-4 py-3"><h2 className="font-semibold">{mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}</h2><button type="button" onClick={() => setMobilePanel(null)} aria-label={`Close ${mobilePanel === 'inspector' ? 'inspector' : 'snapshots'}`} className="rounded p-2"><X className="w-5 h-5" /></button></div>
+          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
+        </div>
+      </div>}
 
       {workflowValidator && (
         <WorkflowValidatorPanel result={workflowValidator} onClose={() => setWorkflowValidator(null)} />

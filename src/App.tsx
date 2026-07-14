@@ -28,7 +28,7 @@ function App() {
             <div className="text-[11px] text-gray-500 leading-none">Local-first workflow canvas</div>
           </div>
         </Link>
-        <div className="flex items-center gap-1 overflow-x-auto pb-1 lg:pb-0">
+        <div className="flex flex-wrap items-center gap-1 pb-1 lg:pb-0">
           {navItems.map((item) => (
             <Link
               key={item.path}

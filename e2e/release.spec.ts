@@ -5,6 +5,13 @@ test('guided demo and invalid routes recover in the rendered app', async ({ page
   await page.getByTestId('open-guided-demo').click();
   await expect(page.getByRole('heading', { name: 'Source material' })).toBeVisible();
   await expect(page.getByTestId('workflow-canvas')).toBeAttached();
+  if (page.viewportSize()?.width && page.viewportSize()!.width < 700) {
+    await page.getByRole('button', { name: 'Open inspector' }).click();
+    await expect(page.getByRole('dialog', { name: 'Inspector' })).toBeVisible();
+    await page.getByRole('button', { name: 'Close inspector' }).click();
+    await page.getByRole('button', { name: 'Open snapshots' }).click();
+    await expect(page.getByRole('dialog', { name: 'Snapshots' })).toBeVisible();
+  }
   await page.goto('/not-a-route');
   await expect(page.getByRole('heading', { name: /page not found/i })).toBeVisible();
 });
