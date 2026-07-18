@@ -13,7 +13,8 @@
     "typecheck": "tsc -b",
     "package:acquisition": "node scripts/package-release.mjs",
     "test:browser": "playwright test",
-    "verify:buyer": "node scripts/verify-buyer.mjs"
+    "verify:buyer": "node scripts/verify-buyer.mjs",
+    "verify": "npm test && npm run lint && npm run typecheck && npm run build && npm run test:browser && npm run verify:buyer && npm run package:acquisition"
   },
   "dependencies": {
     "@tailwindcss/typography": "^0.5.20",
@@ -43,5 +44,8 @@
     "vite": "^8.1.1",
     "vitest": "^4.1.10"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=24 <25"
+  }
 }

@@ -2,7 +2,7 @@ name: WeaveStudio CI
 
 on:
   push:
-    branches: [master, hardening/**]
+    branches: [main, master, hardening/**]
   pull_request:
   workflow_dispatch:
 

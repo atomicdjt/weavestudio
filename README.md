@@ -12,7 +12,7 @@ WeaveStudio is a local-first visual workflow canvas for turning messy notes, tra
 
 ## Current release authority
 
-The authoritative editable source is the `master` branch of this repository. The acquisition hardening, OpenAI/Gemini BYOK workflow, browser validation, buyer materials, commercial architecture guidance, and repository-governance work were consolidated into `master` on July 14, 2026.
+The authoritative editable source is the `main` branch of this repository. The acquisition hardening, OpenAI/Gemini BYOK workflow, browser validation, buyer materials, commercial architecture guidance, and repository-governance work were preserved from the released `master` lineage during the July 2026 non-force branch migration. `master` remains a temporary compatibility branch until production verification is complete.
 
 Generated acquisition ZIPs and deployment artifacts are outputs of the authoritative source; they do not supersede it.
 
@@ -115,7 +115,7 @@ See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for full details.
 
 ## Production deployment
 
-Production is deployed from the authoritative `master` branch to [weavestudio-nine.vercel.app](https://weavestudio-nine.vercel.app/). The public review demo and acquisition overview are available at [weavestudio-demo.vercel.app](https://weavestudio-demo.vercel.app/). `vercel.json` provides the SPA rewrite needed for direct route refreshes.
+Production is deployed from the authoritative `main` branch to [weavestudio-nine.vercel.app](https://weavestudio-nine.vercel.app/). The public review demo and acquisition overview are available at [weavestudio-demo.vercel.app](https://weavestudio-demo.vercel.app/). `vercel.json` provides the SPA rewrite needed for direct route refreshes.
 
 ## Buyer materials
 
