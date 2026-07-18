@@ -2,10 +2,16 @@ name: WeaveStudio CI
 
 on:
   push:
+    branches: [master, hardening/**]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: weavestudio-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -13,23 +19,16 @@ jobs:
     timeout-minutes: 10
 
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24.x
           cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Build
-        run: npm run build
+      - run: npm ci
+      - run: npm test
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - run: npm run package:acquisition

@@ -10,7 +10,7 @@ This document summarizes what is included with the WeaveStudio local-first editi
 - Optional AI Assist Blueprint node for future BYOK provider adapters.
 - Starter templates for proposals, meetings, incidents, research, SOPs, specs, feedback, and optional AI Assist review.
 - Local autosave and version snapshots backed by browser localStorage.
-- Deterministic Process Check for workflow completeness and export readiness.
+- Deterministic Workflow Validator for workflow completeness and export readiness.
 - Deterministic markdown, JSON, and print-oriented PDF export paths.
 - Product pages, docs page, export page, `/acquire` page, known limitations, roadmap, and acquisition listing copy.
 
@@ -66,6 +66,6 @@ The current MVP remains deterministic and local-first because no live AI provide
 
 - localStorage is convenient but not durable enough for high-value work without exports.
 - The generator structures existing node content; it does not rewrite, fact-check, or infer truth.
-- Process Check validates structure and readiness; it does not verify source accuracy.
+- Workflow Validator validates structure and readiness; it does not verify source accuracy.
 - The PDF export is intentionally simple and text-oriented.
 - Sensitive or regulated workflows need independent review and a stronger storage/security model before production use in those domains.

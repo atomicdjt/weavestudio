@@ -1,36 +1,47 @@
 {
   "name": "weavestudio",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "typecheck": "tsc -b",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc -b",
+    "package:acquisition": "node scripts/package-release.mjs",
+    "test:browser": "playwright test",
+    "verify:buyer": "node scripts/verify-buyer.mjs"
   },
   "dependencies": {
+    "@tailwindcss/typography": "^0.5.20",
     "@xyflow/react": "^12.11.2",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",
     "lucide-react": "^1.23.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.1",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "^4.3.2",
-    "@types/node": "^24.13.2",
+    "@types/node": "^24.13.3",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "autoprefixer": "^10.5.2",
+    "jsdom": "^29.1.1",
     "oxlint": "^1.71.0",
     "postcss": "^8.5.16",
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",
-    "vite": "^8.1.1"
-  }
+    "vite": "^8.1.1",
+    "vitest": "^4.1.10"
+  },
+  "license": "UNLICENSED"
 }

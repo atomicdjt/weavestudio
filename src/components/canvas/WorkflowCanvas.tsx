@@ -1,48 +1,57 @@
-import React, { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   Background,
   Controls,
+  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   addEdge,
   useEdgesState,
   useNodesState,
-} from '@xyflow/react';
-import type {
-  Connection,
-  Edge,
-  NodeTypes,
-  OnSelectionChangeFunc,
-  ReactFlowInstance,
+  type Connection,
+  type Edge,
+  type NodeTypes,
+  type OnSelectionChangeFunc,
+  type ReactFlowInstance,
+  type Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { nodeTypes } from './nodes/nodeTypes';
 import type { AppEdge, AppNode, NodeType } from '../../types';
+import { createId } from '../../lib/ids';
 
+/**
+ * State ownership:
+ * - Parent (WorkspacePage) is authoritative for workspace document nodes/edges data.
+ * - Canvas holds React Flow interaction state and syncs from parent when `graphEpoch` changes.
+ * - Viewport is preserved across ordinary updates; fitView only on first mount of a workspace.
+ * - Do NOT remount this tree for source apply / node data edits — bump graphEpoch instead.
+ */
 interface WorkflowCanvasProps {
-  initialNodes: AppNode[];
-  initialEdges: AppEdge[];
-  canvasKey?: number;
-  nodeDataOverrides?: Record<string, Partial<AppNode['data']>>;
+  nodes: AppNode[];
+  edges: AppEdge[];
+  /** Bump when parent applies an external graph replacement (not every keystroke). */
+  graphEpoch: number;
+  workspaceId: string;
   onNodesChange: (nodes: AppNode[]) => void;
   onEdgesChange: (edges: AppEdge[]) => void;
   onNodeSelect: (node: AppNode | null) => void;
+  onViewportChange?: (viewport: Viewport) => void;
+  initialViewport?: { x: number; y: number; zoom: number };
 }
-
-const getId = () => `node_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 
 const getDefaultNodeData = (type: NodeType): AppNode['data'] => {
   if (type === 'aiAssist') {
     return {
       title: 'New AI Assist Blueprint',
-      description: 'Optional BYOK-ready AI adapter step. No live API calls are made by default.',
-      content: 'Blueprint only: define the intended assistive transformation and keep human review enabled.',
+      description: 'Optional BYOK AI step. Live network calls require explicit consent.',
+      content: 'Blueprint only by default. Use Mock offline, or allow a network call to run a provider.',
       status: 'pending',
       promptInstruction: '',
       expectedInput: '',
       expectedOutput: '',
-      providerNote: 'Requires a user-supplied key or future provider adapter to execute real AI calls.',
+      providerNote: 'Requires a user-supplied key or local Ollama. No bundled API keys. Live calls are gated.',
       reviewRequired: true,
     };
   }
@@ -57,42 +66,70 @@ const getDefaultNodeData = (type: NodeType): AppNode['data'] => {
 };
 
 const WorkflowCanvasInner = ({
-  initialNodes,
-  initialEdges,
-  nodeDataOverrides = {},
+  nodes: parentNodes,
+  edges: parentEdges,
+  graphEpoch,
+  workspaceId,
   onNodesChange,
   onEdgesChange,
   onNodeSelect,
-}: Omit<WorkflowCanvasProps, 'canvasKey'>) => {
+  onViewportChange,
+  initialViewport,
+}: WorkflowCanvasProps) => {
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
   const rfInstanceRef = useRef<ReactFlowInstance<AppNode, AppEdge> | null>(null);
+  const lastEpochRef = useRef<number | null>(null);
+  const lastWorkspaceIdRef = useRef<string | null>(null);
+  const applyingExternalRef = useRef(false);
 
-  const [nodes, setNodes, onNodesChangeInternal] = useNodesState<AppNode>(initialNodes);
-  const [edges, setEdges, onEdgesChangeInternal] = useEdgesState<AppEdge>(initialEdges);
+  const [nodes, setNodes, onNodesChangeInternal] = useNodesState<AppNode>(parentNodes);
+  const [edges, setEdges, onEdgesChangeInternal] = useEdgesState<AppEdge>(parentEdges);
 
   const onNodesChangeRef = useRef(onNodesChange);
   onNodesChangeRef.current = onNodesChange;
   const onEdgesChangeRef = useRef(onEdgesChange);
   onEdgesChangeRef.current = onEdgesChange;
 
+  // Push interaction updates upward (skip while applying external graph)
   useEffect(() => {
+    if (applyingExternalRef.current) return;
     onNodesChangeRef.current(nodes);
   }, [nodes]);
 
   useEffect(() => {
+    if (applyingExternalRef.current) return;
     onEdgesChangeRef.current(edges);
   }, [edges]);
 
+  // External graph sync without remount — only when epoch/workspace changes (not every parent render)
   useEffect(() => {
-    if (Object.keys(nodeDataOverrides).length === 0) return;
-    setNodes((current) =>
-      current.map((node) =>
-        nodeDataOverrides[node.id]
-          ? { ...node, data: { ...node.data, ...nodeDataOverrides[node.id] } }
-          : node,
-      ),
-    );
-  }, [nodeDataOverrides, setNodes]);
+    const workspaceChanged = lastWorkspaceIdRef.current !== workspaceId;
+    const epochChanged = lastEpochRef.current !== graphEpoch;
+
+    if (!workspaceChanged && !epochChanged && lastEpochRef.current !== null) {
+      return;
+    }
+
+    applyingExternalRef.current = true;
+    setNodes(structuredClone(parentNodes));
+    setEdges(structuredClone(parentEdges));
+    lastEpochRef.current = graphEpoch;
+    lastWorkspaceIdRef.current = workspaceId;
+
+    // fitView only when switching workspace, not on every source apply
+    if (workspaceChanged && rfInstanceRef.current) {
+      requestAnimationFrame(() => {
+        rfInstanceRef.current?.fitView({ padding: 0.25 });
+        applyingExternalRef.current = false;
+      });
+    } else {
+      requestAnimationFrame(() => {
+        applyingExternalRef.current = false;
+      });
+    }
+    // parentNodes/parentEdges read from the render that bumped graphEpoch
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [graphEpoch, workspaceId, setNodes, setEdges]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((current) => addEdge(params, current)),
@@ -118,7 +155,7 @@ const WorkflowCanvasInner = ({
       });
 
       const newNode: AppNode = {
-        id: getId(),
+        id: createId('node'),
         type,
         position,
         data: getDefaultNodeData(type),
@@ -137,7 +174,7 @@ const WorkflowCanvasInner = ({
   );
 
   return (
-    <div className="w-full h-full" ref={reactFlowWrapper}>
+    <div className="w-full h-full" ref={reactFlowWrapper} data-testid="workflow-canvas">
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -146,27 +183,34 @@ const WorkflowCanvasInner = ({
         onConnect={onConnect}
         onInit={(instance) => {
           rfInstanceRef.current = instance;
+          if (initialViewport) {
+            instance.setViewport(initialViewport);
+          } else {
+            instance.fitView({ padding: 0.25 });
+          }
         }}
+        onMoveEnd={(_, viewport) => onViewportChange?.(viewport)}
         onDrop={onDrop}
         onDragOver={onDragOver}
         nodeTypes={nodeTypes as NodeTypes}
         onSelectionChange={onSelectionChange}
-        fitView
-        fitViewOptions={{ padding: 0.25 }}
         proOptions={{ hideAttribution: true }}
         className="bg-canvas"
         minZoom={0.15}
         maxZoom={2}
+        defaultViewport={initialViewport}
       >
         <Background color="#27272a" gap={20} />
         <Controls className="bg-panel border-border fill-gray-400" />
+        <MiniMap ariaLabel="Workflow minimap" className="hidden md:block" nodeColor="#3b82f6" />
       </ReactFlow>
     </div>
   );
 };
 
-export const WorkflowCanvas = ({ canvasKey = 0, ...props }: WorkflowCanvasProps) => (
-  <ReactFlowProvider key={canvasKey}>
+/** Stable provider — never key-remount for ordinary edits */
+export const WorkflowCanvas = (props: WorkflowCanvasProps) => (
+  <ReactFlowProvider>
     <WorkflowCanvasInner {...props} />
   </ReactFlowProvider>
 );

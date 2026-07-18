@@ -1,206 +1,57 @@
 import React from 'react';
-import type { AppNode, NodeType } from '../../types';
-import { BrainCircuit, FileInput, FileOutput, GitFork, Plus, Scissors, Trash2, UserCheck } from 'lucide-react';
+import type { AppNode, NodeCategory, NodeType } from '../../types';
+import { BrainCircuit, Eye, EyeOff, FileInput, FileOutput, GitFork, Plus, Scissors, Trash2, UserCheck, X } from 'lucide-react';
+import { PROVIDER_MODELS, runAIRequest, type AIProviderId } from '../../lib/ai';
+import { AccessibleDialog } from '../ui/AccessibleDialog';
 
-interface NodePaletteProps {
-  onAddNode: (type: NodeType) => void;
-}
+const CATEGORY_OPTIONS: { value: NodeCategory; label: string }[] = (['source', 'evidence', 'action', 'risk', 'decision', 'conclusion', 'open_question', 'output', 'other'] as NodeCategory[]).map((value) => ({ value, label: value.replace('_', ' ') }));
+const palette: { type: NodeType; label: string; icon: React.ReactNode; color: string }[] = [
+  { type: 'input', label: 'Input', icon: <FileInput className="w-4 h-4" />, color: 'text-emerald-400' },
+  { type: 'transform', label: 'Transform', icon: <Scissors className="w-4 h-4" />, color: 'text-blue-400' },
+  { type: 'decision', label: 'Decision', icon: <GitFork className="w-4 h-4" />, color: 'text-amber-400' },
+  { type: 'review', label: 'Review', icon: <UserCheck className="w-4 h-4" />, color: 'text-purple-400' },
+  { type: 'aiAssist', label: 'AI Assist', icon: <BrainCircuit className="w-4 h-4" />, color: 'text-cyan-300' },
+  { type: 'output', label: 'Output', icon: <FileOutput className="w-4 h-4" />, color: 'text-rose-400' },
+];
 
-export const NodePalette = ({ onAddNode }: NodePaletteProps) => {
-  const onDragStart = (event: React.DragEvent, nodeType: NodeType) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
+export const NodePalette = ({ onAddNode }: { onAddNode: (type: NodeType) => void }) => <aside className="w-full lg:w-64 bg-panel border-b lg:border-b-0 lg:border-r border-border p-4 overflow-y-auto"><h3 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-2">Node Palette</h3><p className="text-xs text-gray-400 mb-4">Drag a node to the canvas, or use add for keyboard-friendly creation.</p><div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-3">{palette.map((item) => <div key={item.type} draggable onDragStart={(event) => { event.dataTransfer.setData('application/reactflow', item.type); event.dataTransfer.effectAllowed = 'move'; }} className={`flex items-center gap-2 p-3 rounded-lg border border-gray-800 bg-[#1e1e24] cursor-grab ${item.color}`}><span>{item.icon}</span><span className="text-sm text-gray-200 flex-1">{item.label}</span><button type="button" onClick={() => onAddNode(item.type)} className="p-1 rounded bg-black/30" aria-label={`Add ${item.label} node`}><Plus className="w-4 h-4" /></button></div>)}</div></aside>;
 
-  const items: { type: NodeType; label: string; icon: React.ReactNode; color: string }[] = [
-    { type: 'input', label: 'Input', icon: <FileInput className="w-4 h-4" />, color: 'text-emerald-400 border-emerald-500/30' },
-    { type: 'transform', label: 'Transform', icon: <Scissors className="w-4 h-4" />, color: 'text-blue-400 border-blue-500/30' },
-    { type: 'decision', label: 'Decision', icon: <GitFork className="w-4 h-4" />, color: 'text-amber-400 border-amber-500/30' },
-    { type: 'review', label: 'Review', icon: <UserCheck className="w-4 h-4" />, color: 'text-purple-400 border-purple-500/30' },
-    { type: 'aiAssist', label: 'AI Assist', icon: <BrainCircuit className="w-4 h-4" />, color: 'text-cyan-300 border-cyan-500/30' },
-    { type: 'output', label: 'Output', icon: <FileOutput className="w-4 h-4" />, color: 'text-rose-400 border-rose-500/30' },
-  ];
+interface NodeInspectorProps { selectedNode: AppNode | null; onUpdate: (id: string, data: Partial<AppNode['data']>) => void; onDelete: (id: string) => void; onAddInput?: () => void; }
 
-  return (
-    <aside className="w-full lg:w-64 bg-panel border-b lg:border-b-0 lg:border-r border-border p-4 flex flex-col lg:h-full max-h-72 lg:max-h-none overflow-y-auto">
-      <h3 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-4">Node Palette</h3>
-      <p className="text-xs text-gray-400 mb-4">Drag a node onto the canvas, or use the add button for keyboard-friendly creation.</p>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-1 gap-3">
-        {items.map((item) => (
-          <div
-            key={item.type}
-            className={`flex items-center gap-2 p-3 rounded-lg border bg-[#1e1e24] cursor-grab active:cursor-grabbing hover:bg-gray-800 transition-colors ${item.color}`}
-            onDragStart={(event) => onDragStart(event, item.type)}
-            draggable
-          >
-            {item.icon}
-            <span className="font-medium text-sm text-gray-200 flex-1 min-w-0 truncate">{item.label}</span>
-            <button
-              type="button"
-              onClick={() => onAddNode(item.type)}
-              className="p-1 rounded bg-black/30 text-gray-300 hover:text-white hover:bg-black/50"
-              aria-label={`Add ${item.label} node`}
-              title={`Add ${item.label} node`}
-            >
-              <Plus className="w-3.5 h-3.5" />
-            </button>
-          </div>
-        ))}
-      </div>
-    </aside>
-  );
-};
+export const NodeInspector = ({ selectedNode, onUpdate, onDelete, onAddInput }: NodeInspectorProps) => {
+  const [keys, setKeys] = React.useState<Record<string, string>>({});
+  const [consent, setConsent] = React.useState(false);
+  const [running, setRunning] = React.useState(false);
+  const [draft, setDraft] = React.useState<string | null>(null);
+  const [error, setError] = React.useState('');
+  const [showKey, setShowKey] = React.useState(false);
+  const abort = React.useRef<AbortController | null>(null);
 
-interface NodeInspectorProps {
-  selectedNode: AppNode | null;
-  onUpdate: (id: string, data: Partial<AppNode['data']>) => void;
-  onDelete: (id: string) => void;
-}
-
-export const NodeInspector = ({ selectedNode, onUpdate, onDelete }: NodeInspectorProps) => {
-  if (!selectedNode) {
-    return (
-      <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 flex flex-col lg:h-full min-h-40 lg:min-h-0 items-center justify-center text-gray-500 text-sm text-center">
-        <div className="max-w-56">
-          <div className="font-semibold text-gray-300 mb-1">No node selected</div>
-          <p>Select a canvas node to edit its title, description, content, and review settings.</p>
-        </div>
-      </aside>
-    );
-  }
+  if (!selectedNode) return <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 grid place-items-center text-center text-sm text-gray-500"><div><strong className="text-gray-300">No node selected</strong><p>Select a canvas node to edit it.</p>{onAddInput && <button type="button" onClick={onAddInput} className="mt-3 rounded border border-emerald-500/40 px-3 py-2 text-xs font-semibold text-emerald-200">Add Input node</button>}</div></aside>;
 
   const { data } = selectedNode;
+  const provider = (data.provider || 'openai') as AIProviderId;
+  const model = data.modelName || PROVIDER_MODELS[provider][0];
+  const key = keys[selectedNode.id] || '';
+  const requestText = `Instruction: ${data.promptInstruction || ''}\n\nInput context:\n${data.expectedInput || ''}\n\nGenerate a draft for human review.`;
+  const send = async () => {
+    if (!key) return;
+    setRunning(true); setError('');
+    const controller = new AbortController(); abort.current = controller;
+    try { const response = await runAIRequest({ provider, model, apiKey: key, prompt: requestText }, controller.signal); setDraft(response.text); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'Generation failed.'); }
+    finally { setRunning(false); abort.current = null; }
+  };
 
-  return (
-    <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 flex flex-col lg:h-full max-h-96 lg:max-h-none overflow-y-auto">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="font-bold text-sm uppercase tracking-wider text-gray-500">Node Inspector</h3>
-        <button type="button" onClick={() => onDelete(selectedNode.id)} className="text-red-400 hover:text-red-300 p-1 rounded hover:bg-red-900/30 transition-colors" title="Delete Node" aria-label="Delete selected node">
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Type</label>
-          <div className="bg-[#1e1e24] px-3 py-2 rounded text-sm text-gray-300 capitalize border border-gray-800">
-            {selectedNode.type}
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Title</label>
-          <input
-            type="text"
-            value={data.title}
-            onChange={(e) => onUpdate(selectedNode.id, { title: e.target.value })}
-            className="w-full bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-            placeholder="Node title"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Description</label>
-          <input
-            type="text"
-            value={data.description}
-            onChange={(e) => onUpdate(selectedNode.id, { description: e.target.value })}
-            className="w-full bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-            placeholder="Short description"
-          />
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Content</label>
-          <textarea
-            value={data.content}
-            onChange={(e) => onUpdate(selectedNode.id, { content: e.target.value })}
-            className="w-full h-40 bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm font-mono text-white focus:outline-none focus:border-blue-500 resize-none"
-            placeholder="Raw text, markdown, rules..."
-          />
-        </div>
-
-        {selectedNode.type === 'review' && (
-          <div className="flex items-center space-x-2 pt-2">
-            <input
-              type="checkbox"
-              id="reviewReq"
-              checked={!!data.reviewRequired}
-              onChange={(e) => onUpdate(selectedNode.id, { reviewRequired: e.target.checked })}
-              className="w-4 h-4 rounded border-gray-600 text-blue-600 focus:ring-blue-500 bg-[#1e1e24]"
-            />
-            <label htmlFor="reviewReq" className="text-sm text-gray-300 select-none cursor-pointer">
-              Requires Human Verification
-            </label>
-          </div>
-        )}
-
-        {selectedNode.type === 'aiAssist' && (
-          <div className="space-y-4 rounded-lg border border-cyan-500/20 bg-cyan-500/5 p-3">
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wider text-cyan-200">BYOK-ready blueprint</div>
-              <p className="mt-1 text-xs leading-relaxed text-gray-400">
-                This node documents a future provider adapter. It does not make live AI calls or store API keys.
-              </p>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Prompt / Instruction</label>
-              <textarea
-                value={data.promptInstruction ?? ''}
-                onChange={(e) => onUpdate(selectedNode.id, { promptInstruction: e.target.value })}
-                className="w-full h-24 bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none"
-                placeholder="Describe the intended assistive prompt..."
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Expected Input</label>
-              <input
-                type="text"
-                value={data.expectedInput ?? ''}
-                onChange={(e) => onUpdate(selectedNode.id, { expectedInput: e.target.value })}
-                className="w-full bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                placeholder="Upstream notes, transcript, or structured text"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Expected Output</label>
-              <input
-                type="text"
-                value={data.expectedOutput ?? ''}
-                onChange={(e) => onUpdate(selectedNode.id, { expectedOutput: e.target.value })}
-                className="w-full bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500"
-                placeholder="Draft summary, candidate sections, or checklist"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Provider Note</label>
-              <textarea
-                value={data.providerNote ?? ''}
-                onChange={(e) => onUpdate(selectedNode.id, { providerNote: e.target.value })}
-                className="w-full h-20 bg-[#1e1e24] border border-gray-700 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-cyan-500 resize-none"
-                placeholder="Adapter requirements or BYOK notes"
-              />
-            </div>
-
-            <div className="flex items-center space-x-2 pt-1">
-              <input
-                type="checkbox"
-                id="aiReviewReq"
-                checked={!!data.reviewRequired}
-                onChange={(e) => onUpdate(selectedNode.id, { reviewRequired: e.target.checked })}
-                className="w-4 h-4 rounded border-gray-600 text-cyan-600 focus:ring-cyan-500 bg-[#1e1e24]"
-              />
-              <label htmlFor="aiReviewReq" className="text-sm text-gray-300 select-none cursor-pointer">
-                Human review required
-              </label>
-            </div>
-          </div>
-        )}
-      </div>
-    </aside>
-  );
+  return <aside className="w-full lg:w-80 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 overflow-y-auto">
+    <div className="flex justify-between mb-5"><h3 className="font-bold text-sm uppercase tracking-wider text-gray-500">Node Inspector</h3><button type="button" onClick={() => onDelete(selectedNode.id)} className="text-red-400" aria-label="Delete selected node"><Trash2 className="w-4 h-4" /></button></div>
+    <div className="space-y-3">
+      <label className="block text-xs text-gray-400">Title<input value={data.title} onChange={(event) => onUpdate(selectedNode.id, { title: event.target.value })} className="mt-1 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white" /></label>
+      <label className="block text-xs text-gray-400">Description<textarea value={data.description} onChange={(event) => onUpdate(selectedNode.id, { description: event.target.value })} className="mt-1 min-h-16 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white" /></label>
+      <label className="block text-xs text-gray-400">Content<textarea value={data.content} onChange={(event) => onUpdate(selectedNode.id, { content: event.target.value })} className="mt-1 h-32 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white" /></label>
+      <label className="block text-xs text-gray-400">Category<select value={data.category || 'other'} onChange={(event) => onUpdate(selectedNode.id, { category: event.target.value as NodeCategory })} className="mt-1 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white">{CATEGORY_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+      {selectedNode.type === 'aiAssist' && <section className="space-y-3 rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-3"><div><strong className="text-xs uppercase text-cyan-200">Optional AI Assist</strong><p className="mt-1 text-[11px] text-cyan-100/70">Direct browser connection. Data is sent only after confirmation. Keys are volatile and never exported.</p></div><div className="grid grid-cols-2 gap-2"><label className="text-xs text-gray-400">Provider<select value={provider} onChange={(event) => { setKeys({}); onUpdate(selectedNode.id, { provider: event.target.value as AIProviderId, modelName: '' }); }} className="mt-1 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white"><option value="openai">OpenAI</option><option value="gemini">Gemini</option></select></label><label className="text-xs text-gray-400">Model<select value={data.modelName || ''} onChange={(event) => onUpdate(selectedNode.id, { modelName: event.target.value })} className="mt-1 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white"><option value="">{model}</option>{PROVIDER_MODELS[provider].map((item) => <option key={item} value={item}>{item}</option>)}</select></label></div><label className="block text-xs text-gray-400">API key (memory only)<span className="relative mt-1 block"><input type={showKey ? 'text' : 'password'} spellCheck={false} autoComplete="off" value={key} onChange={(event) => setKeys((current) => ({ ...current, [selectedNode.id]: event.target.value }))} className="w-full rounded border border-gray-700 bg-[#1e1e24] p-2 pr-9 text-white" /><button type="button" onClick={() => setShowKey((value) => !value)} className="absolute right-2 top-2" aria-label={showKey ? 'Hide API key' : 'Show API key'}>{showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}</button></span><small className="text-gray-500">Stored in memory for this tab only. It is not saved with your workspace.</small></label><label className="block text-xs text-gray-400">Prompt<textarea value={data.promptInstruction || ''} onChange={(event) => onUpdate(selectedNode.id, { promptInstruction: event.target.value })} className="mt-1 h-20 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white" /></label><label className="block text-xs text-gray-400">Input context<textarea value={data.expectedInput || ''} onChange={(event) => onUpdate(selectedNode.id, { expectedInput: event.target.value })} className="mt-1 h-16 w-full rounded border border-gray-700 bg-[#1e1e24] p-2 text-white" /></label>{error && <p className="rounded border border-red-500/40 p-2 text-xs text-red-300" role="status">{error}</p>}{draft && <div className="rounded border border-cyan-500/30 p-2 text-xs"><strong className="text-cyan-200">AI-generated draft — review before applying</strong><p className="mt-2 max-h-24 overflow-auto whitespace-pre-wrap">{draft}</p><button type="button" onClick={() => { onUpdate(selectedNode.id, { content: draft }); setDraft(null); }} className="mt-2 rounded bg-cyan-600 px-2 py-1 text-white">Apply to node</button><button type="button" onClick={() => setDraft(null)} className="ml-2 rounded border border-gray-700 px-2 py-1">Discard</button></div>}<button type="button" disabled={running} onClick={() => setConsent(true)} className="w-full rounded border border-cyan-500/30 p-2 text-sm font-semibold text-cyan-200 disabled:opacity-50">{running ? 'Calling provider…' : 'Run live provider (review before sending)'}</button>{running && <button type="button" onClick={() => abort.current?.abort()} className="w-full rounded border border-red-500/40 p-2 text-sm text-red-300">Cancel request</button>}</section>}
+    </div>
+    {consent && <AccessibleDialog label="Confirm external AI request" onClose={() => setConsent(false)} className="w-full max-w-lg rounded-xl border border-cyan-500/40 bg-[#18181b] p-5"><div className="flex justify-between"><h2 className="font-bold">Confirm external AI request</h2><button type="button" onClick={() => setConsent(false)} aria-label="Cancel AI request"><X className="w-5 h-5" /></button></div><p className="mt-3 text-sm text-gray-300">This direct browser request sends your instruction and input context ({((data.promptInstruction || '').length + (data.expectedInput || '').length).toLocaleString()} characters) to <strong>{provider === 'gemini' ? 'Google Gemini' : 'OpenAI'}</strong> using <strong>{model}</strong>. Provider charges and privacy terms apply.</p><details className="mt-3 rounded border border-gray-700 p-2 text-xs"><summary>Preview data being sent</summary><pre className="mt-2 whitespace-pre-wrap font-sans">{requestText}</pre></details><p className="mt-3 text-xs text-gray-400">The API key is not included in exports. Canceling now sends nothing; canceling an in-flight request cannot retract data already received.</p>{!key && <p className="mt-2 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-100">Enter an API key to enable sending. Opening this review screen never sends a provider request.</p>}<div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setConsent(false)} className="rounded border border-gray-700 px-3 py-2">Cancel</button><button type="button" autoFocus disabled={!key} onClick={() => { setConsent(false); void send(); }} className="rounded bg-cyan-600 px-3 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Confirm and send to {provider === 'gemini' ? 'Gemini' : 'OpenAI'}</button></div></AccessibleDialog>}
+  </aside>;
 };
