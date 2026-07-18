@@ -1,4 +1,4 @@
-import type { AppEdge, AppNode, NodeType, ProcessCheckIssue, ProcessCheckResult, ProcessCheckStatus } from '../types';
+import type { AppEdge, AppNode, NodeType, workflowValidatorIssue, WorkflowValidatorResult, workflowValidatorStatus } from '../types';
 
 const actionByType: Record<NodeType, string> = {
   input: 'Collect and preserve source material',
@@ -63,12 +63,12 @@ const hasUpstreamInput = (nodeId: string, nodes: AppNode[], edges: AppEdge[]) =>
   return false;
 };
 
-const addIssue = (issues: ProcessCheckIssue[], issue: ProcessCheckIssue) => {
+const addIssue = (issues: workflowValidatorIssue[], issue: workflowValidatorIssue) => {
   issues.push(issue);
 };
 
-export const buildProcessCheck = (nodes: AppNode[], edges: AppEdge[]): ProcessCheckResult => {
-  const issues: ProcessCheckIssue[] = [];
+export const buildWorkflowValidator = (nodes: AppNode[], edges: AppEdge[]): WorkflowValidatorResult => {
+  const issues: workflowValidatorIssue[] = [];
   const nodeIds = new Set(nodes.map((node) => node.id));
   const connectedNodeIds = new Set<string>();
   const validEdges = edges.filter((edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target));
@@ -208,7 +208,7 @@ export const buildProcessCheck = (nodes: AppNode[], edges: AppEdge[]): ProcessCh
   const orderedNodes = getOrderedNodes(nodes, validEdges);
   const walkthrough = orderedNodes.map((node, index) => {
     const nodeIssues = issues.filter((issue) => issue.nodeId === node.id);
-    const status: ProcessCheckStatus = nodeIssues.some((issue) => issue.status === 'Incomplete')
+    const status: workflowValidatorStatus = nodeIssues.some((issue) => issue.status === 'Incomplete')
       ? 'Incomplete'
       : nodeIssues.some((issue) => issue.status === 'Needs Review')
         ? 'Needs Review'
@@ -232,7 +232,7 @@ export const buildProcessCheck = (nodes: AppNode[], edges: AppEdge[]): ProcessCh
   const warningCount = issues.filter((issue) => issue.status === 'Warning').length;
   const penalty = incompleteCount * 22 + needsReviewCount * 12 + warningCount * 6;
   const completenessScore = Math.max(0, Math.min(100, 100 - penalty));
-  const exportReadiness: ProcessCheckStatus =
+  const exportReadiness: workflowValidatorStatus =
     incompleteCount > 0 ? 'Incomplete' : needsReviewCount > 0 ? 'Needs Review' : warningCount > 0 ? 'Warning' : 'Ready';
 
   return {

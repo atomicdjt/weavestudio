@@ -1,74 +1,126 @@
 # WeaveStudio
 
-WeaveStudio is a local-first visual workflow canvas for turning messy inputs into repeatable, human-reviewed professional deliverables.
+**Turn fragmented information into a structured, reusable deliverable workflow.**
 
-It is a static browser app. There is no backend, account system, external API dependency, cloud sync, database requirement, or authentication layer in this release.
+WeaveStudio is a local-first visual workflow canvas for turning messy notes, transcripts, logs, research fragments, and discovery inputs into reviewable, reusable deliverables.
 
-## Core Capabilities
+[Open the public demo](https://weavestudio-demo.vercel.app/) · [Acquisition overview](https://weavestudio-demo.vercel.app/acquire)
 
-- Visual workflow canvas powered by `@xyflow/react`.
-- Typed nodes for input, transform, decision, review, optional AI Assist Blueprint, and output steps.
-- Local template gallery for common workflow starters.
-- Browser localStorage autosave for the current workspace.
-- Local version snapshots with save, restore, and delete actions.
-- Deterministic Process Check for workflow completeness, review checkpoints, and export readiness.
-- Output preview generated from current workflow nodes.
-- Markdown, JSON, and print-oriented PDF exports.
-- `/acquire` source/IP acquisition page for developer buyers.
+**Release status:** v1.0.0 — acquisition-ready consolidated release
 
-## AI Assist Blueprint
+![WeaveStudio home screen](docs/screenshots/weavestudio-home.png)
 
-AI Assist is an optional blueprint node, not a live AI integration. It is BYOK-ready for a future buyer or maintainer who wants to wire provider-specific adapters later. The current MVP includes no bundled API keys, makes no external provider calls, and does not save API keys to localStorage.
+## Current release authority
 
-Extension points:
+The authoritative editable source is the `main` branch of this repository. The acquisition hardening, OpenAI/Gemini BYOK workflow, browser validation, buyer materials, commercial architecture guidance, and repository-governance work were preserved from the released `master` lineage during the July 2026 non-force branch migration. `master` remains a temporary compatibility branch until production verification is complete.
 
-- `src/types/index.ts` for node data fields.
-- `src/components/workspace/WorkspacePanels.tsx` for inspector fields.
-- `src/components/canvas/nodes/CustomNodes.tsx` for node rendering.
-- `src/lib/processCheck.ts` for deterministic readiness checks.
+Generated acquisition ZIPs and deployment artifacts are outputs of the authoritative source; they do not supersede it.
 
-## Tech Stack
+## The problem it solves
 
-- React 19
-- TypeScript
-- Vite
-- Tailwind CSS v4 using `@tailwindcss/vite`
-- React Router
-- `@xyflow/react`
-- `jspdf` loaded lazily for PDF export
-- Browser `localStorage`
+Important source material often begins as scattered, inconsistent fragments. WeaveStudio gives that material a visible workflow shape: source content becomes editable nodes, nodes become a structured deliverable, and the final result remains reviewable before it is shared.
 
-## Routes
+## Golden path
 
-- `/` - product overview
-- `/app` - workflow canvas
-- `/templates` - template gallery
-- `/exports` - export documentation
-- `/docs` - usage guide
-- `/acquire` - source/IP acquisition page
-- `/buyer` - redirect to `/acquire`
+1. Choose a professional workflow template or open the guided demo.
+2. Paste unstructured source material.
+3. Apply the source to an Input node or split it into editable nodes.
+4. Organize, connect, classify, and review the workflow on the canvas.
+5. Run Workflow Validator, then generate a template-structured deliverable.
+6. Review and edit the draft before exporting Markdown, PDF, or Project JSON.
+7. Reopen the named workspace later in the same browser profile.
 
-## Local Development
+## Implemented capabilities
+
+- Visual workflow canvas powered by `@xyflow/react`
+- Five primary templates plus an expandable legacy starter pack
+- Source ingest, editable canvas nodes, and explicit review checkpoints
+- Named browser-local workspaces with autosave, visible save state, and snapshots
+- Bounded workspace undo/redo with toolbar and keyboard shortcuts
+- Workflow outline, minimap, explicit auto-layout, and keyboard-safe deletion
+- Workflow Validator for structure, completeness, review gaps, and export readiness
+- Template-structured deliverable generation with an editable draft
+- Markdown, PDF, and re-importable Project JSON export
+- Owned-data backup, validated restore, import-as-new, scoped clearing, and storage-pressure guidance
+- Optional OpenAI/Gemini BYOK assistance with explicit consent for each request and human review before applying output
+
+## Product tour
+
+### Guided workflow workspace
+
+![WeaveStudio guided-demo workspace](docs/screenshots/weavestudio-workspace.png)
+
+### Template gallery
+
+![WeaveStudio template gallery](docs/screenshots/weavestudio-templates.png)
+
+### Deliverable preview and exports
+
+![WeaveStudio deliverable preview and export choices](docs/screenshots/weavestudio-deliverable.png)
+
+## Local-first architecture
+
+WeaveStudio is a static browser application. The standard workflow has no backend, account system, cloud database, or required external API. Workspaces are stored in browser `localStorage`; exports are files you initiate from the browser.
+
+The normal workflow does not make provider requests. Optional AI Assist requests are disabled until a user explicitly confirms the individual action and may send the displayed prompt/context to the selected provider. API keys are not bundled with WeaveStudio, are held only in volatile tab memory, and are not saved to `localStorage` or project exports.
+
+## Local development
 
 ```bash
-npm install
+npm ci
 npm run dev
-npm run build
-npm run lint
 ```
 
-## Release Notes
+## Verification
 
-- This is an assistive workflow tool, not a legal, medical, financial, compliance, or security product.
-- Output generation is deterministic local formatting. It does not verify facts, infer truth, or make correctness guarantees.
-- Browser localStorage can be cleared by the user, browser settings, private browsing, or device cleanup tools. Export important work.
-- Static hosting works on Netlify, Vercel, Cloudflare Pages, GitHub Pages, or equivalent hosts. Configure SPA fallback to `index.html` for deep routes.
+```bash
+npm test
+npm run lint
+npm run typecheck
+npm run build
+npm run test:browser
+npm run package:acquisition
+# Full buyer release gate
+npm run verify:buyer
+```
 
-## Acquisition Package Notes
+To inspect the built application locally:
 
-The WeaveStudio local-first edition is packaged with source, documentation, templates, and buyer-facing notes. See:
+```bash
+npm run preview
+```
 
-- [BUYER_HANDOFF.md](./BUYER_HANDOFF.md)
-- [KNOWN_LIMITATIONS.md](./KNOWN_LIMITATIONS.md)
-- [ROADMAP.md](./ROADMAP.md)
-- [ACQUISITION_LISTING.md](./ACQUISITION_LISTING.md)
+## Export and persistence
+
+- **Markdown** produces an editable text deliverable.
+- **PDF** produces a simple local print-oriented representation of the draft.
+- **Project JSON** preserves workspace nodes, edges, source material, template selection, and the deliverable draft for re-import.
+- **Snapshots** capture a coherent local checkpoint of workspace state.
+- **Download all local data** creates an owned-data backup that can be validated and restored.
+
+## Known limitations and review boundaries
+
+- Browser `localStorage` is neither encrypted storage nor durable cloud storage. Clearing site data, using private browsing, changing browsers, or device cleanup can remove workspaces.
+- Workflow Validator evaluates workflow structure and readiness; it does not verify facts or guarantee correctness.
+- Generated and AI-assisted work requires human review before sharing or applying.
+- WeaveStudio is a single-user workflow tool. It does not provide real-time collaboration, cloud sync, account-based sharing, or billing.
+- Dense graph editing is most efficient on desktop; mobile includes dedicated Inspector and Snapshot sheets but remains better suited to review and lighter edits.
+- It is not legal, medical, financial, compliance, or security software.
+
+See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for full details.
+
+## License
+
+[Proprietary — All Rights Reserved](LICENSE.md). Public visibility is provided for evaluation and portfolio review only. It does not grant a license to copy, redistribute, commercialize, or reuse the source or associated intellectual property.
+
+## Production deployment
+
+Production is deployed from the authoritative `main` branch to [weavestudio-nine.vercel.app](https://weavestudio-nine.vercel.app/). The public review demo and acquisition overview are available at [weavestudio-demo.vercel.app](https://weavestudio-demo.vercel.app/). `vercel.json` provides the SPA rewrite needed for direct route refreshes.
+
+## Buyer materials
+
+The acquisition-ready executive summary, architecture and maintenance guide, feature-reality matrix, outreach copy, value proof, public-demo notes, and preview instructions are in [`docs/buyer/`](docs/buyer/). The package command builds a fresh ZIP and prints its SHA-256; generated release files are intentionally not committed.
+
+For transfer and post-acquisition operation, see [`docs/buyer/TRANSFER_CHECKLIST.md`](docs/buyer/TRANSFER_CHECKLIST.md) and [`docs/buyer/OPERATING_PLAN_90_DAYS.md`](docs/buyer/OPERATING_PLAN_90_DAYS.md).
+
+No revenue, customer, active-user, compliance-certification, or completed-acquisition claim is included with this asset.

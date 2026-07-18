@@ -1,9 +1,11 @@
-# WeaveStudio Portfolio License
+# WeaveStudio Proprietary Notice
 
 Copyright © 2026 David Turner. All rights reserved.
 
-WeaveStudio is a private source/IP project. Its repository and materials are provided only for authorized review, evaluation, maintenance, or a separately agreed acquisition or license arrangement.
+No permission is granted to copy, modify, distribute, sublicense, sell, publish, or commercially use the WeaveStudio source code or associated intellectual property except under written authorization from the copyright owner.
 
-No right is granted to copy, publish, distribute, sell, sublicense, or reuse the code, designs, documentation, branding, templates, or other project materials without prior written permission from the copyright holder.
+Access to this private repository does not itself grant a license. Commercial licensing or acquisition rights require a separate written agreement with the copyright owner.
+
+This notice is a repository ownership statement, not a substitute for a separately negotiated commercial agreement.
 
 Third-party packages remain subject to their own licenses.

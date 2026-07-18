@@ -11,6 +11,24 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
+!.env.example
+.vercel/
+
+# Internal release and QA artifacts
+WeaveStudio-current-safe-checkpoint.zip
+WeaveStudio-backup-*.zip
+*-backup-*.zip
+*-checkpoint-*.zip
+ANTIGRAVITY_PROJECT_CONTEXT_EXPORT.*
+WEAVESTUDIO-*-QA-REPORT-*.md
+WEAVESTUDIO-PROD-SCREENSHOTS/
+playwright-report/
+test-results/
+coverage/
+.playwright-cli/
+output/playwright/
 
 # Editor directories and files
 .vscode/*
@@ -22,3 +40,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.vercel
+release/
+.worktrees/

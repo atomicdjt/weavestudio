@@ -3,9 +3,9 @@ import { BrainCircuit, FileInput, FileOutput, GitFork, Scissors, UserCheck } fro
 import type React from 'react';
 import type { NodeData } from '../../../types';
 
-const BaseNode = ({ data, type, icon, colorClass, borderClass }: { data: NodeData, type: string, icon: React.ReactNode, colorClass: string, borderClass: string }) => {
+const BaseNode = ({ data, selected, type, icon, colorClass, borderClass }: { data: NodeData, selected?: boolean, type: string, icon: React.ReactNode, colorClass: string, borderClass: string }) => {
   return (
-    <div className={`rounded-xl shadow-lg border bg-panel text-white overflow-hidden w-[280px] ${borderClass}`}>
+    <div role="group" aria-label={`${type}: ${data.title || 'Untitled node'}${selected ? ', selected' : ''}`} className={`rounded-xl shadow-lg border bg-panel text-white overflow-hidden w-[280px] transition-all ${borderClass} ${selected ? 'ring-2 ring-blue-500 shadow-blue-900/50 scale-[1.02]' : ''}`}>
       <div className={`px-4 py-2 flex items-center space-x-2 border-b ${colorClass} bg-opacity-20`}>
         <div className="shrink-0">{icon}</div>
         <div className="font-semibold text-sm truncate uppercase tracking-wider">{type}</div>
@@ -28,10 +28,11 @@ const BaseNode = ({ data, type, icon, colorClass, borderClass }: { data: NodeDat
   );
 };
 
-export const InputNode = ({ data }: { data: NodeData }) => (
+export const InputNode = ({ data, selected }: { data: NodeData, selected?: boolean }) => (
   <>
     <BaseNode 
       data={data} 
+      selected={selected}
       type="Input" 
       icon={<FileInput className="w-4 h-4 text-emerald-400" />} 
       colorClass="border-emerald-500/30" 
@@ -41,11 +42,12 @@ export const InputNode = ({ data }: { data: NodeData }) => (
   </>
 );
 
-export const TransformNode = ({ data }: { data: NodeData }) => (
+export const TransformNode = ({ data, selected }: { data: NodeData, selected?: boolean }) => (
   <>
     <Handle type="target" position={Position.Left} />
     <BaseNode 
       data={data} 
+      selected={selected}
       type="Transform" 
       icon={<Scissors className="w-4 h-4 text-blue-400" />} 
       colorClass="border-blue-500/30" 
@@ -55,11 +57,12 @@ export const TransformNode = ({ data }: { data: NodeData }) => (
   </>
 );
 
-export const DecisionNode = ({ data }: { data: NodeData }) => (
+export const DecisionNode = ({ data, selected }: { data: NodeData, selected?: boolean }) => (
   <>
     <Handle type="target" position={Position.Left} />
     <BaseNode 
       data={data} 
+      selected={selected}
       type="Decision" 
       icon={<GitFork className="w-4 h-4 text-amber-400" />} 
       colorClass="border-amber-500/30" 
@@ -69,11 +72,12 @@ export const DecisionNode = ({ data }: { data: NodeData }) => (
   </>
 );
 
-export const ReviewNode = ({ data }: { data: NodeData }) => (
+export const ReviewNode = ({ data, selected }: { data: NodeData, selected?: boolean }) => (
   <>
     <Handle type="target" position={Position.Left} />
     <BaseNode 
       data={data} 
+      selected={selected}
       type="Review" 
       icon={<UserCheck className="w-4 h-4 text-purple-400" />} 
       colorClass="border-purple-500/30" 
@@ -83,11 +87,12 @@ export const ReviewNode = ({ data }: { data: NodeData }) => (
   </>
 );
 
-export const AiAssistNode = ({ data }: { data: NodeData }) => (
+export const AiAssistNode = ({ data, selected }: { data: NodeData, selected?: boolean }) => (
   <>
     <Handle type="target" position={Position.Left} />
     <BaseNode
       data={data}
+      selected={selected}
       type="AI Assist Blueprint"
       icon={<BrainCircuit className="w-4 h-4 text-cyan-300" />}
       colorClass="border-cyan-500/30"
@@ -97,11 +102,12 @@ export const AiAssistNode = ({ data }: { data: NodeData }) => (
   </>
 );
 
-export const OutputNode = ({ data }: { data: NodeData }) => (
+export const OutputNode = ({ data, selected }: { data: NodeData, selected?: boolean }) => (
   <>
     <Handle type="target" position={Position.Left} />
     <BaseNode 
       data={data} 
+      selected={selected}
       type="Output" 
       icon={<FileOutput className="w-4 h-4 text-rose-400" />} 
       colorClass="border-rose-500/30" 
