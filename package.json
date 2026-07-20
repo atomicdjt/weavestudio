@@ -13,7 +13,7 @@
     "typecheck": "tsc -b",
     "package:acquisition": "node scripts/package-release.mjs",
     "test:browser": "playwright test",
-    "verify:buyer": "node scripts/verify-buyer.mjs",
+    "verify:buyer": "node scripts/validate-docs.mjs && node scripts/verify-buyer.mjs",
     "verify": "npm test && npm run lint && npm run typecheck && npm run build && npm run test:browser && npm run verify:buyer && npm run package:acquisition"
   },
   "dependencies": {

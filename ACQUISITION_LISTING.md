@@ -66,7 +66,7 @@ AI Assist is optional and implemented as a BYOK-ready blueprint. The core canvas
 
 ## Suggested Acquisition Range
 
-$3,000 - $5,000 depending on support, exclusivity, branding transfer, and any included deployment or domain assets.
+$6,500
 
 ## Limitations
 

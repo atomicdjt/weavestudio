@@ -113,7 +113,7 @@ test('mobile navigation, guided tour, and acquisition inquiry remain reachable',
   await page.goto('/');
   await page.getByRole('button', { name: /open navigation/i }).click();
   await page.getByRole('dialog', { name: 'Navigation' }).getByRole('link', { name: 'Acquire' }).click();
-  await expect(page.getByRole('link', { name: /email davidelsey9513@gmail.com/i })).toHaveAttribute('href', 'mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry');
+  await expect(page.getByRole('link', { name: /email acquisition@weavestudio.invalid/i })).toHaveAttribute('href', 'mailto:acquisition@weavestudio.invalid?subject=WeaveStudio%20acquisition%20inquiry');
   await page.goto('/app');
   await page.getByRole('button', { name: /start guided tour/i }).click();
   await expect(page.getByRole('dialog', { name: /weavestudio quick tour/i })).toBeVisible();

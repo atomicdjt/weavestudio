@@ -1,0 +1,23 @@
+# WeaveStudio Walkthrough Script
+
+**Target Duration:** 90–150 seconds
+
+[0:00] **The Problem:** Consulting and service businesses drown in unstructured data—call transcripts, messy notes, and PDFs. Synthesizing this into a client-ready deliverable is a manual, tedious, and error-prone process.
+
+[0:15] **The Solution:** WeaveStudio is a local-first workflow canvas that turns fragmented source material into structured, professional documents. Let's see how it works.
+
+[0:25] **Templates:** We start by selecting a built-in workflow template, such as the "Strategy Proposal." This instantly sets up our target deliverable structure.
+
+[0:35] **Source Material:** Next, we drop our raw inputs directly into the workspace—raw text, meeting notes, or research. Because WeaveStudio is local-first, everything stays in the browser; nothing is sent to a central server without your explicit consent.
+
+[0:50] **Structuring:** Using the node-based canvas, we map out how our raw materials feed into each section of the final proposal. We connect sources to specific outline nodes.
+
+[1:05] **Validation:** Before generating, the Workflow Validator checks our canvas to ensure every required section has sufficient inputs.
+
+[1:15] **Generation:** With one click, WeaveStudio synthesizes the content (optionally using a BYOK AI provider). We can instantly preview and edit the draft deliverable inline.
+
+[1:30] **Export:** Once finalized, we can export the document as a clean PDF or Markdown file. For portability, the entire workspace exports as a single deterministic JSON project file.
+
+[1:45] **Acquisition Package:** WeaveStudio is complete, fully tested, and ready for acquisition. The verified transfer package includes the full React/TypeScript source, comprehensive buyer documentation, and automated deterministic packaging.
+
+[2:00] **CTA:** It's available for an exclusive asset acquisition today. Review the technical verification report and acquire the source code to accelerate your own product roadmap.

@@ -2,7 +2,7 @@
 
 ## Scope
 
-This summary applies to the authoritative `master` release after the July 14, 2026 consolidation. It describes repository and automated-test evidence; it does not claim independent certification, production-scale usage, revenue, customers, or regulated compliance.
+This summary applies to the authoritative `main` release after the July 14, 2026 consolidation. It describes repository and automated-test evidence; it does not claim independent certification, production-scale usage, revenue, customers, or regulated compliance.
 
 ## Verified release evidence
 
@@ -11,7 +11,7 @@ This summary applies to the authoritative `master` release after the July 14, 20
 - **Lint and typecheck:** clean in the acquisition hardening verification used for consolidation.
 - **Production build and buyer package:** completed successfully through `npm run verify:buyer` before consolidation.
 - **Deployment checks:** both the primary WeaveStudio Vercel project and public demo reported successful status checks after the consolidated release was merged.
-- **Release authority:** `master` is the single editable source of truth. Generated ZIPs and deployment artifacts are derivative outputs.
+- **Release authority:** `main` is the single editable source of truth. Generated ZIPs and deployment artifacts are derivative outputs.
 
 ## Major behavior classes verified
 

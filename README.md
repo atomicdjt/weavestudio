@@ -90,6 +90,8 @@ To inspect the built application locally:
 npm run preview
 ```
 
+The manually dispatched or acquisition-tag-triggered workflow in [`.github/workflows/acquisition-release.yml`](.github/workflows/acquisition-release.yml) runs the buyer gate and produces a private release artifact containing the deterministic package, package manifest, CycloneDX SBOM, release summary, and SHA-256 inventory.
+
 ## Export and persistence
 
 - **Markdown** produces an editable text deliverable.
@@ -121,6 +123,17 @@ Production is deployed from the authoritative `main` branch to [weavestudio-nine
 
 The acquisition-ready executive summary, architecture and maintenance guide, feature-reality matrix, outreach copy, value proof, public-demo notes, and preview instructions are in [`docs/buyer/`](docs/buyer/). The package command builds a fresh ZIP and prints its SHA-256; generated release files are intentionally not committed.
 
-For transfer and post-acquisition operation, see [`docs/buyer/TRANSFER_CHECKLIST.md`](docs/buyer/TRANSFER_CHECKLIST.md) and [`docs/buyer/OPERATING_PLAN_90_DAYS.md`](docs/buyer/OPERATING_PLAN_90_DAYS.md).
+Fast-sale and transaction materials:
+
+- [One-page acquisition brief](docs/buyer/ONE_PAGE_ACQUISITION_BRIEF.md)
+- [Included asset schedule](docs/buyer/ASSET_SCHEDULE.md)
+- [Excluded assets and retained rights](docs/buyer/EXCLUDED_ASSETS.md)
+- [Buyer due-diligence index](docs/buyer/DUE_DILIGENCE_INDEX.md)
+- [Closing runbook](docs/buyer/CLOSING_RUNBOOK.md)
+- [Post-close support terms](docs/buyer/POST_CLOSE_SUPPORT_TERMS.md)
+- [Transfer checklist](docs/buyer/TRANSFER_CHECKLIST.md)
+- [90-day buyer operating plan](docs/buyer/OPERATING_PLAN_90_DAYS.md)
+
+Draft legal-review templates are available under [`docs/buyer/legal/`](docs/buyer/legal/). They are working templates only and are not legal advice or self-executing transaction documents.
 
 No revenue, customer, active-user, compliance-certification, or completed-acquisition claim is included with this asset.
