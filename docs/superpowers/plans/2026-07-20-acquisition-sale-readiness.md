@@ -49,7 +49,7 @@
 - [ ] **Step 1:** Write the acquisition brief with product, buyer value, implemented capabilities, honest boundaries, included assets, and a $6,500 asking price.
 - [ ] **Step 2:** Write the diligence index that maps buyer questions to exact repository documents and verification commands.
 - [ ] **Step 3:** Write the closing runbook covering headline terms, signature, funded escrow, final verification, GitHub/Vercel transfer, inspection, release, and access removal.
-- [ ] **Step 4:** Verify no document discloses the confidential $3,500 floor.
+- [ ] **Step 4:** Verify no document discloses the confidential [REDACTED] floor.
 - [ ] **Step 5:** Commit with `docs: add acquisition brief and closing materials`.
 
 ### Task 3: Add legally cautious templates

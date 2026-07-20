@@ -2,14 +2,14 @@
 
 ## Objective
 
-Prepare WeaveStudio for a fast, low-friction exclusive source-code and intellectual-property asset sale in the USD $3,500–$7,500 range while minimizing seller cost, buyer uncertainty, transaction friction, and accidental overcommitment.
+Prepare WeaveStudio for a fast, low-friction exclusive source-code and intellectual-property asset sale while minimizing seller cost, buyer uncertainty, transaction friction, and accidental overcommitment.
 
 ## Approved commercial model
 
 - Public asking price: $6,500.
 - Normal target close: $5,000–$5,750.
 - Seven-day clean-close offer: $4,500.
-- Confidential absolute floor: $3,500, accepted only for fully funded escrow, buyer-paid fees, a three-business-day inspection period, no custom development, and tightly limited transition support.
+- Confidential absolute floor: [REDACTED], accepted only for fully funded escrow, buyer-paid fees, a three-business-day inspection period, no custom development, and tightly limited transition support.
 - Primary route: direct strategic outreach to previously researched workflow, client-portal, documentation, proposal, no-code, and automation software companies.
 - Passive route: one free marketplace listing where available.
 - Payment route: buyer-funded third-party escrow.
