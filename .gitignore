@@ -43,3 +43,5 @@ output/playwright/
 .vercel
 release/
 .worktrees/
+
+.seller-private/
