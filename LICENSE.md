@@ -1,6 +1,6 @@
 # WeaveStudio Proprietary Notice
 
-Copyright © 2026 [Seller Name]. All rights reserved.
+Copyright © 2026 David Turner. All rights reserved.
 
 No permission is granted to copy, modify, distribute, sublicense, sell, publish, or commercially use the WeaveStudio source code or associated intellectual property except under written authorization from the copyright owner.
 

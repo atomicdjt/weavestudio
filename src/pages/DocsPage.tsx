@@ -91,7 +91,7 @@ export const DocsPage = () => {
 
         <section id="license" className="bg-panel border border-border rounded-lg p-6">
           <h2 className="text-xl font-bold text-white mb-4">License and acquisition inquiries</h2>
-          <p className="text-sm leading-relaxed">This build is distributed as proprietary source/IP for evaluation and acquisition discussions; no public redistribution license is granted by this preview. For source/IP acquisition, request the current scope and transfer materials at <a className="text-blue-300 hover:underline" href="mailto:acquisition@weavestudio.invalid?subject=WeaveStudio%20acquisition%20inquiry">acquisition@weavestudio.invalid</a>.</p>
+          <p className="text-sm leading-relaxed">This build is distributed as proprietary source/IP for evaluation and acquisition discussions; no public redistribution license is granted by this preview. For source/IP acquisition, request the current scope and transfer materials at <a className="text-blue-300 hover:underline" href="mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry">davidelsey9513@gmail.com</a>.</p>
         </section>
 
         <section className="bg-panel border border-border rounded-lg p-6">

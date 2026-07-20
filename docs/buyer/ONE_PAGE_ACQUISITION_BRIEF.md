@@ -81,7 +81,7 @@ The verification gate runs type checking, linting, unit tests, production build,
 
 ## Contact
 
-[Seller Name]  
+David Turner  
 Original creator of WeaveStudio
 
 This brief is a factual acquisition overview, not an offer of securities or a representation of future financial performance. Final terms are governed only by a signed agreement.
