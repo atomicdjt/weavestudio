@@ -27,8 +27,18 @@
 * **Phase 12 & 13:** Built CRM (`PROSPECT_CRM.csv`) and one standardized outreach draft (`OUTREACH_DRAFT.md`).
 * **Phase 14 & 15:** Drafted 5-day transition roadmap and documented teardown procedures.
 * **Phase 16:** Committed changes locally and pushed to origin. Rollback is safe via `git reset --hard origin/main`.
-* **Phase 17:** Verified Git status is perfectly clean.
-* **Phase 21 & 22:** Compiled `FINAL_RELEASE_REPORT.md` including the SHA-256 of the generated ZIP artifact.
+* **Phase 17:** Repository-state and canonical-source audit completed.
+* **Phase 18:** Final clean technical verification and vulnerability audit passed perfectly.
+* **Phase 19:** Package security, manifest, checksum, and reproducibility audit passed (`3c2b27dd75c67bb98d4246c79c9674b8d9e28171dca93eab350583b096734a85`).
+* **Phase 20:** Commercial, legal-draft, confidentiality, and data-room audit completed. Documents are strictly separated and legal warnings verified.
+* **Phase 21:** CRM, suppression, idempotency, and unsent-draft audit completed. All outreach materials are unsent drafts.
+* **Phase 22:** Final PR evidence, readiness classification, manual-approval checklist, and acquisition-readiness report generated in `FINAL_RELEASE_REPORT.md`.
 
-### Remaining Work
-* **Phase 24 (Manual Approval):** The user must approve merging PR #7, executing public outreach, and performing asset transfers.
+### Remaining Work / Hard Stops
+All safe, reversible preparation is complete. Execution is blocked pending explicit manual approval for the following restricted actions:
+* Merging PR #7 or pushing to `main`.
+* Executing public outreach to prospects.
+* Accepting or communicating acceptance of a binding buyer offer.
+* Authorizing escrow release.
+* Delivering the final source-code acquisition package to a buyer.
+* Transferring assets (GitHub, Vercel, Domains).
