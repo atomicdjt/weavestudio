@@ -119,6 +119,13 @@ test('mobile navigation, guided tour, and acquisition inquiry remain reachable',
   await expect(page.getByRole('dialog', { name: /weavestudio quick tour/i })).toBeVisible();
 });
 
+test('acquisition page shows the public offer and preserves the inquiry CTA', async ({ page }) => {
+  await page.goto('/acquire');
+  await expect(page.getByText('WeaveStudio is offered as a one-time source-code and seller-owned-IP acquisition for $6,500. Request the acquisition brief, verified buyer package details, and transfer checklist.')).toBeVisible();
+  await expect(page.getByText(/Pricing is discussed privately/i)).toHaveCount(0);
+  await expect(page.getByRole('link', { name: /email davidelsey9513@gmail.com/i })).toHaveAttribute('href', 'mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry');
+});
+
 test('acquisition page provides an accessible recorded workflow walkthrough', async ({ page }) => {
   await page.goto('/acquire');
   const walkthrough = page.getByRole('region', { name: /recorded workflow walkthrough/i });
