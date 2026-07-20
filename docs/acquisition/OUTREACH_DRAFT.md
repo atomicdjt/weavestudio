@@ -8,15 +8,16 @@ WeaveStudio is a fully developed, thoroughly tested React/TypeScript application
 
 **Acquisition Highlights:**
 - **Product:** Complete React/TypeScript source code, ready for deployment.
-- **Price:** $6,500 (Buy-It-Now price).
-- **Terms:** Includes all intellectual property, source code, and a five-day transition support period. No customers, revenue, or liabilities are included.
+- **Price:** $6,500.
+- **Terms:** Includes seller-owned original source code and the assets identified in the final Asset Schedule, subject to third-party licenses, and a five-day transition support period. No customers, revenue, or liabilities are included.
 
-The code is currently staged in a private data room, verified by automated security and deterministic packaging workflows.
+Diligence materials are staged and can be shared after buyer qualification and, where appropriate, NDA execution. You can view the live public demo at https://weavestudio-demo.vercel.app/.
 
-If you are interested in exploring this acquisition to accelerate your product roadmap, please let me know, and I can provide the Mutual NDA and Data Room access.
+If you are interested in exploring this acquisition to accelerate your product roadmap, please let me know. If you are not the right person or are not interested, please reply "Opt out" and I will not contact you again regarding this matter.
 
 Best regards,
 David Turner
 
 ---
 Idempotency Key: OUTREACH-WEAVESTUDIO-20260720-v1
+[NOTE: This is a strictly controlled template. Do not create live recipient drafts.]

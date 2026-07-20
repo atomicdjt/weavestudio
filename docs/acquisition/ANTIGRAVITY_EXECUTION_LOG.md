@@ -26,7 +26,7 @@
 * **Phase 10 & 11:** Assembled local data room at `C:\Users\Atomic\Projects\weavestudio-data-room`. Generated Drive Sync Manifest since Google Drive permissions could not be safely verified.
 * **Phase 12 & 13:** Built CRM (`PROSPECT_CRM.csv`) and one standardized outreach draft (`OUTREACH_DRAFT.md`).
 * **Phase 14 & 15:** Drafted 5-day transition roadmap and documented teardown procedures.
-* **Phase 16:** Committed changes locally and pushed to origin. Rollback is safe via `git reset --hard origin/main`.
+* **Phase 16:** Committed changes locally and pushed to origin. Safe rollback procedures: close the PR without merging, revert specific commits if they were merged, preserve the branch, remove the isolated worktree only after confirming it is clean and pushed.
 * **Phase 17:** Repository-state and canonical-source audit completed.
 * **Phase 18:** Final clean technical verification and vulnerability audit passed perfectly.
 * **Phase 19:** Package security, manifest, checksum, and reproducibility audit passed (`3c2b27dd75c67bb98d4246c79c9674b8d9e28171dca93eab350583b096734a85`).
