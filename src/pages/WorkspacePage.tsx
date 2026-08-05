@@ -586,6 +586,7 @@ export const WorkspacePage = () => {
               <button
                 type="button"
                 onClick={handleResetDemo}
+                aria-label="Open guided demo"
                 className="bg-panel border border-border text-gray-300 hover:text-white px-3 py-2 rounded-lg shadow-md flex items-center space-x-2 text-sm font-semibold"
               >
                 <RotateCcw className="w-4 h-4" />

@@ -28,16 +28,16 @@ test('guided demo and invalid routes recover in the rendered app', async ({ page
   await expect(page.getByRole('heading', { name: /page not found/i })).toBeVisible();
 });
 
-test('guided-demo reset asks before replacing a non-demo workspace', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop', 'The desktop toolbar control is covered here; mobile exposes the same action in the responsive toolbar.');
+test('guided-demo reset asks before replacing a non-demo workspace', async ({ page }) => {
   await page.goto('/app');
-  await page.getByRole('button', { name: 'Guided demo', exact: true }).click();
+  const guidedDemo = page.getByRole('button', { name: 'Open guided demo', exact: true });
+  await guidedDemo.click();
   const confirm = page.getByRole('dialog', { name: 'Open guided demo?' });
   await expect(confirm).toBeVisible();
   await expect(confirm.getByText(/replace the current workspace/i)).toBeVisible();
   await confirm.getByRole('button', { name: 'Cancel' }).click();
   await expect(confirm).toBeHidden();
-  await page.getByRole('button', { name: 'Guided demo', exact: true }).click();
+  await guidedDemo.click();
   await confirm.getByRole('button', { name: /open guided demo/i }).click();
   await expect(page.getByRole('heading', { name: 'Source material' })).toBeVisible();
 });
@@ -58,12 +58,13 @@ test('AI provider request stays behind explicit consent', async ({ page }, testI
 });
 
 test('AI consent preflight is visible without a key and dispatches exactly once after confirmation', async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== 'desktop', 'The existing consent test covers the mobile inspector sheet.');
   let requests = 0;
   await page.route(/api\.openai\.com/, async (route) => { requests += 1; await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output_text: 'Reviewed draft' }) }); });
   await page.goto('/app');
   await page.getByRole('button', { name: 'Add AI Assist node' }).click();
-  const run = page.getByRole('button', { name: /run live provider/i });
+  if (testInfo.project.name === 'mobile') await page.getByRole('button', { name: 'Open inspector' }).click();
+  const inspector = testInfo.project.name === 'mobile' ? page.getByRole('dialog', { name: 'Inspector' }) : page;
+  const run = inspector.getByRole('button', { name: /run live provider/i });
   await run.click();
   const consent = page.getByRole('dialog', { name: /confirm external ai request/i });
   await expect(consent).toBeVisible();
@@ -71,7 +72,7 @@ test('AI consent preflight is visible without a key and dispatches exactly once 
   await expect(consent.getByRole('button', { name: /confirm and send/i })).toBeDisabled();
   expect(requests).toBe(0);
   await consent.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await page.getByLabel('API key (memory only)').fill('test-key');
+  await inspector.getByLabel('API key (memory only)').fill('test-key');
   await run.click();
   await consent.getByRole('button', { name: /confirm and send/i }).click();
   await expect(page.getByText('Reviewed draft')).toBeVisible();
