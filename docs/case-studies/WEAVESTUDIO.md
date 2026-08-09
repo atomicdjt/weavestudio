@@ -34,21 +34,21 @@ The React/Vite application uses `@xyflow/react` for the canvas, browser `localSt
 
 Rejected scope is documented in `KNOWN_LIMITATIONS.md`: no real-time collaboration, cloud sync, billing, legal/compliance functionality, or hidden provider calls.
 
-## David's role and AI assistance
+## Owner-attested role and AI assistance
 
-David defined the workflow boundaries, product scope, local-first architecture, review checkpoints, release/package process, acceptance criteria, and verification expectations. AI assistance is a documented optional product capability and may also assist implementation work; generated output is treated as a reviewable draft, not an autonomous final result.
+The following role description is owner-attested context, not an independently verified repository claim: David defined the workflow boundaries, product scope, local-first architecture, review checkpoints, release/package process, acceptance criteria, and verification expectations. AI assistance is a documented optional product capability and may also assist implementation work; generated output is treated as a reviewable draft, not an autonomous final result.
 
 ## Verification evidence
 
-- `npm test`: 45 unit tests passed during the 2026-08-05 remediation baseline.
-- `npm run test:browser`: 21 browser tests passed; 7 mobile-specific cases were explicitly skipped by the suite.
-- Browser coverage includes guided demo, invalid-route recovery, explicit AI consent, Escape/focus return, workflow outline, acquisition route, keyboard undo/redo, canvas navigation, and corrupt-import recovery.
-- `npm run lint`, `npm run typecheck`, `npm run build`, `npm run verify:buyer`, and `npm run package:acquisition` passed in the remediation baseline.
-- Acquisition package validation produced a 154-file archive with SHA-256 `a89826d725f9b29a4919a94bcb72276c2889c32718e4f246949291031e172b52`.
+- The pre-correction remediation baseline at `3e9c9df628c984527e2f7d9f5f2068c01f77a754` recorded 45 passing unit tests, and `npm run lint`, `npm run typecheck`, `npm run build`, `npm run verify:buyer`, and `npm run package:acquisition` all passed. These results are SHA-scoped historical evidence, not a claim about a later revision.
+- At that baseline, `npm run test:browser` reported 23 passed and 5 intentional viewport-scoped skips: the mobile recorded guided-demo walkthrough; mobile Escape/focus coverage for desktop toolbar dialogs; desktop execution of the mobile-only navigation/tour/acquisition check; mobile keyboard undo/redo; and mobile canvas-navigation/minimap controls. The executed suite covers guided demo, invalid-route recovery, explicit AI consent, Escape/focus return, workflow outline, acquisition route, keyboard undo/redo, canvas navigation, and corrupt-import recovery within their supported viewports.
+- The same baseline produced an acquisition ZIP with 156 total files (155 manifest entries plus `PACKAGE_MANIFEST.json`) and SHA-256 `55759c0acf740261e776515d1119171cda852ef5a189af98c8e1bd944266ffeb`. This is historical evidence for `3e9c9df`; regenerate and verify the package for any later commit.
 
 ## Deployment and acquisition model
 
-Canonical production and acquisition review are `https://weavestudio-nine.vercel.app/` and `/acquire`. The separate `weavestudio-demo` Vercel project is a non-canonical hardening-branch preview. The canonical product is sourced from `atomicdjt/weavestudio` `main`; provider-side branch/commit provenance remains a documented approval-gated verification item.
+Canonical production and acquisition review are `https://weavestudio-nine.vercel.app/` and `https://weavestudio-nine.vercel.app/acquire`. The canonical product is sourced from `atomicdjt/weavestudio` `main`.
+
+`weavestudio-demo.vercel.app` is a separate, non-canonical legacy/testing project. During the 2026-08-09 evidence review, its active alias resolved to an older production-target deployment from `main`; that snapshot does not describe every deployment in the project and is not source authority. Pull-request branches use separate non-production preview deployments. The reviewed `3e9c9df` preview was a branch preview with `noindex`, not the legacy-demo deployment.
 
 Generated acquisition ZIPs are outputs, not source authority. Buyer materials distinguish public review material from seller-only or transaction material. No price, payment, buyer, or transaction result is asserted here.
 
