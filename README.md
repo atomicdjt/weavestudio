@@ -2,9 +2,11 @@
 
 **Turn fragmented information into a structured, reusable deliverable workflow.**
 
+**Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
+
 WeaveStudio is a local-first visual workflow canvas for turning messy notes, transcripts, logs, research fragments, and discovery inputs into reviewable, reusable deliverables.
 
-[Open the public demo](https://weavestudio-demo.vercel.app/) · [Acquisition overview](https://weavestudio-demo.vercel.app/acquire)
+[Open the canonical public demo](https://weavestudio-nine.vercel.app/) · [Acquisition overview](https://weavestudio-nine.vercel.app/acquire)
 
 **Release status:** v1.0.0 — acquisition-ready consolidated release
 
@@ -12,7 +14,9 @@ WeaveStudio is a local-first visual workflow canvas for turning messy notes, tra
 
 ## Current release authority
 
-The authoritative editable source is the `main` branch of this repository. The acquisition hardening, OpenAI/Gemini BYOK workflow, browser validation, buyer materials, commercial architecture guidance, and repository-governance work were preserved from the released `master` lineage during the July 2026 non-force branch migration. `master` remains a temporary compatibility branch until production verification is complete.
+The authoritative editable source and production branch is `main`. The acquisition hardening, OpenAI/Gemini BYOK workflow, browser validation, buyer materials, commercial architecture guidance, and repository-governance work were preserved from the released `master` lineage during the July 2026 non-force branch migration. `master` is retained only as a compatibility/legacy branch.
+
+`https://weavestudio-nine.vercel.app/` is canonical production. `https://weavestudio-demo.vercel.app/` is a supporting noncanonical buyer-review and transfer surface referenced by due-diligence materials; it is not a second production authority.
 
 Generated acquisition ZIPs and deployment artifacts are outputs of the authoritative source; they do not supersede it.
 
