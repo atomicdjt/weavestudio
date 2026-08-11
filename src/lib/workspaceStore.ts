@@ -443,12 +443,19 @@ export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBr
 
 /** Replace only owned keys after a successful staged inspection. */
 export const restoreFullBrowserBackup = (backup: FullBrowserBackup): { ok: true } | { ok: false; error: string } => {
+  const previousRecords = collectFullBrowserBackup();
   try {
     clearAllLocalData();
     for (const [key, value] of Object.entries(backup.records)) localStorage.setItem(key, value);
     return { ok: true };
   } catch {
-    return { ok: false, error: 'Could not write the backup to browser storage.' };
+    try {
+      clearAllLocalData();
+      for (const [key, value] of Object.entries(previousRecords)) localStorage.setItem(key, value);
+      return { ok: false, error: 'Could not write the backup to browser storage. Previous WeaveStudio data was restored.' };
+    } catch {
+      return { ok: false, error: 'Could not write the backup or fully restore the previous WeaveStudio data.' };
+    }
   }
 };
 
