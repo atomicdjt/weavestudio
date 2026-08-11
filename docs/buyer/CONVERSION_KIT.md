@@ -3,7 +3,9 @@
 ## One-page acquisition memo
 
 **Asset:** WeaveStudio — local-first visual workflow canvas  
-**Demo:** https://weavestudio-demo.vercel.app  
+**Canonical demo:** https://weavestudio-nine.vercel.app
+
+**Supporting buyer-review demo:** https://weavestudio-demo.vercel.app (noncanonical)
 **Transaction:** one-time asset sale; no revenue or customer claims.
 
 WeaveStudio turns fragmented notes, transcripts, and operational inputs into editable workflow nodes and reusable deliverables. It is a polished React/TypeScript product with templates, validation, local browser persistence, recovery/export, PDF/Markdown/JSON output, and optional explicit-consent OpenAI/Gemini BYOK assistance.

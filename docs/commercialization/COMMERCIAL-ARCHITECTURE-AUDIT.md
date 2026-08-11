@@ -2,7 +2,9 @@
 
 **Audit date:** 2026-07-14  
 **Verified baseline:** `a6f8d97a421e433bfce124c0734f117d4b41f7fa`  
-**Current public demo:** https://weavestudio-demo.vercel.app  
+**Canonical public demo:** https://weavestudio-nine.vercel.app
+
+**Supporting buyer-review demo:** https://weavestudio-demo.vercel.app (noncanonical)
 **Scope:** Phase 0 architecture and acquisition readiness only. No commercial application code was added.
 
 ## Executive finding
