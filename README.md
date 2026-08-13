@@ -6,7 +6,7 @@
 
 WeaveStudio is a local-first visual workflow canvas for turning messy notes, transcripts, logs, research fragments, and discovery inputs into reviewable, reusable deliverables.
 
-[Open the canonical public demo](https://weavestudio-nine.vercel.app/) · [Acquisition overview](https://weavestudio-nine.vercel.app/acquire)
+[Open the canonical public demo](https://weavestudio-nine.vercel.app/) · [Case study](CASE_STUDY.md) · [Acquisition overview](https://weavestudio-nine.vercel.app/acquire)
 
 **Release status:** v1.0.0 — acquisition-ready consolidated release
 

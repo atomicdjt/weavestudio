@@ -14,7 +14,7 @@ function runValidation() {
   // 1. Verify .seller-private is ignored
   try {
     execSync('git check-ignore .seller-private/foo.txt', { stdio: 'ignore' });
-  } catch (e) {
+  } catch {
     fail('Error: .seller-private is not ignored by git.');
   }
 
