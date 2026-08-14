@@ -6,7 +6,9 @@
 
 WeaveStudio is a local-first visual workflow canvas for turning messy notes, transcripts, logs, research fragments, and discovery inputs into reviewable, reusable deliverables.
 
-[Open the canonical public demo](https://weavestudio-nine.vercel.app/) · [Case study](CASE_STUDY.md) · [Acquisition overview](https://weavestudio-nine.vercel.app/acquire)
+[Open the canonical public demo](https://weavestudio-nine.vercel.app/) · [Case study](CASE_STUDY.md) · [Acquisition overview](https://weavestudio-nine.vercel.app/acquire) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
+
+**More by David Turner:** [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [Validation Ledger](https://github.com/atomicdjt/validation-ledger) · [GitHub profile](https://github.com/atomicdjt)
 
 **Release status:** v1.0.0 — acquisition-ready consolidated release
 
