@@ -2,13 +2,37 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { HelpCircle, Home, Layers, Menu, Workflow, X } from 'lucide-react';
 import { AccessibleDialog } from './components/ui/AccessibleDialog';
+import { getPageMetadata } from './lib/pageMetadata';
+
+function setMetaContent(selector: string, content: string) {
+  const element = document.querySelector<HTMLMetaElement>(selector);
+  element?.setAttribute('content', content);
+}
 
 function App() {
   const location = useLocation();
   const [mobileNav, setMobileNav] = useState(false);
+
   useEffect(() => {
-    const titles: Record<string, string> = { '/': 'WeaveStudio — Local-first workflow canvas', '/app': 'Workspace — WeaveStudio', '/templates': 'Templates — WeaveStudio', '/docs': 'Docs — WeaveStudio', '/acquire': 'Acquire WeaveStudio' };
-    document.title = titles[location.pathname] ?? 'Page not found — WeaveStudio';
+    const metadata = getPageMetadata(location.pathname);
+    document.title = metadata.title;
+
+    setMetaContent('meta[name="description"]', metadata.description);
+    setMetaContent('meta[property="og:title"]', metadata.title);
+    setMetaContent('meta[property="og:description"]', metadata.description);
+    setMetaContent('meta[property="og:url"]', metadata.canonicalUrl);
+    setMetaContent('meta[name="twitter:title"]', metadata.title);
+    setMetaContent('meta[name="twitter:description"]', metadata.description);
+
+    document.querySelector<HTMLLinkElement>('link[rel="canonical"]')?.setAttribute('href', metadata.canonicalUrl);
+
+    let robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]');
+    if (!robots) {
+      robots = document.createElement('meta');
+      robots.setAttribute('name', 'robots');
+      document.head.appendChild(robots);
+    }
+    robots.setAttribute('content', metadata.robots);
   }, [location.pathname]);
 
   const navItems = [
