@@ -4,9 +4,20 @@
 
 **Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
 
+### What is this?
 WeaveStudio is a local-first visual workflow canvas for turning messy notes, transcripts, logs, research fragments, and discovery inputs into reviewable, reusable deliverables.
 
-[Open the canonical public demo](https://weavestudio-nine.vercel.app/) · [Case study](CASE_STUDY.md) · [Acquisition overview](https://weavestudio-nine.vercel.app/acquire) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
+### Who is it for?
+It is designed for researchers, analysts, project managers, and consultants who need to synthesize unstructured source material into professional, structured documents without relying on cloud-based SaaS backends.
+
+### Why is it interesting?
+It features a true local-first architecture using browser `localStorage`. There is no backend, no cloud database, and no mandatory external API. Data stays in your browser unless you explicitly initiate an export or use the BYOK AI feature with explicit consent.
+
+### Can I see it?
+Yes! [Open the canonical public demo](https://weavestudio-nine.vercel.app/)
+
+### Where is the evidence?
+The codebase includes comprehensive [Case study](CASE_STUDY.md), an [Acquisition overview](https://weavestudio-nine.vercel.app/acquire), and architectural documentation.
 
 **More by David Turner:** [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [Validation Ledger](https://github.com/atomicdjt/validation-ledger) · [GitHub profile](https://github.com/atomicdjt)
 
