@@ -1,5 +1,6 @@
 import type { WorkflowValidatorResult, workflowValidatorStatus } from '../../types';
 import { AlertTriangle, CheckCircle2, CircleDashed, ClipboardCheck, X } from 'lucide-react';
+import { getCompletenessHelperText } from '../../lib/workflowValidatorPresentation';
 import { AccessibleDialog } from '../ui/AccessibleDialog';
 
 interface WorkflowValidatorPanelProps {
@@ -19,11 +20,6 @@ const StatusBadge = ({ status }: { status: workflowValidatorStatus }) => (
     {status}
   </span>
 );
-
-export const getCompletenessHelperText = (result: WorkflowValidatorResult) =>
-  result.issueCount === 0
-    ? 'No structural or review-gate issues remain. The score does not verify factual accuracy.'
-    : 'Start with the first suggested fix below. The score reflects workflow structure and required human review state, not factual accuracy.';
 
 export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPanelProps) => {
   const isReady = result.exportReadiness === 'Ready';
