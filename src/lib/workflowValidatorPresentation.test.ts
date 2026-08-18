@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WorkflowValidatorResult } from '../types';
-import { getCompletenessHelperText } from '../components/workspace/WorkflowValidatorPanel';
+import { getCompletenessHelperText } from './workflowValidatorPresentation';
 
 const result = (issueCount: number): WorkflowValidatorResult => ({
   completenessScore: issueCount === 0 ? 100 : 88,
