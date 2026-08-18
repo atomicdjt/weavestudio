@@ -18,7 +18,16 @@ export interface NodeData extends Record<string, unknown> {
   title: string;
   description: string;
   content: string;
-  status?: 'pending' | 'running' | 'complete' | 'needs_review' | 'warning' | 'incomplete' | 'ready';
+  status?:
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'running'
+    | 'complete'
+    | 'needs_review'
+    | 'warning'
+    | 'incomplete'
+    | 'ready';
   category?: NodeCategory;
   reviewRequired?: boolean;
   provider?: 'openai' | 'gemini';
