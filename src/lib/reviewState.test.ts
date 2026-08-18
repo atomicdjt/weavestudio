@@ -39,6 +39,21 @@ describe('invalidateApprovedReviews', () => {
     expect(result.find((node) => node.id === 'review')?.data.status).toBe('pending');
   });
 
+  it('resets approved reviews when source material changes', () => {
+    const nodes = [inputNode(), approvedReview()];
+
+    const result = invalidateApprovedReviews({
+      previousNodes: nodes,
+      nextNodes: nodes,
+      previousEdges: edges,
+      nextEdges: edges,
+      previousSource: 'Original source',
+      nextSource: 'Changed source',
+    });
+
+    expect(result.find((node) => node.id === 'review')?.data.status).toBe('pending');
+  });
+
   it('resets approved reviews when routing changes', () => {
     const nodes = [inputNode(), approvedReview()];
 
