@@ -25,6 +25,7 @@ import type {
   WorkspaceDocument,
 } from '../types';
 import { buildWorkflowValidator } from '../lib/workflowValidator';
+import { invalidateApprovedReviews } from '../lib/reviewState';
 import {
   applySourceToInputNode,
   countDerivedNodes,
@@ -90,7 +91,6 @@ const defaultWorkspace = (): WorkspaceDocument => {
   const existing = getActiveWorkspace();
   if (existing) return existing;
 
-  // Empty store: blank workspace only — never auto-create a template as a side effect of guided demo
   return createWorkspace({ name: 'Blank workspace', nodes: [], edges: [], sourceMaterial: '' });
 };
 
@@ -108,7 +108,6 @@ export const WorkspacePage = () => {
   const locationState = location.state as LocationState;
 
   const [workspace, setWorkspace] = useState<WorkspaceDocument>(() => {
-    // Process nav intent in initializer so we never create a default template first
     const fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
     return fromNav ?? defaultWorkspace();
   });
@@ -116,7 +115,6 @@ export const WorkspacePage = () => {
   const restoringHistoryRef = useRef(false);
   const [, setHistoryVersion] = useState(0);
   const [indexEntries, setIndexEntries] = useState(() => loadIndex().workspaces);
-  /** Bumped only for external graph replacements / workspace switches — not for pan or source panel typing */
   const [graphEpoch, setGraphEpoch] = useState(0);
   const [clearSignal, setClearSignal] = useState(0);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -167,7 +165,6 @@ export const WorkspacePage = () => {
     [workspace.sourceMaterial, workspace.nodes, workspace.meta?.appliedSourceFingerprint],
   );
 
-  // Subsequent navigations to /app with new intents (same mounted route)
   useEffect(() => {
     if (!locationState) return;
     if (!(locationState.openGuidedDemo || locationState.blankWorkspace || locationState.loadTemplate)) {
@@ -187,7 +184,6 @@ export const WorkspacePage = () => {
     navigate('/app', { replace: true, state: null });
   }, [location.key, locationState, navConsumedKey, navigate]);
 
-  // Clear history state after first paint if we already consumed intent in useState
   useEffect(() => {
     if (locationState && (locationState.openGuidedDemo || locationState.blankWorkspace || locationState.loadTemplate)) {
       navigate('/app', { replace: true, state: null });
@@ -195,7 +191,6 @@ export const WorkspacePage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Autosave
   useEffect(() => {
     setSaveStatus('saving');
     const timer = setTimeout(() => {
@@ -221,25 +216,53 @@ export const WorkspacePage = () => {
   const applyHistoryWorkspace = (next: WorkspaceDocument) => {
     restoringHistoryRef.current = true;
     setWorkspace(next);
+    setWorkflowValidator(null);
     setGraphEpoch((value) => value + 1);
     setHistoryVersion((value) => value + 1);
     window.setTimeout(() => { restoringHistoryRef.current = false; }, 500);
   };
 
   const replaceGraph = (next: Partial<WorkspaceDocument> & { nodes: AppNode[]; edges?: WorkspaceDocument['edges'] }) => {
-    patchWorkspace((current) => ({
-      ...current,
-      ...next,
-      edges: next.edges ?? current.edges,
-    }));
+    patchWorkspace((current) => {
+      const nextEdges = next.edges ?? current.edges;
+      const nextSource = typeof next.sourceMaterial === 'string' ? next.sourceMaterial : current.sourceMaterial;
+      const guardedNodes = invalidateApprovedReviews({
+        previousNodes: current.nodes,
+        nextNodes: next.nodes,
+        previousEdges: current.edges,
+        nextEdges,
+        previousSource: current.sourceMaterial,
+        nextSource,
+      });
+      return {
+        ...current,
+        ...next,
+        nodes: guardedNodes,
+        edges: nextEdges,
+      };
+    });
+    setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
   };
 
   const handleUpdateNode = (id: string, data: Partial<AppNode['data']>) => {
-    patchWorkspace((current) => ({
-      ...current,
-      nodes: current.nodes.map((node) => (node.id === id ? { ...node, data: { ...node.data, ...data } } : node)),
-    }), `node:${id}`);
+    patchWorkspace((current) => {
+      const nextNodes = current.nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, ...data } } : node,
+      );
+      return {
+        ...current,
+        nodes: invalidateApprovedReviews({
+          previousNodes: current.nodes,
+          nextNodes,
+          previousEdges: current.edges,
+          nextEdges: current.edges,
+          previousSource: current.sourceMaterial,
+          nextSource: current.sourceMaterial,
+        }),
+      };
+    }, `node:${id}`);
+    setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
   };
 
@@ -257,11 +280,20 @@ export const WorkspacePage = () => {
     if (restoringHistoryRef.current) return;
     setWorkspace((current) => {
       if (JSON.stringify(canvasNodes) === JSON.stringify(current.nodes)) return current;
-      const next = { ...current, nodes: canvasNodes };
+      const guardedNodes = invalidateApprovedReviews({
+        previousNodes: current.nodes,
+        nextNodes: canvasNodes,
+        previousEdges: current.edges,
+        nextEdges: current.edges,
+        previousSource: current.sourceMaterial,
+        nextSource: current.sourceMaterial,
+      });
+      const next = { ...current, nodes: guardedNodes };
       historyRef.current.record(next, 'canvas');
       setHistoryVersion((value) => value + 1);
       return next;
     });
+    setWorkflowValidator(null);
   };
   const handleAutoLayout = () => replaceGraph({ nodes: autoLayoutNodes(workspace.nodes, workspace.edges) });
 
@@ -269,19 +301,25 @@ export const WorkspacePage = () => {
     if (restoringHistoryRef.current) return;
     setWorkspace((current) => {
       if (JSON.stringify(canvasEdges) === JSON.stringify(current.edges)) return current;
-      const next = { ...current, edges: canvasEdges };
+      const guardedNodes = invalidateApprovedReviews({
+        previousNodes: current.nodes,
+        nextNodes: current.nodes,
+        previousEdges: current.edges,
+        nextEdges: canvasEdges,
+        previousSource: current.sourceMaterial,
+        nextSource: current.sourceMaterial,
+      });
+      const next = { ...current, nodes: guardedNodes, edges: canvasEdges };
       historyRef.current.record(next, 'canvas');
       setHistoryVersion((value) => value + 1);
       return next;
     });
+    setWorkflowValidator(null);
   };
 
   const handleAddNode = (type: NodeType) => {
     const nextNode = createNode(type, workspace.nodes.length);
-    replaceGraph({
-      nodes: [...workspace.nodes, nextNode],
-    });
-    // React Flow emits an empty selection update after a palette insert; retain the useful inspector selection.
+    replaceGraph({ nodes: [...workspace.nodes, nextNode] });
     pendingPaletteSelectionRef.current = nextNode.id;
     setSelectedNodeId(nextNode.id);
   };
@@ -295,11 +333,11 @@ export const WorkspacePage = () => {
       deliverableDraft: undefined,
       meta: {
         ...workspace.meta,
+        sourceUserTouched: false,
         appliedSourceFingerprint: '',
         sourceSyncStatus: 'in_sync',
       },
     });
-    setWorkflowValidator(null);
     setSelectedNodeId(null);
     } });
   };
@@ -329,8 +367,8 @@ export const WorkspacePage = () => {
     setSelectedNodeId(null);
     setGraphEpoch((e) => e + 1);
     };
-    if (workspace.name !== 'Guided demo') {
-      setConfirmation({ title: 'Open guided demo?', description: 'This will replace the current workspace in the canvas. Your existing workspace remains saved locally and can be reopened from the workspace menu.', label: 'Open guided demo', action: openDemo });
+    if (!workspace.meta?.guidedDemo) {
+      setConfirmation({ title: 'Open guided demo?', description: 'This will replace the current workspace in the canvas. Your existing workspace remains saved in this browser and can be reopened from the workspace menu.', label: 'Open guided demo', action: openDemo });
       return;
     }
     openDemo();
@@ -354,6 +392,16 @@ export const WorkspacePage = () => {
 
   const handleWorkflowValidator = () => {
     setWorkflowValidator(buildWorkflowValidator(nodes, edges));
+  };
+
+  const handleOpenPreview = () => {
+    const liveValidation = buildWorkflowValidator(nodes, edges);
+    if (liveValidation.exportReadiness === 'Incomplete' || liveValidation.exportReadiness === 'Needs Review') {
+      setWorkflowValidator(liveValidation);
+      setNotice('Resolve blocking validation issues and approve required human review before generating or exporting.');
+      return;
+    }
+    setShowPreview(true);
   };
 
   const handleApplyToInput = () => {
@@ -434,6 +482,7 @@ export const WorkspacePage = () => {
         deliverableDraft: undefined,
         meta: {
           ...workspace.meta,
+          sourceUserTouched: false,
           appliedSourceFingerprint: source,
           sourceSyncStatus: 'in_sync',
         },
@@ -464,7 +513,6 @@ export const WorkspacePage = () => {
       });
     }
 
-    setWorkflowValidator(null);
     setSelectedNodeId(null);
     setPendingTemplateId(null);
   };
@@ -489,10 +537,10 @@ export const WorkspacePage = () => {
     const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
     setWorkspace(next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
     setIndexEntries(loadIndex().workspaces);
+    setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
   };
 
-  // The listener intentionally refreshes from document state so keyboard commands use the active selection.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -531,6 +579,7 @@ export const WorkspacePage = () => {
                 const next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
                 setWorkspace(next);
                 setIndexEntries(loadIndex().workspaces);
+                setWorkflowValidator(null);
                 setSelectedNodeId(null);
                 setGraphEpoch((e) => e + 1);
               }}
@@ -539,6 +588,7 @@ export const WorkspacePage = () => {
                 if (!copy) return;
                 setWorkspace(copy);
                 setIndexEntries(loadIndex().workspaces);
+                setWorkflowValidator(null);
                 setGraphEpoch((e) => e + 1);
               }}
               onDelete={() => {
@@ -553,6 +603,7 @@ export const WorkspacePage = () => {
                   setWorkspace(createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
                 }
                 setIndexEntries(loadIndex().workspaces);
+                setWorkflowValidator(null);
                 setGraphEpoch((e) => e + 1);
                 }
               }}
@@ -601,7 +652,7 @@ export const WorkspacePage = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setShowPreview(true)}
+                onClick={handleOpenPreview}
                 className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-lg font-semibold shadow-md flex items-center space-x-2"
               >
                 <Eye className="w-4 h-4" />
@@ -619,11 +670,19 @@ export const WorkspacePage = () => {
           {showCoach && (
             <div className="pointer-events-auto rounded-lg border border-blue-500/30 bg-blue-950/90 px-4 py-3 text-sm text-blue-50 shadow-lg max-w-xl">
               <div className="font-semibold mb-1">Golden path</div>
-              <ol className="list-decimal list-inside text-xs text-blue-100/90 space-y-1 mb-2">
-                <li>Paste source material below (or use sample).</li>
-                <li>Apply to Input or Split into nodes (confirms before overwriting).</li>
-                <li>Validate → Generate → export Markdown/PDF/project JSON.</li>
-              </ol>
+              {workspace.meta?.guidedDemo ? (
+                <ol className="list-decimal list-inside text-xs text-blue-100/90 space-y-1 mb-2">
+                  <li>Edit the intentionally empty Proposed approach step.</li>
+                  <li>Validate, then open the Review node and approve the checkpoint.</li>
+                  <li>Revalidate to Ready → Generate → export Markdown/PDF/project JSON.</li>
+                </ol>
+              ) : (
+                <ol className="list-decimal list-inside text-xs text-blue-100/90 space-y-1 mb-2">
+                  <li>Add or edit source material below.</li>
+                  <li>Apply to Input or Split into nodes, then resolve validation issues.</li>
+                  <li>Approve required review → revalidate → Generate → export.</li>
+                </ol>
+              )}
               <button
                 type="button"
                 className="text-xs text-blue-300 hover:text-white underline"
@@ -641,7 +700,12 @@ export const WorkspacePage = () => {
               <button type="button" className="ml-3 text-xs text-blue-300 hover:text-white underline" onClick={() => setShowTour(true)}>Start guided tour</button>
             </div>
           )}
-          <OnboardingChecklist hasSource={Boolean(workspace.sourceMaterial.trim())} hasNodes={workspace.nodes.length > 0} validated={Boolean(workflowValidator)} onOpenTemplates={() => navigate('/templates')} />
+          <OnboardingChecklist
+            hasSource={Boolean(workspace.meta?.sourceUserTouched)}
+            hasNodes={workspace.nodes.length > 0}
+            validated={workflowValidator?.exportReadiness === 'Ready'}
+            onOpenTemplates={() => navigate('/templates')}
+          />
         </div>
 
         <div className="shrink-0">
@@ -650,30 +714,53 @@ export const WorkspacePage = () => {
             inputInstructions={template?.inputInstructions}
             sample={template?.messyInputSample}
             syncStatus={syncStatus}
-            onChange={(value) =>
-              patchWorkspace({
+            onChange={(value) => {
+              patchWorkspace((current) => ({
+                ...current,
                 sourceMaterial: value,
+                nodes: invalidateApprovedReviews({
+                  previousNodes: current.nodes,
+                  nextNodes: current.nodes,
+                  previousEdges: current.edges,
+                  nextEdges: current.edges,
+                  previousSource: current.sourceMaterial,
+                  nextSource: value,
+                }),
                 meta: {
-                  ...workspace.meta,
+                  ...current.meta,
+                  sourceUserTouched: true,
                   sourceSyncStatus: computeSourceSyncStatus(
                     value,
-                    workspace.nodes,
-                    typeof workspace.meta?.appliedSourceFingerprint === 'string'
-                      ? workspace.meta.appliedSourceFingerprint
+                    current.nodes,
+                    typeof current.meta?.appliedSourceFingerprint === 'string'
+                      ? current.meta.appliedSourceFingerprint
                       : undefined,
                   ),
                 },
-              }, 'source')
-            }
+              }), 'source');
+              setWorkflowValidator(null);
+            }}
             onUseSample={() => {
               if (!template?.messyInputSample) return;
-              patchWorkspace({
-                sourceMaterial: template.messyInputSample,
+              const value = template.messyInputSample;
+              patchWorkspace((current) => ({
+                ...current,
+                sourceMaterial: value,
+                nodes: invalidateApprovedReviews({
+                  previousNodes: current.nodes,
+                  nextNodes: current.nodes,
+                  previousEdges: current.edges,
+                  nextEdges: current.edges,
+                  previousSource: current.sourceMaterial,
+                  nextSource: value,
+                }),
                 meta: {
-                  ...workspace.meta,
+                  ...current.meta,
+                  sourceUserTouched: true,
                   sourceSyncStatus: 'source_ahead',
                 },
-              }, 'source');
+              }), 'source');
+              setWorkflowValidator(null);
             }}
             onApplyToInput={handleApplyToInput}
             onSplitIntoNodes={handleSplitIntoNodes}
