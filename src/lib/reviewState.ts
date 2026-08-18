@@ -22,8 +22,9 @@ const semanticEdge = (edge: AppEdge) => ({
   targetHandle: edge.targetHandle ?? null,
 });
 
-const workflowMeaningSignature = (nodes: AppNode[], edges: AppEdge[]) =>
+const workflowMeaningSignature = (nodes: AppNode[], edges: AppEdge[], sourceMaterial: string) =>
   JSON.stringify({
+    sourceMaterial,
     nodes: nodes.map(semanticNode).toSorted((left, right) => left.id.localeCompare(right.id)),
     edges: edges
       .map(semanticEdge)
@@ -39,10 +40,16 @@ export const invalidateApprovedReviews = (params: {
   nextNodes: AppNode[];
   previousEdges: AppEdge[];
   nextEdges: AppEdge[];
+  previousSource?: string;
+  nextSource?: string;
 }): AppNode[] => {
   const changed =
-    workflowMeaningSignature(params.previousNodes, params.previousEdges) !==
-    workflowMeaningSignature(params.nextNodes, params.nextEdges);
+    workflowMeaningSignature(
+      params.previousNodes,
+      params.previousEdges,
+      params.previousSource ?? '',
+    ) !==
+    workflowMeaningSignature(params.nextNodes, params.nextEdges, params.nextSource ?? '');
 
   if (!changed) return params.nextNodes;
 
