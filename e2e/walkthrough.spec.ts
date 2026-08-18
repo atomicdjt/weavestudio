@@ -14,20 +14,42 @@ test('guided demo walkthrough', async ({ page }, testInfo) => {
   await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
 
   await page.getByRole('button', { name: /workflow outline/i }).click();
-  const outline = page.getByRole('region', { name: /workflow outline/i });
+  let outline = page.getByRole('region', { name: /workflow outline/i });
   await outline.getByRole('button', { name: /proposed approach/i }).click();
-  await page.getByLabel('Content').fill(
+  const proposedApproach = page.getByLabel('Content');
+  await proposedApproach.fill(
     '1. Simple lead intake checklist\n2. Quote follow-up cadence\n3. One-page sales-to-ops handoff form\n4. 30-day pilot with office manager',
   );
 
   await page.getByRole('button', { name: /workflow outline/i }).click();
-  await page.getByRole('region', { name: /workflow outline/i }).getByRole('button', { name: /assumption check/i }).click();
+  outline = page.getByRole('region', { name: /workflow outline/i });
+  await outline.getByRole('button', { name: /assumption check/i }).click();
   await page.getByRole('button', { name: 'Approve', exact: true }).click();
 
   await page.getByRole('button', { name: 'Validate' }).click();
   const readyValidation = page.getByRole('dialog', { name: 'Workflow Validator' });
   await expect(readyValidation.getByText('Ready', { exact: true }).first()).toBeVisible();
   await expect(readyValidation.getByText(/required review checkpoints are approved/i)).toBeVisible();
+  await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+
+  await page.getByRole('button', { name: /workflow outline/i }).click();
+  outline = page.getByRole('region', { name: /workflow outline/i });
+  await outline.getByRole('button', { name: /proposed approach/i }).click();
+  await page.getByLabel('Content').fill(
+    '1. Simple lead intake checklist\n2. Quote follow-up cadence\n3. One-page sales-to-ops handoff form\n4. 30-day pilot with office manager\n5. Confirm the revised handoff owner',
+  );
+  await page.getByRole('button', { name: 'Validate' }).click();
+  const staleValidation = page.getByRole('dialog', { name: 'Workflow Validator' });
+  await expect(staleValidation.getByText('Human approval pending')).toBeVisible();
+  await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+
+  await page.getByRole('button', { name: /workflow outline/i }).click();
+  outline = page.getByRole('region', { name: /workflow outline/i });
+  await outline.getByRole('button', { name: /assumption check/i }).click();
+  await page.getByRole('button', { name: 'Approve', exact: true }).click();
+  await page.getByRole('button', { name: 'Validate' }).click();
+  const revalidated = page.getByRole('dialog', { name: 'Workflow Validator' });
+  await expect(revalidated.getByText('Ready', { exact: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
 
   await page.getByRole('button', { name: 'Generate' }).click();
