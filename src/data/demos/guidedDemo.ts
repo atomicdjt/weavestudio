@@ -6,6 +6,20 @@ import { getTemplateById } from '../templates';
 export const createGuidedDemoWorkspace = (): WorkspaceDocument => {
   const template = getTemplateById('client-proposal-builder')!;
   const now = new Date().toISOString();
+  const nodes = structuredClone(template.nodes).map((node) =>
+    node.id === 'n_t3'
+      ? {
+          ...node,
+          data: {
+            ...node.data,
+            content: '',
+            status: 'pending' as const,
+          },
+        }
+      : node.type === 'review'
+        ? { ...node, data: { ...node.data, status: 'pending' as const } }
+        : node,
+  );
 
   return {
     schemaVersion: WORKSPACE_SCHEMA_VERSION,
@@ -15,13 +29,13 @@ export const createGuidedDemoWorkspace = (): WorkspaceDocument => {
     createdAt: now,
     updatedAt: now,
     sourceMaterial: template.nodes.find((n) => n.type === 'input')?.data.content ?? template.messyInputSample,
-    nodes: structuredClone(template.nodes),
+    nodes,
     edges: structuredClone(template.edges),
     deliverableDraft: {
       title: 'Proposal: Lightweight Operations Upgrade',
       markdown: '',
       userEdited: false,
     },
-    meta: { guidedDemo: true },
+    meta: { guidedDemo: true, sourceUserTouched: false },
   };
 };
