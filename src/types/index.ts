@@ -68,6 +68,8 @@ export interface WorkspaceDocument {
   viewport?: { x: number; y: number; zoom: number };
   meta?: Record<string, unknown> & {
     guidedDemo?: boolean;
+    /** True only after an explicit source edit/sample action in this workspace. */
+    sourceUserTouched?: boolean;
     /** Last source string applied to the Input node via Apply */
     appliedSourceFingerprint?: string;
     sourceSyncStatus?: SourceSyncStatus;
