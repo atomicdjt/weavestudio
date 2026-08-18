@@ -20,6 +20,11 @@ const StatusBadge = ({ status }: { status: workflowValidatorStatus }) => (
   </span>
 );
 
+export const getCompletenessHelperText = (result: WorkflowValidatorResult) =>
+  result.issueCount === 0
+    ? 'No structural or review-gate issues remain. The score does not verify factual accuracy.'
+    : 'Start with the first suggested fix below. The score reflects workflow structure and required human review state, not factual accuracy.';
+
 export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPanelProps) => {
   const isReady = result.exportReadiness === 'Ready';
 
@@ -40,7 +45,7 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
           <div className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
             <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Completeness</div>
             <div className="text-3xl font-bold text-white">{result.completenessScore}%</div>
-            <p className="mt-2 text-[11px] text-gray-400">Start with the first suggested fix below; the score reflects workflow structure, not fact accuracy.</p>
+            <p className="mt-2 text-[11px] text-gray-400">{getCompletenessHelperText(result)}</p>
           </div>
           <div className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
             <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Issues Found</div>
@@ -58,7 +63,7 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
             <h4 className="font-semibold text-white">Issues and suggested fixes</h4>
           </div>
           {result.issues.length === 0 ? (
-            <p className="text-sm text-gray-400">No blocking issues found. Review the walkthrough before exporting.</p>
+            <p className="text-sm text-gray-400">No blocking issues found. Required review checkpoints are approved; export readiness is Ready. This validator does not verify facts.</p>
           ) : (
             <div className="space-y-3">
               {result.issues.map((issue) => (
@@ -107,7 +112,7 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
 
         <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
           <CircleDashed className="w-4 h-4 shrink-0" />
-          <span>Workflow Validator is deterministic and local. It validates workflow structure; it does not verify facts.</span>
+          <span>Workflow Validator is deterministic and local. It validates workflow structure and explicit review gates; it does not verify facts.</span>
         </div>
       </div>
     </AccessibleDialog>
