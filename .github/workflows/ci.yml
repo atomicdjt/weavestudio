@@ -28,7 +28,7 @@ jobs:
         env:
           BASE_URL: https://weavestudio-nine.vercel.app
         run: |
-          cat > /tmp/weavestudio-production-smoke.mjs <<'EOF'
+          cat > weavestudio-production-smoke.mjs <<'EOF'
           import { chromium } from 'playwright';
 
           const base = process.env.BASE_URL;
@@ -110,7 +110,7 @@ jobs:
             await browser.close();
           }
           EOF
-          node /tmp/weavestudio-production-smoke.mjs
+          node weavestudio-production-smoke.mjs
       - name: Upload screenshot evidence
         if: always()
         uses: actions/upload-artifact@v4
