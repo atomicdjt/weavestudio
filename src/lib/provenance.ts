@@ -83,6 +83,93 @@ export const validateSourceFragment = (
   return 'valid';
 };
 
+export const upsertSourceFragment = (
+  graph: ProvenanceGraph | undefined,
+  sourceMaterial: string,
+  startOffset: number,
+  endOffset: number,
+  id?: string,
+): { graph: ProvenanceGraph; fragment: SourceFragment } => {
+  if (startOffset === endOffset) throw new RangeError('Select non-empty source text for provenance.');
+  const currentSourceFingerprint = fingerprintText(sourceMaterial);
+  const currentQuote = validOffsets(startOffset, endOffset, sourceMaterial.length)
+    ? sourceMaterial.slice(startOffset, endOffset)
+    : '';
+  const existing = graph?.fragments.find(
+    (fragment) =>
+      fragment.startOffset === startOffset &&
+      fragment.endOffset === endOffset &&
+      fragment.quote === currentQuote &&
+      fragment.sourceFingerprint === currentSourceFingerprint &&
+      validateSourceFragment(fragment, sourceMaterial) === 'valid',
+  );
+
+  if (existing) {
+    return {
+      graph: {
+        ...graph,
+        sourceFingerprint: currentSourceFingerprint,
+        fragments: [...graph.fragments],
+        claims: [...graph.claims],
+      },
+      fragment: existing,
+    };
+  }
+
+  const fragment = createSourceFragment({ sourceMaterial, startOffset, endOffset, id });
+  const next: ProvenanceGraph = graph
+    ? {
+        ...graph,
+        sourceFingerprint: currentSourceFingerprint,
+        fragments: [...graph.fragments, fragment],
+        claims: [...graph.claims],
+      }
+    : {
+        version: 1,
+        sourceFingerprint: currentSourceFingerprint,
+        fragments: [fragment],
+        claims: [],
+      };
+  return { graph: next, fragment };
+};
+
+export const upsertProvenanceClaim = (
+  graph: ProvenanceGraph,
+  args: {
+    nodeId: string;
+    claimText: string;
+    sourceFragmentIds: string[];
+    viaNodeIds?: string[];
+    derivation: ProvenanceDerivation;
+    id?: string;
+  },
+): { graph: ProvenanceGraph; claim: ProvenanceClaim } => {
+  if (args.sourceFragmentIds.length === 0) {
+    throw new Error('A provenance claim must reference at least one source fragment.');
+  }
+  const uniqueFragmentIds = [...new Set(args.sourceFragmentIds)];
+  const uniqueViaNodeIds = [...new Set(args.viaNodeIds ?? [])];
+  const missingFragment = uniqueFragmentIds.find(
+    (fragmentId) => !graph.fragments.some((fragment) => fragment.id === fragmentId),
+  );
+  if (missingFragment) throw new Error(`Unknown source fragment: ${missingFragment}`);
+
+  const existingIndex = graph.claims.findIndex(
+    (claim) => claim.nodeId === args.nodeId && claim.claimText === args.claimText,
+  );
+  const existing = existingIndex >= 0 ? graph.claims[existingIndex] : undefined;
+  const claim = createProvenanceClaim({
+    ...args,
+    id: existing?.id ?? args.id,
+    sourceFragmentIds: uniqueFragmentIds,
+    viaNodeIds: uniqueViaNodeIds,
+  });
+  const claims = [...graph.claims];
+  if (existingIndex >= 0) claims[existingIndex] = claim;
+  else claims.push(claim);
+  return { graph: { ...graph, claims }, claim };
+};
+
 export const validateProvenanceClaim = (
   claim: ProvenanceClaim,
   graph: ProvenanceGraph,
