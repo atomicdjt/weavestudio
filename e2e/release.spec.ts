@@ -175,3 +175,64 @@ test('corrupt project import reports an error without leaving the recovery flow'
   await page.getByRole('button', { name: 'Import new workspace' }).click();
   await expect(portability.getByText(/failed to parse import file/i)).toBeVisible();
 });
+
+test('source text selection can be captured as a provenance fragment', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop covers precise textarea selection authoring.');
+  await page.goto('/');
+  await page.getByTestId('open-guided-demo').click();
+  const source = page.getByLabel('Source material');
+  await source.evaluate((element: HTMLTextAreaElement) => {
+    element.focus();
+    element.setSelectionRange(0, Math.min(24, element.value.length));
+    element.dispatchEvent(new Event('select', { bubbles: true }));
+  });
+
+  const addFragment = page.getByRole('button', { name: 'Add source fragment' });
+  await expect(addFragment).toBeEnabled();
+  await addFragment.click();
+  await expect(page.getByRole('status').filter({ hasText: /source fragment added for provenance/i })).toBeVisible();
+});
+
+test('output preview supports explicit claim-to-source provenance review', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop covers the full provenance annotation and inspection flow.');
+  await page.goto('/');
+  await page.getByTestId('open-guided-demo').click();
+
+  const source = page.getByLabel('Source material');
+  await source.evaluate((element: HTMLTextAreaElement) => {
+    element.focus();
+    element.setSelectionRange(0, Math.min(32, element.value.length));
+    element.dispatchEvent(new Event('select', { bubbles: true }));
+  });
+  await page.getByRole('button', { name: 'Add source fragment' }).click();
+
+  await page.getByRole('button', { name: /workflow outline/i }).click();
+  let outline = page.getByRole('region', { name: /workflow outline/i });
+  await outline.getByRole('button', { name: /proposed approach/i }).click();
+  await page.getByLabel('Content').fill('A traceable pilot recommendation based on the selected source evidence.');
+
+  await page.getByRole('button', { name: /workflow outline/i }).click();
+  outline = page.getByRole('region', { name: /workflow outline/i });
+  await outline.getByRole('button', { name: /assumption check/i }).click();
+  await page.getByRole('button', { name: 'Approve', exact: true }).click();
+
+  await page.getByRole('button', { name: 'Validate' }).click();
+  const validator = page.getByRole('dialog', { name: 'Workflow Validator' });
+  await expect(validator.getByText('Ready', { exact: true }).first()).toBeVisible();
+  await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+
+  await page.getByRole('button', { name: 'Generate' }).click();
+  const preview = page.getByRole('dialog', { name: 'Output preview' });
+  await preview.getByRole('button', { name: 'Provenance' }).click();
+  await expect(preview.getByText('Workspace lineage only — this does not verify the truth or authenticity of the source.')).toBeVisible();
+  await expect(preview.getByRole('heading', { name: 'Annotate a claim' })).toBeVisible();
+
+  const candidate = preview.getByLabel('Claim candidate');
+  await candidate.selectOption({ index: 1 });
+  await preview.getByRole('checkbox', { name: /source fragment/i }).first().check();
+  await preview.getByLabel('Derivation').selectOption('direct');
+  await preview.getByRole('button', { name: 'Save provenance' }).click();
+
+  await expect(preview.getByText('Valid', { exact: true }).first()).toBeVisible();
+  await expect(preview.getByText(/source range/i).first()).toBeVisible();
+});
