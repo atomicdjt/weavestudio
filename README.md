@@ -52,6 +52,8 @@ Important source material often begins as scattered, inconsistent fragments. Wea
 - Visual workflow canvas powered by `@xyflow/react`
 - Five primary templates plus an expandable legacy starter pack
 - Source ingest, editable canvas nodes, and explicit review checkpoints
+- Explicit claim-to-source provenance: selected source ranges can be linked to reviewable claims with direct, transformed, manual, or AI-assisted derivation labels
+- Reviewer-facing provenance inspection in Output Preview with valid/stale/broken/missing status and exact source quotes
 - Named browser-local workspaces with autosave, visible save state, and snapshots
 - Bounded workspace undo/redo with toolbar and keyboard shortcuts
 - Workflow outline, minimap, explicit auto-layout, and keyboard-safe deletion
@@ -80,6 +82,8 @@ Important source material often begins as scattered, inconsistent fragments. Wea
 WeaveStudio is a static browser application. The standard workflow has no backend, account system, cloud database, or required external API. Workspaces are stored in browser `localStorage`; exports are files you initiate from the browser.
 
 The normal workflow does not make provider requests. Optional AI Assist requests are disabled until a user explicitly confirms the individual action and may send the displayed prompt/context to the selected provider. API keys are not bundled with WeaveStudio, are held only in volatile tab memory, and are not saved to `localStorage` or project exports.
+
+Provenance is also browser-local workspace metadata. It records **workspace lineage**—which captured source fragments and declared transform/AI-assist steps a claim was linked to. It does **not** prove external factual truth, source authenticity, or that the source itself is trustworthy. Provenance fingerprints are deterministic stale-reference detectors, not cryptographic authenticity proofs.
 
 ## Local development
 
@@ -113,14 +117,15 @@ The manually dispatched or acquisition-tag-triggered workflow in [`.github/workf
 
 - **Markdown** produces an editable text deliverable.
 - **PDF** produces a simple local print-oriented representation of the draft.
-- **Project JSON** preserves workspace nodes, edges, source material, template selection, and the deliverable draft for re-import.
-- **Snapshots** capture a coherent local checkpoint of workspace state.
+- **Project JSON** preserves workspace nodes, edges, source material, template selection, deliverable draft, and provenance identifiers for validated re-import.
+- **Snapshots** capture a coherent local checkpoint of workspace state, including provenance when present.
 - **Download all local data** creates an owned-data backup that can be validated and restored.
 
 ## Known limitations and review boundaries
 
 - Browser `localStorage` is neither encrypted storage nor durable cloud storage. Clearing site data, using private browsing, changing browsers, or device cleanup can remove workspaces.
 - Workflow Validator evaluates workflow structure and readiness; it does not verify facts or guarantee correctness.
+- Provenance records workspace lineage only. A `Valid` trace means the recorded claim, declared intermediate steps, and captured source ranges still resolve consistently; it does not establish factual truth, source authenticity, or source quality.
 - Generated and AI-assisted work requires human review before sharing or applying.
 - WeaveStudio is a single-user workflow tool. It does not provide real-time collaboration, cloud sync, account-based sharing, or billing.
 - Dense graph editing is most efficient on desktop; mobile includes dedicated Inspector and Snapshot sheets but remains better suited to review and lighter edits.
