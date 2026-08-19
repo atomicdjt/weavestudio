@@ -6,6 +6,8 @@ import {
   extractClaimCandidates,
   fingerprintText,
   resolveClaimTrace,
+  upsertProvenanceClaim,
+  upsertSourceFragment,
   validateProvenanceClaim,
   validateSourceFragment,
 } from './provenance';
@@ -77,6 +79,30 @@ describe('provenance fingerprints and fragments', () => {
   it('marks invalid fragment offsets broken', () => {
     const { fragment } = buildDirectFixture();
     expect(validateSourceFragment({ ...fragment, endOffset: source.length + 10 }, source)).toBe('broken');
+  });
+});
+
+describe('source fragment annotation upsert', () => {
+  it('creates a graph when absent and reuses an exact current fragment', () => {
+    const first = upsertSourceFragment(undefined, source, 0, 15, 'frag_fixed');
+    expect(first.fragment.id).toBe('frag_fixed');
+    expect(first.graph.fragments).toHaveLength(1);
+    expect(first.graph.sourceFingerprint).toBe(fingerprintText(source));
+
+    const second = upsertSourceFragment(first.graph, source, 0, 15, 'frag_should_not_be_used');
+    expect(second.fragment.id).toBe('frag_fixed');
+    expect(second.graph.fragments).toHaveLength(1);
+  });
+
+  it('does not rewrite historical fragment anchors after source text changes', () => {
+    const first = upsertSourceFragment(undefined, source, 0, 15, 'frag_original');
+    const changed = source.replace('Alpha evidence.', 'Omega evidence.');
+    const second = upsertSourceFragment(first.graph, changed, 0, 15, 'frag_reanchored');
+
+    expect(second.graph.fragments.map((item) => item.id)).toEqual(['frag_original', 'frag_reanchored']);
+    expect(second.graph.fragments[0].quote).toBe('Alpha evidence.');
+    expect(second.graph.fragments[1].quote).toBe('Omega evidence.');
+    expect(second.graph.sourceFingerprint).toBe(fingerprintText(changed));
   });
 });
 
@@ -220,6 +246,55 @@ describe('claim trace resolution', () => {
     const nodes = [node('out_1', 'output', 'Unsupported conclusion', 'output')];
 
     expect(resolveClaimTrace({ claim, graph, sourceMaterial: source, nodes }).status).toBe('missing');
+  });
+});
+
+describe('provenance claim annotation upsert', () => {
+  it('creates a claim and updates the same node/text pair without duplicating it', () => {
+    const { graph } = buildDirectFixture();
+    const first = upsertProvenanceClaim(graph, {
+      id: 'claim_new',
+      nodeId: 'out_2',
+      claimText: 'A new conclusion',
+      sourceFragmentIds: ['frag_alpha'],
+      derivation: 'direct',
+    });
+    expect(first.claim.id).toBe('claim_new');
+    expect(first.graph.claims).toHaveLength(2);
+
+    const updated = upsertProvenanceClaim(first.graph, {
+      id: 'claim_unused',
+      nodeId: 'out_2',
+      claimText: 'A new conclusion',
+      sourceFragmentIds: ['frag_alpha'],
+      viaNodeIds: ['transform_1'],
+      derivation: 'transformed',
+    });
+    expect(updated.claim.id).toBe('claim_new');
+    expect(updated.claim.derivation).toBe('transformed');
+    expect(updated.claim.viaNodeIds).toEqual(['transform_1']);
+    expect(updated.graph.claims).toHaveLength(2);
+  });
+
+  it('creates a separate record for different claim text and refuses empty fragment links', () => {
+    const { graph } = buildDirectFixture();
+    const separate = upsertProvenanceClaim(graph, {
+      id: 'claim_second',
+      nodeId: 'out_1',
+      claimText: 'Different conclusion',
+      sourceFragmentIds: ['frag_alpha'],
+      derivation: 'manual',
+    });
+    expect(separate.graph.claims.map((item) => item.id)).toEqual(['claim_1', 'claim_second']);
+
+    expect(() =>
+      upsertProvenanceClaim(graph, {
+        nodeId: 'out_1',
+        claimText: 'Unsupported',
+        sourceFragmentIds: [],
+        derivation: 'manual',
+      }),
+    ).toThrow(/source fragment/i);
   });
 });
 
