@@ -104,7 +104,7 @@ export const upsertSourceFragment = (
       validateSourceFragment(fragment, sourceMaterial) === 'valid',
   );
 
-  if (existing) {
+  if (existing && graph) {
     return {
       graph: {
         ...graph,
