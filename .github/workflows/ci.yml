@@ -42,6 +42,18 @@ jobs:
             await locator.waitFor({ state: 'visible', timeout: 20000 });
             pass(label);
           };
+          const validateReady = async (label) => {
+            await page.getByRole('button', { name: 'Validate' }).click();
+            const dialog = page.getByRole('dialog', { name: 'Workflow Validator' });
+            await visible(dialog.getByText('Ready', { exact: true }).first(), label);
+            await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+          };
+          const approveReview = async () => {
+            await page.getByRole('button', { name: /workflow outline/i }).click();
+            const outline = page.getByRole('region', { name: /workflow outline/i });
+            await outline.getByRole('button', { name: /assumption check/i }).click();
+            await page.getByRole('button', { name: 'Approve', exact: true }).click();
+          };
 
           try {
             const response = await page.goto(`${base}/`, { waitUntil: 'networkidle', timeout: 30000 });
@@ -71,17 +83,9 @@ jobs:
             let outline = page.getByRole('region', { name: /workflow outline/i });
             await outline.getByRole('button', { name: /proposed approach/i }).click();
             await page.getByLabel('Content').fill('A traceable pilot recommendation based on the selected source evidence.');
-
-            await page.getByRole('button', { name: /workflow outline/i }).click();
-            outline = page.getByRole('region', { name: /workflow outline/i });
-            await outline.getByRole('button', { name: /assumption check/i }).click();
-            await page.getByRole('button', { name: 'Approve', exact: true }).click();
+            await approveReview();
             pass('human review approval applied');
-
-            await page.getByRole('button', { name: 'Validate' }).click();
-            let validator = page.getByRole('dialog', { name: 'Workflow Validator' });
-            await visible(validator.getByText('Ready', { exact: true }).first(), 'validator reports Ready after approval');
-            await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+            await validateReady('validator reports Ready after approval');
 
             await page.getByRole('button', { name: 'Generate' }).click();
             let preview = page.getByRole('dialog', { name: 'Output preview' });
@@ -96,23 +100,18 @@ jobs:
             await preview.getByRole('button', { name: 'Save provenance' }).click();
             await visible(preview.getByText('Valid', { exact: true }).first(), 'saved claim-to-source provenance resolves Valid');
             await visible(preview.getByText(/source range/i).first(), 'source range is inspectable');
-
-            await page.screenshot({ path: 'weavestudio-production-provenance.png', fullPage: true });
-            pass('production provenance screenshot captured');
+            await page.screenshot({ path: 'weavestudio-production-provenance-valid.png', fullPage: true });
+            pass('valid provenance screenshot captured');
 
             await page.waitForTimeout(2000);
             const entries = await page.evaluate(() => Object.keys(localStorage).map(key => [key, localStorage.getItem(key)]));
-            console.log(`LOCAL_STORAGE_KEYS=${entries.map(([key]) => key).join(',')}`);
             const workspaceEntry = entries.find(([key, value]) => key.startsWith('weavestudio_v1_ws_') && value?.includes('"provenance"') && value?.includes('"claims"'));
             if (!workspaceEntry) throw new Error(`Persisted workspace did not expose provenance graph; keys=${entries.map(([key]) => key).join(',')}`);
             pass('provenance graph persisted in browser-local workspace state');
 
             await page.reload({ waitUntil: 'networkidle', timeout: 30000 });
             await visible(page.getByTestId('workflow-canvas'), 'workspace reload restores canvas');
-            await page.getByRole('button', { name: 'Validate' }).click();
-            validator = page.getByRole('dialog', { name: 'Workflow Validator' });
-            await visible(validator.getByText('Ready', { exact: true }).first(), 'reloaded workspace remains Ready');
-            await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+            await validateReady('reloaded workspace remains Ready');
             await page.getByRole('button', { name: 'Generate' }).click();
             preview = page.getByRole('dialog', { name: 'Output preview' });
             await visible(preview, 'reloaded output preview opens');
@@ -120,6 +119,29 @@ jobs:
             await visible(preview.getByText('1 annotated', { exact: true }), 'reloaded provenance retains recorded claim');
             await visible(preview.getByText('Valid', { exact: true }).first(), 'reloaded provenance remains Valid');
             await visible(preview.getByText(/source range/i).first(), 'reloaded source range remains inspectable');
+
+            await page.getByRole('button', { name: 'Close output preview' }).click();
+            const sourceAfterReload = page.getByLabel('Source material');
+            const originalSource = await sourceAfterReload.inputValue();
+            await sourceAfterReload.fill(`UPDATED: ${originalSource}`);
+            pass('source mutation applied');
+
+            await page.getByRole('button', { name: 'Validate' }).click();
+            let validator = page.getByRole('dialog', { name: 'Workflow Validator' });
+            await visible(validator.getByText('Needs Review', { exact: true }).first(), 'source mutation invalidates prior human approval');
+            await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+
+            await approveReview();
+            pass('mutated workflow review re-approved');
+            await validateReady('mutated workflow returns to Ready after re-approval');
+            await page.getByRole('button', { name: 'Generate' }).click();
+            preview = page.getByRole('dialog', { name: 'Output preview' });
+            await visible(preview, 'mutated output preview opens');
+            await preview.getByRole('button', { name: 'Provenance' }).click();
+            await visible(preview.getByText('Stale', { exact: true }).first(), 'source mutation makes prior provenance stale');
+            await visible(preview.getByText(/source range/i).first(), 'stale source range remains inspectable');
+            await page.screenshot({ path: 'weavestudio-production-provenance-stale.png', fullPage: true });
+            pass('stale provenance screenshot captured');
 
             if (browserErrors.length) throw new Error(`Browser errors: ${JSON.stringify(browserErrors)}`);
             pass('no browser console/page errors');
@@ -134,5 +156,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: weavestudio-production-smoke-evidence
-          path: weavestudio-production-provenance.png
+          path: weavestudio-production-provenance-*.png
           if-no-files-found: ignore
