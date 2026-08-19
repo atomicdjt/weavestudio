@@ -1,6 +1,14 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { collectFullBrowserBackup, createWorkspace, inspectFullBrowserBackup, restoreFullBrowserBackup } from './workspaceStore';
+import {
+  buildProjectExport,
+  collectFullBrowserBackup,
+  createWorkspace,
+  importProjectFile,
+  inspectFullBrowserBackup,
+  restoreFullBrowserBackup,
+} from './workspaceStore';
+import { createProvenanceClaim, createSourceFragment, fingerprintText } from './provenance';
 
 describe('full browser backup recovery', () => {
   beforeEach(() => localStorage.clear());
@@ -52,5 +60,57 @@ describe('full browser backup recovery', () => {
     expect(result.ok).toBe(false);
     expect(localStorage.getItem('weavestudio_marker')).toBe(JSON.stringify({ state: 'before' }));
     expect(localStorage.getItem('unrelated_key')).toBe('keep');
+  });
+});
+
+describe('project provenance portability', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('preserves provenance IDs through project export and validated import', () => {
+    const sourceMaterial = 'Alpha evidence. Beta evidence.';
+    const fragment = createSourceFragment({
+      sourceMaterial,
+      startOffset: 0,
+      endOffset: 15,
+      id: 'frag_portable',
+    });
+    const claim = createProvenanceClaim({
+      id: 'claim_portable',
+      nodeId: 'out_1',
+      claimText: 'Alpha conclusion',
+      sourceFragmentIds: [fragment.id],
+      derivation: 'direct',
+    });
+    const base = createWorkspace({
+      name: 'Portable provenance',
+      sourceMaterial,
+      nodes: [
+        {
+          id: 'out_1',
+          type: 'output',
+          position: { x: 0, y: 0 },
+          data: { title: 'Output', description: '', content: 'Alpha conclusion' },
+        },
+      ],
+      edges: [],
+    });
+    const workspace = {
+      ...base,
+      provenance: {
+        version: 1 as const,
+        sourceFingerprint: fingerprintText(sourceMaterial),
+        fragments: [fragment],
+        claims: [claim],
+      },
+    };
+
+    const exported = buildProjectExport(workspace);
+    const imported = importProjectFile(exported, 'as-new');
+
+    expect(imported.ok).toBe(true);
+    if (!imported.ok) return;
+    expect(imported.workspace.provenance?.fragments.map((item) => item.id)).toEqual(['frag_portable']);
+    expect(imported.workspace.provenance?.claims.map((item) => item.id)).toEqual(['claim_portable']);
+    expect(imported.workspace.provenance?.sourceFingerprint).toBe(fingerprintText(sourceMaterial));
   });
 });
