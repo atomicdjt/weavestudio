@@ -1,14 +1,56 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  applySnapshotToWorkspace,
   buildProjectExport,
   collectFullBrowserBackup,
   createWorkspace,
   importProjectFile,
   inspectFullBrowserBackup,
   restoreFullBrowserBackup,
+  saveSnapshot,
 } from './workspaceStore';
 import { createProvenanceClaim, createSourceFragment, fingerprintText } from './provenance';
+import type { ProvenanceGraph, VersionSnapshot, WorkspaceDocument } from '../types';
+
+const buildTraceableWorkspace = (): WorkspaceDocument => {
+  const sourceMaterial = 'Alpha evidence. Beta evidence.';
+  const fragment = createSourceFragment({
+    sourceMaterial,
+    startOffset: 0,
+    endOffset: 15,
+    id: 'frag_portable',
+  });
+  const claim = createProvenanceClaim({
+    id: 'claim_portable',
+    nodeId: 'out_1',
+    claimText: 'Alpha conclusion',
+    sourceFragmentIds: [fragment.id],
+    derivation: 'direct',
+  });
+  const base = createWorkspace({
+    name: 'Portable provenance',
+    sourceMaterial,
+    nodes: [
+      {
+        id: 'out_1',
+        type: 'output',
+        position: { x: 0, y: 0 },
+        data: { title: 'Output', description: '', content: 'Alpha conclusion' },
+      },
+    ],
+    edges: [],
+  });
+  return {
+    ...base,
+    provenance: {
+      version: 1,
+      sourceFingerprint: fingerprintText(sourceMaterial),
+      fragments: [fragment],
+      claims: [claim],
+    },
+  };
+};
 
 describe('full browser backup recovery', () => {
   beforeEach(() => localStorage.clear());
@@ -67,43 +109,7 @@ describe('project provenance portability', () => {
   beforeEach(() => localStorage.clear());
 
   it('preserves provenance IDs through project export and validated import', () => {
-    const sourceMaterial = 'Alpha evidence. Beta evidence.';
-    const fragment = createSourceFragment({
-      sourceMaterial,
-      startOffset: 0,
-      endOffset: 15,
-      id: 'frag_portable',
-    });
-    const claim = createProvenanceClaim({
-      id: 'claim_portable',
-      nodeId: 'out_1',
-      claimText: 'Alpha conclusion',
-      sourceFragmentIds: [fragment.id],
-      derivation: 'direct',
-    });
-    const base = createWorkspace({
-      name: 'Portable provenance',
-      sourceMaterial,
-      nodes: [
-        {
-          id: 'out_1',
-          type: 'output',
-          position: { x: 0, y: 0 },
-          data: { title: 'Output', description: '', content: 'Alpha conclusion' },
-        },
-      ],
-      edges: [],
-    });
-    const workspace = {
-      ...base,
-      provenance: {
-        version: 1 as const,
-        sourceFingerprint: fingerprintText(sourceMaterial),
-        fragments: [fragment],
-        claims: [claim],
-      },
-    };
-
+    const workspace = buildTraceableWorkspace();
     const exported = buildProjectExport(workspace);
     const imported = importProjectFile(exported, 'as-new');
 
@@ -111,6 +117,45 @@ describe('project provenance portability', () => {
     if (!imported.ok) return;
     expect(imported.workspace.provenance?.fragments.map((item) => item.id)).toEqual(['frag_portable']);
     expect(imported.workspace.provenance?.claims.map((item) => item.id)).toEqual(['claim_portable']);
-    expect(imported.workspace.provenance?.sourceFingerprint).toBe(fingerprintText(sourceMaterial));
+    expect(imported.workspace.provenance?.sourceFingerprint).toBe(fingerprintText(workspace.sourceMaterial));
+  });
+});
+
+describe('provenance snapshot portability', () => {
+  beforeEach(() => localStorage.clear());
+
+  it('deeply preserves provenance through save and full snapshot restore', () => {
+    const workspace = buildTraceableWorkspace();
+    const expected: ProvenanceGraph = structuredClone(workspace.provenance!);
+    const snapshot = saveSnapshot('Traceable checkpoint', workspace);
+
+    expect(snapshot.provenance).toEqual(expected);
+    expect(snapshot.provenance).not.toBe(workspace.provenance);
+
+    const mutated: WorkspaceDocument = { ...workspace, provenance: undefined };
+    const restored = applySnapshotToWorkspace(mutated, snapshot);
+    expect(restored.legacyIncomplete).toBe(false);
+    expect(restored.workspace.provenance).toEqual(expected);
+    expect(restored.workspace.provenance).not.toBe(snapshot.provenance);
+  });
+
+  it('clears provenance when restoring a pre-provenance full snapshot', () => {
+    const workspace = buildTraceableWorkspace();
+    const legacyFullSnapshot: VersionSnapshot = {
+      id: 'snap_pre_provenance',
+      timestamp: 1,
+      title: 'Pre provenance',
+      snapshotVersion: 2,
+      workspaceId: workspace.id,
+      nodes: structuredClone(workspace.nodes),
+      edges: structuredClone(workspace.edges),
+      sourceMaterial: workspace.sourceMaterial,
+      deliverableDraft: workspace.deliverableDraft,
+      templateId: workspace.templateId,
+    };
+
+    const restored = applySnapshotToWorkspace(workspace, legacyFullSnapshot);
+    expect(restored.legacyIncomplete).toBe(false);
+    expect(restored.workspace.provenance).toBeUndefined();
   });
 });
