@@ -97,12 +97,18 @@ jobs:
             await visible(preview.getByText('Valid', { exact: true }).first(), 'saved claim-to-source provenance resolves Valid');
             await visible(preview.getByText(/source range/i).first(), 'source range is inspectable');
 
-            await page.waitForTimeout(500);
-            const storage = await page.evaluate(() => JSON.stringify(localStorage));
-            if (!/provenance|sourceFragments|claims/i.test(storage)) throw new Error('Provenance-bearing state was not found in browser-local persistence');
-            pass('provenance persisted in browser-local workspace state');
-
             await page.screenshot({ path: 'weavestudio-production-provenance.png', fullPage: true });
+            pass('production provenance screenshot captured');
+
+            await page.waitForTimeout(2000);
+            const entries = await page.evaluate(() => Object.keys(localStorage).map(key => [key, localStorage.getItem(key)]));
+            console.log(`LOCAL_STORAGE_KEYS=${entries.map(([key]) => key).join(',')}`);
+            const serialized = JSON.stringify(entries);
+            if (!serialized.includes('"provenance"') || !serialized.includes('"claims"')) {
+              throw new Error(`Persisted workspace did not expose provenance graph; keys=${entries.map(([key]) => key).join(',')}`);
+            }
+            pass('provenance graph persisted in browser-local workspace state');
+
             if (browserErrors.length) throw new Error(`Browser errors: ${JSON.stringify(browserErrors)}`);
             pass('no browser console/page errors');
             console.log('PRODUCTION_SMOKE_PASS');
