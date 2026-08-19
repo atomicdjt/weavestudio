@@ -16,18 +16,21 @@ It features a true local-first architecture using browser `localStorage`. There 
 ### Can I see it?
 Yes! [Open the canonical public demo](https://weavestudio-nine.vercel.app/)
 
+### Want to challenge it?
+Yes. [Try the demo and leave candid feedback](https://github.com/atomicdjt/weavestudio/issues/21). I am specifically looking for confusing steps, missing capabilities, trust concerns, unmet expectations, and reasons you would not use it in real work.
+
 ### Where is the evidence?
-The codebase includes comprehensive [Case study](CASE_STUDY.md), an [Acquisition overview](https://weavestudio-nine.vercel.app/acquire), and architectural documentation.
+The codebase includes a comprehensive [Case study](CASE_STUDY.md), architectural documentation, [Known limitations](KNOWN_LIMITATIONS.md), and a separate [Acquisition overview](https://weavestudio-nine.vercel.app/acquire) for buyer review.
 
 **More by David Turner:** [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [Validation Ledger](https://github.com/atomicdjt/validation-ledger) · [GitHub profile](https://github.com/atomicdjt)
 
-**Release status:** v1.0.0 — acquisition-ready consolidated release
+**Release status:** v1.0.0 — current consolidated release
 
 ![WeaveStudio home screen](docs/screenshots/weavestudio-home.png)
 
 ## Current release authority
 
-The authoritative editable source and production branch is `main`. The acquisition hardening, OpenAI/Gemini BYOK workflow, browser validation, buyer materials, commercial architecture guidance, and repository-governance work were preserved from the released `master` lineage during the July 2026 non-force branch migration. `master` is retained only as a compatibility/legacy branch.
+The authoritative editable source and production branch is `main`. The released feature set, OpenAI/Gemini BYOK workflow, browser validation, repository-governance work, buyer materials, and commercial architecture guidance were preserved from the released `master` lineage during the July 2026 non-force branch migration. `master` is retained only as a compatibility/legacy branch.
 
 `https://weavestudio-nine.vercel.app/` is canonical production. `https://weavestudio-demo.vercel.app/` is a supporting noncanonical buyer-review and transfer surface referenced by due-diligence materials; it is not a second production authority.
 
