@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { FileInput, ListTree, Sparkles } from 'lucide-react';
 import type { SourceSyncStatus } from '../../types';
 import { SOURCE_SYNC_LABELS } from '../../lib/sourceSync';
@@ -35,6 +35,16 @@ export const SourceIngestPanel = ({
     if (!textarea) return;
     setSelection({ start: textarea.selectionStart, end: textarea.selectionEnd });
   };
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return undefined;
+    const handleNativeSelect = () => {
+      setSelection({ start: textarea.selectionStart, end: textarea.selectionEnd });
+    };
+    textarea.addEventListener('select', handleNativeSelect);
+    return () => textarea.removeEventListener('select', handleNativeSelect);
+  }, []);
 
   const handleSourceChange = (value: string) => {
     setSelection({ start: 0, end: 0 });
@@ -127,6 +137,8 @@ export const SourceIngestPanel = ({
         value={sourceMaterial}
         onChange={(e) => handleSourceChange(e.target.value)}
         onSelect={captureSelection}
+        onMouseUp={captureSelection}
+        onKeyUp={captureSelection}
         rows={4}
         className="w-full bg-[#1e1e24] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono focus:outline-none focus:border-blue-500 resize-y min-h-[96px]"
         placeholder="Paste fragmented notes, transcripts, logs, or research here…"
