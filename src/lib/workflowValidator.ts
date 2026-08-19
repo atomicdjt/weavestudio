@@ -146,15 +146,37 @@ export const buildWorkflowValidator = (nodes: AppNode[], edges: AppEdge[]): Work
       });
     }
 
-    if (node.type === 'review' && !node.data.content?.trim()) {
-      addIssue(issues, {
-        id: `review-note-${node.id}`,
-        status: 'Needs Review',
-        title: 'Review note is empty',
-        detail: `${node.data.title || 'Review node'} should explain what the human reviewer must verify.`,
-        suggestedFix: 'Add review criteria, assumptions to confirm, or acceptance notes.',
-        nodeId: node.id,
-      });
+    if (node.type === 'review') {
+      if (!node.data.content?.trim()) {
+        addIssue(issues, {
+          id: `review-note-${node.id}`,
+          status: 'Needs Review',
+          title: 'Review note is empty',
+          detail: `${node.data.title || 'Review node'} should explain what the human reviewer must verify.`,
+          suggestedFix: 'Add review criteria, assumptions to confirm, or acceptance notes.',
+          nodeId: node.id,
+        });
+      }
+
+      if (node.data.status === 'rejected') {
+        addIssue(issues, {
+          id: `review-rejected-${node.id}`,
+          status: 'Needs Review',
+          title: 'Review rejected',
+          detail: `${node.data.title || 'Review node'} was explicitly rejected and cannot contribute to export readiness.`,
+          suggestedFix: 'Resolve the rejected assumptions or content, then approve this review checkpoint when it is acceptable.',
+          nodeId: node.id,
+        });
+      } else if (node.data.status !== 'approved') {
+        addIssue(issues, {
+          id: `review-pending-${node.id}`,
+          status: 'Needs Review',
+          title: 'Human approval pending',
+          detail: `${node.data.title || 'Review node'} requires an explicit human approval before the workflow can be Ready.`,
+          suggestedFix: 'Open this Review node, verify the checkpoint, and choose Approve when the reviewed content is acceptable.',
+          nodeId: node.id,
+        });
+      }
     }
 
     if (node.type === 'aiAssist') {

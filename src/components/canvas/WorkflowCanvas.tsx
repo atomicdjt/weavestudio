@@ -11,7 +11,6 @@ import {
   type Connection,
   type Edge,
   type NodeTypes,
-  type OnSelectionChangeFunc,
   type ReactFlowInstance,
   type Viewport,
 } from '@xyflow/react';
@@ -23,7 +22,7 @@ import { createId } from '../../lib/ids';
 
 /**
  * State ownership:
- * - Parent (WorkspacePage) is authoritative for workspace document nodes/edges data.
+ * - Parent (WorkspacePage) is authoritative for workspace document nodes/edges data and inspector selection.
  * - Canvas holds React Flow interaction state and syncs from parent when `graphEpoch` changes.
  * - Viewport is preserved across ordinary updates; fitView only on first mount of a workspace.
  * - Do NOT remount this tree for source apply / node data edits — bump graphEpoch instead.
@@ -166,13 +165,6 @@ const WorkflowCanvasInner = ({
     [setNodes],
   );
 
-  const onSelectionChange = useCallback<OnSelectionChangeFunc<AppNode>>(
-    ({ nodes: selected }) => {
-      onNodeSelect(selected.length === 1 ? selected[0] : null);
-    },
-    [onNodeSelect],
-  );
-
   return (
     <div className="w-full h-full" ref={reactFlowWrapper} data-testid="workflow-canvas">
       <ReactFlow
@@ -193,7 +185,8 @@ const WorkflowCanvasInner = ({
         onDrop={onDrop}
         onDragOver={onDragOver}
         nodeTypes={nodeTypes as NodeTypes}
-        onSelectionChange={onSelectionChange}
+        onNodeClick={(_, node) => onNodeSelect(node)}
+        onPaneClick={() => onNodeSelect(null)}
         proOptions={{ hideAttribution: true }}
         className="bg-canvas"
         minZoom={0.15}

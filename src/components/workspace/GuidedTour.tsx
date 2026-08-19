@@ -3,9 +3,9 @@ import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { AccessibleDialog } from '../ui/AccessibleDialog';
 
 const steps = [
-  ['Start with source', 'Paste notes, transcripts, or research fragments in Source material. Use a sample whenever you want a safe starting point.'],
-  ['Build a readable workflow', 'Apply source to the Input node or split it into editable steps. Use the Outline button whenever you prefer a linear reading order.'],
-  ['Review before sharing', 'Validate structure, generate an editable deliverable, and export a project backup before clearing browser data.'],
+  ['Start with source', 'Paste or edit source material yourself. Preloaded demo/sample text is a starting point, not a completed user step.'],
+  ['Resolve a visible workflow issue', 'Edit the intentionally incomplete workflow step, then run Validate until structural/content issues are resolved.'],
+  ['Approve before sharing', 'Open the Review checkpoint, verify its assumptions, choose Approve, revalidate to Ready, then generate and export a project backup.'],
 ] as const;
 
 export const GuidedTour = ({ onClose }: { onClose: () => void }) => {

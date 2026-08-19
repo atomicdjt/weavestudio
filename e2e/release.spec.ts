@@ -90,9 +90,11 @@ test('workspace dialogs close with Escape and return focus to their trigger', as
 
   const generate = page.getByRole('button', { name: /generate/i });
   await generate.click();
-  await expect(page.getByRole('dialog', { name: /output preview/i })).toBeVisible();
+  const blocked = page.getByRole('dialog', { name: /workflow validator/i });
+  await expect(blocked).toBeVisible();
+  await expect(blocked.getByText(/missing input node/i)).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('dialog', { name: /output preview/i })).toBeHidden();
+  await expect(blocked).toBeHidden();
   await expect(generate).toBeFocused();
 });
 

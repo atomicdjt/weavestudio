@@ -12,7 +12,7 @@ export const SaveStatusChip = ({ status, error, workspaceName }: SaveStatusProps
     status === 'saving'
       ? 'Saving…'
       : status === 'saved'
-        ? 'Saved locally'
+        ? 'Saved in this browser'
         : status === 'quota'
           ? 'Storage full'
           : status === 'error'
@@ -31,12 +31,17 @@ export const SaveStatusChip = ({ status, error, workspaceName }: SaveStatusProps
   const Icon =
     status === 'saving' ? Loader2 : status === 'saved' ? Check : status === 'quota' || status === 'error' ? AlertTriangle : CloudOff;
 
+  const recoveryScope =
+    status === 'saved'
+      ? 'Saved with browser localStorage on this device/site. Clearing site data, using another browser/device, or browser privacy controls can remove it. Export a project backup for portable recovery.'
+      : undefined;
+
   return (
     <div
       className={`inline-flex items-center gap-2 rounded-lg border px-3 py-1.5 text-xs font-medium ${className}`}
       role="status"
       aria-live="polite"
-      title={error || workspaceName || label}
+      title={error || recoveryScope || workspaceName || label}
     >
       <Icon className={`w-3.5 h-3.5 ${status === 'saving' ? 'animate-spin' : ''}`} />
       <span>{label}</span>

@@ -18,7 +18,16 @@ export interface NodeData extends Record<string, unknown> {
   title: string;
   description: string;
   content: string;
-  status?: 'pending' | 'running' | 'complete' | 'needs_review' | 'warning' | 'incomplete' | 'ready';
+  status?:
+    | 'pending'
+    | 'approved'
+    | 'rejected'
+    | 'running'
+    | 'complete'
+    | 'needs_review'
+    | 'warning'
+    | 'incomplete'
+    | 'ready';
   category?: NodeCategory;
   reviewRequired?: boolean;
   provider?: 'openai' | 'gemini';
@@ -59,6 +68,8 @@ export interface WorkspaceDocument {
   viewport?: { x: number; y: number; zoom: number };
   meta?: Record<string, unknown> & {
     guidedDemo?: boolean;
+    /** True only after an explicit source edit/sample action in this workspace. */
+    sourceUserTouched?: boolean;
     /** Last source string applied to the Input node via Apply */
     appliedSourceFingerprint?: string;
     sourceSyncStatus?: SourceSyncStatus;
