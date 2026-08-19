@@ -1,5 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "git": {
+    "deploymentEnabled": {
+      "qa/weavestudio-production-smoke-20260819": false
+    }
+  },
   "rewrites": [
     {
       "source": "/((?!assets/|favicon.ico|robots.txt|sitemap.xml).*)",
