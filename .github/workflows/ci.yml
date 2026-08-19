@@ -79,12 +79,12 @@ jobs:
             pass('human review approval applied');
 
             await page.getByRole('button', { name: 'Validate' }).click();
-            const validator = page.getByRole('dialog', { name: 'Workflow Validator' });
+            let validator = page.getByRole('dialog', { name: 'Workflow Validator' });
             await visible(validator.getByText('Ready', { exact: true }).first(), 'validator reports Ready after approval');
             await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
 
             await page.getByRole('button', { name: 'Generate' }).click();
-            const preview = page.getByRole('dialog', { name: 'Output preview' });
+            let preview = page.getByRole('dialog', { name: 'Output preview' });
             await visible(preview, 'output preview opens');
             await preview.getByRole('button', { name: 'Provenance' }).click();
             await visible(preview.getByText('Workspace lineage only — this does not verify the truth or authenticity of the source.'), 'provenance trust-boundary disclosure');
@@ -103,11 +103,23 @@ jobs:
             await page.waitForTimeout(2000);
             const entries = await page.evaluate(() => Object.keys(localStorage).map(key => [key, localStorage.getItem(key)]));
             console.log(`LOCAL_STORAGE_KEYS=${entries.map(([key]) => key).join(',')}`);
-            const serialized = JSON.stringify(entries);
-            if (!serialized.includes('"provenance"') || !serialized.includes('"claims"')) {
-              throw new Error(`Persisted workspace did not expose provenance graph; keys=${entries.map(([key]) => key).join(',')}`);
-            }
+            const workspaceEntry = entries.find(([key, value]) => key.startsWith('weavestudio_v1_ws_') && value?.includes('"provenance"') && value?.includes('"claims"'));
+            if (!workspaceEntry) throw new Error(`Persisted workspace did not expose provenance graph; keys=${entries.map(([key]) => key).join(',')}`);
             pass('provenance graph persisted in browser-local workspace state');
+
+            await page.reload({ waitUntil: 'networkidle', timeout: 30000 });
+            await visible(page.getByTestId('workflow-canvas'), 'workspace reload restores canvas');
+            await page.getByRole('button', { name: 'Validate' }).click();
+            validator = page.getByRole('dialog', { name: 'Workflow Validator' });
+            await visible(validator.getByText('Ready', { exact: true }).first(), 'reloaded workspace remains Ready');
+            await page.getByRole('button', { name: 'Close Workflow Validator' }).click();
+            await page.getByRole('button', { name: 'Generate' }).click();
+            preview = page.getByRole('dialog', { name: 'Output preview' });
+            await visible(preview, 'reloaded output preview opens');
+            await preview.getByRole('button', { name: 'Provenance' }).click();
+            await visible(preview.getByText('1 annotated', { exact: true }), 'reloaded provenance retains recorded claim');
+            await visible(preview.getByText('Valid', { exact: true }).first(), 'reloaded provenance remains Valid');
+            await visible(preview.getByText(/source range/i).first(), 'reloaded source range remains inspectable');
 
             if (browserErrors.length) throw new Error(`Browser errors: ${JSON.stringify(browserErrors)}`);
             pass('no browser console/page errors');
