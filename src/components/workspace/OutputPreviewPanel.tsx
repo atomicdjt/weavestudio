@@ -7,10 +7,11 @@ import {
   slugifyFilename,
 } from '../../lib/exporter';
 import { composeDeliverableMarkdown } from '../../lib/deliverableEngine';
-import { FileText, FileJson, FileDown, X, Code2, Eye, RefreshCw } from 'lucide-react';
+import { FileText, FileJson, FileDown, X, Code2, Eye, RefreshCw, GitBranch } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { AccessibleDialog } from '../ui/AccessibleDialog';
+import { ProvenancePanel } from './ProvenancePanel';
 
 interface OutputPreviewPanelProps {
   workspace: WorkspaceDocument;
@@ -33,7 +34,7 @@ export const OutputPreviewPanel = ({
   );
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'preview' | 'raw'>('preview');
+  const [viewMode, setViewMode] = useState<'preview' | 'raw' | 'provenance'>('preview');
   const [confirmRegenerate, setConfirmRegenerate] = useState(false);
 
   const generated = useMemo(
@@ -85,7 +86,6 @@ export const OutputPreviewPanel = ({
   };
 
   const regenerate = () => {
-
     const next = composeDeliverableMarkdown(workspace.nodes, workspace.edges, {
       title,
       template,
@@ -139,12 +139,16 @@ export const OutputPreviewPanel = ({
 
   return (
     <>
-    <AccessibleDialog label="Output preview" onClose={onClose} className="bg-panel border border-border rounded-lg shadow-2xl w-full max-w-6xl h-full max-h-[880px] flex flex-col overflow-hidden">
+      <AccessibleDialog
+        label="Output preview"
+        onClose={onClose}
+        className="bg-panel border border-border rounded-lg shadow-2xl w-full max-w-6xl h-full max-h-[880px] flex flex-col overflow-hidden"
+      >
         <div className="flex items-center justify-between px-6 py-4 bg-[#1e1e24] border-b border-gray-800 shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white">Deliverable preview</h2>
             <p className="text-xs text-gray-400">
-              Composed from template structure and canvas nodes. Edit before export if needed.
+              Review the deliverable, edit it, or inspect explicit workspace provenance before export.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -169,6 +173,16 @@ export const OutputPreviewPanel = ({
                 <Code2 className="w-4 h-4" />
                 Edit
               </button>
+              <button
+                type="button"
+                onClick={() => setViewMode('provenance')}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  viewMode === 'provenance' ? 'bg-violet-600/20 text-violet-300' : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <GitBranch className="w-4 h-4" />
+                Provenance
+              </button>
             </div>
             <button
               type="button"
@@ -182,69 +196,75 @@ export const OutputPreviewPanel = ({
         </div>
 
         <div className="flex-1 flex flex-col md:flex-row min-h-0">
-          <div className="flex-1 md:border-r border-gray-800 p-6 overflow-y-auto bg-canvas flex flex-col min-h-0">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => handleTitleChange(e.target.value)}
-              className="w-full bg-transparent border-b border-gray-700 pb-2 mb-4 text-3xl font-bold text-white focus:outline-none focus:border-blue-500 shrink-0"
-              placeholder="Report Title"
-              aria-label="Output title"
-            />
-
-            <div className="flex flex-wrap items-center gap-3 mb-4 text-xs text-gray-400 shrink-0">
-              <label className="inline-flex items-center gap-2 cursor-pointer">
+          <div className="flex-1 md:border-r border-gray-800 overflow-y-auto bg-canvas flex flex-col min-h-0">
+            {viewMode === 'provenance' ? (
+              <ProvenancePanel workspace={workspace} onWorkspacePatch={onWorkspacePatch} />
+            ) : (
+              <div className="flex h-full min-h-0 flex-col p-6">
                 <input
-                  type="checkbox"
-                  checked={includeAppendix}
-                  onChange={(e) => setIncludeAppendix(e.target.checked)}
-                  className="rounded border-gray-600"
+                  type="text"
+                  value={title}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  className="w-full bg-transparent border-b border-gray-700 pb-2 mb-4 text-3xl font-bold text-white focus:outline-none focus:border-blue-500 shrink-0"
+                  placeholder="Report Title"
+                  aria-label="Output title"
                 />
-                Include process appendix
-              </label>
-              {userEdited && (
-                <span className="text-amber-300 font-medium">
-                  Manual edits active — regenerate asks for confirmation before replacing them.
-                </span>
-              )}
-              {workspace.meta?.deliverableNeedsRegen && (
-                <span className="text-amber-200">
-                  Deliverable was cleared after a legacy snapshot restore — regenerate before export.
-                </span>
-              )}
-              <button
-                type="button"
-                onClick={handleRegenerate}
-                className="inline-flex items-center gap-1.5 text-blue-300 hover:text-blue-200"
-                data-testid="regenerate-deliverable"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                Regenerate from canvas
-              </button>
-            </div>
 
-            {!hasNodes && (
-              <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100 shrink-0">
-                Empty workflow. Add source material and nodes before exporting a client-facing deliverable.
+                <div className="flex flex-wrap items-center gap-3 mb-4 text-xs text-gray-400 shrink-0">
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={includeAppendix}
+                      onChange={(e) => setIncludeAppendix(e.target.checked)}
+                      className="rounded border-gray-600"
+                    />
+                    Include process appendix
+                  </label>
+                  {userEdited && (
+                    <span className="text-amber-300 font-medium">
+                      Manual edits active — regenerate asks for confirmation before replacing them.
+                    </span>
+                  )}
+                  {workspace.meta?.deliverableNeedsRegen && (
+                    <span className="text-amber-200">
+                      Deliverable was cleared after a legacy snapshot restore — regenerate before export.
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={handleRegenerate}
+                    className="inline-flex items-center gap-1.5 text-blue-300 hover:text-blue-200"
+                    data-testid="regenerate-deliverable"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                    Regenerate from canvas
+                  </button>
+                </div>
+
+                {!hasNodes && (
+                  <div className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100 shrink-0">
+                    Empty workflow. Add source material and nodes before exporting a client-facing deliverable.
+                  </div>
+                )}
+
+                <div className="flex-1 min-h-0 bg-panel border border-gray-800 rounded-lg overflow-hidden">
+                  <div className="h-full overflow-y-auto p-8 bg-white text-gray-900">
+                    {viewMode === 'preview' ? (
+                      <div className="prose prose-slate max-w-none">
+                        <ReactMarkdown>{markdown}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      <textarea
+                        value={markdown}
+                        onChange={(e) => handleBodyChange(e.target.value)}
+                        className="w-full h-full min-h-[420px] whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed bg-gray-50 p-4 rounded-md border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        aria-label="Editable deliverable markdown"
+                      />
+                    )}
+                  </div>
+                </div>
               </div>
             )}
-
-            <div className="flex-1 min-h-0 bg-panel border border-gray-800 rounded-lg overflow-hidden">
-              <div className="h-full overflow-y-auto p-8 bg-white text-gray-900">
-                {viewMode === 'preview' ? (
-                  <div className="prose prose-slate max-w-none">
-                    <ReactMarkdown>{markdown}</ReactMarkdown>
-                  </div>
-                ) : (
-                  <textarea
-                    value={markdown}
-                    onChange={(e) => handleBodyChange(e.target.value)}
-                    className="w-full h-full min-h-[420px] whitespace-pre-wrap font-mono text-sm text-gray-800 leading-relaxed bg-gray-50 p-4 rounded-md border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    aria-label="Editable deliverable markdown"
-                  />
-                )}
-              </div>
-            </div>
           </div>
 
           <div className="w-full md:w-72 p-6 bg-[#1e1e24] flex flex-col space-y-4 shrink-0 overflow-y-auto">
@@ -300,12 +320,23 @@ export const OutputPreviewPanel = ({
             </button>
 
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              Project JSON round-trips nodes, edges, source material, template id, and deliverable draft. No server upload.
+              Project JSON round-trips nodes, edges, source material, template id, deliverable draft, and provenance. No server upload.
             </p>
           </div>
         </div>
-    </AccessibleDialog>
-      <ConfirmDialog open={confirmRegenerate} title="Replace manual deliverable edits?" description="Regenerating replaces the edited draft with a fresh composition from the canvas." confirmLabel="Regenerate draft" destructive onCancel={() => setConfirmRegenerate(false)} onConfirm={() => { setConfirmRegenerate(false); regenerate(); }} />
+      </AccessibleDialog>
+      <ConfirmDialog
+        open={confirmRegenerate}
+        title="Replace manual deliverable edits?"
+        description="Regenerating replaces the edited draft with a fresh composition from the canvas."
+        confirmLabel="Regenerate draft"
+        destructive
+        onCancel={() => setConfirmRegenerate(false)}
+        onConfirm={() => {
+          setConfirmRegenerate(false);
+          regenerate();
+        }}
+      />
     </>
   );
 };
