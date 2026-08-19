@@ -309,6 +309,7 @@ export const saveSnapshot = (
     deliverableDraft: workspace.deliverableDraft
       ? structuredClone(workspace.deliverableDraft)
       : undefined,
+    provenance: workspace.provenance ? structuredClone(workspace.provenance) : undefined,
     templateId: workspace.templateId,
     viewport: workspace.viewport ? { ...workspace.viewport } : undefined,
     appliedSourceFingerprint:
@@ -354,6 +355,7 @@ export const applySnapshotToWorkspace = (
         deliverableDraft: snapshot.deliverableDraft
           ? structuredClone(snapshot.deliverableDraft)
           : undefined,
+        provenance: snapshot.provenance ? structuredClone(snapshot.provenance) : undefined,
         templateId:
           snapshot.templateId !== undefined ? snapshot.templateId : workspace.templateId,
         viewport: snapshot.viewport ? { ...snapshot.viewport } : workspace.viewport,
@@ -376,6 +378,7 @@ export const applySnapshotToWorkspace = (
       nodes: structuredClone(snapshot.nodes),
       edges: structuredClone(snapshot.edges),
       deliverableDraft: undefined,
+      provenance: undefined,
       meta: {
         ...workspace.meta,
         deliverableNeedsRegen: true,

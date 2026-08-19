@@ -51,6 +51,34 @@ export interface DeliverableDraft {
   userEdited: boolean;
 }
 
+export type ProvenanceDerivation = 'direct' | 'transformed' | 'manual' | 'ai-assisted';
+
+export interface SourceFragment {
+  id: string;
+  startOffset: number;
+  endOffset: number;
+  quote: string;
+  quoteFingerprint: string;
+  sourceFingerprint: string;
+}
+
+export interface ProvenanceClaim {
+  id: string;
+  nodeId: string;
+  claimText: string;
+  claimFingerprint: string;
+  sourceFragmentIds: string[];
+  viaNodeIds: string[];
+  derivation: ProvenanceDerivation;
+}
+
+export interface ProvenanceGraph {
+  version: 1;
+  sourceFingerprint: string;
+  fragments: SourceFragment[];
+  claims: ProvenanceClaim[];
+}
+
 /** Source panel vs canvas input synchronization */
 export type SourceSyncStatus = 'in_sync' | 'source_ahead' | 'canvas_ahead' | 'unknown';
 
@@ -65,6 +93,7 @@ export interface WorkspaceDocument {
   nodes: AppNode[];
   edges: AppEdge[];
   deliverableDraft?: DeliverableDraft;
+  provenance?: ProvenanceGraph;
   viewport?: { x: number; y: number; zoom: number };
   meta?: Record<string, unknown> & {
     guidedDemo?: boolean;
@@ -172,6 +201,7 @@ export interface VersionSnapshot {
   snapshotVersion?: number;
   sourceMaterial?: string;
   deliverableDraft?: DeliverableDraft;
+  provenance?: ProvenanceGraph;
   templateId?: string | null;
   viewport?: { x: number; y: number; zoom: number };
   appliedSourceFingerprint?: string;

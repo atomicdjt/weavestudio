@@ -3,6 +3,10 @@ import type {
   AppNode,
   DeliverableDraft,
   ProjectExportFile,
+  ProvenanceClaim,
+  ProvenanceDerivation,
+  ProvenanceGraph,
+  SourceFragment,
   WorkspaceDocument,
   WorkspaceIndex,
 } from '../types';
@@ -49,6 +53,109 @@ const parseDeliverableDraft = (value: unknown): DeliverableDraft | undefined => 
   };
 };
 
+const DERIVATIONS = new Set<ProvenanceDerivation>([
+  'direct',
+  'transformed',
+  'manual',
+  'ai-assisted',
+]);
+
+const isStringArray = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every((item) => typeof item === 'string');
+
+const hasUniqueIds = (items: Array<{ id: string }>): boolean =>
+  new Set(items.map((item) => item.id)).size === items.length;
+
+const parseSourceFragment = (value: unknown): SourceFragment | null => {
+  if (!isObject(value)) return null;
+  if (typeof value.id !== 'string' || !value.id.trim()) return null;
+  if (!Number.isInteger(value.startOffset) || !Number.isInteger(value.endOffset)) return null;
+  const startOffset = value.startOffset as number;
+  const endOffset = value.endOffset as number;
+  if (startOffset < 0 || endOffset < startOffset) return null;
+  if (
+    typeof value.quote !== 'string' ||
+    typeof value.quoteFingerprint !== 'string' ||
+    typeof value.sourceFingerprint !== 'string'
+  ) {
+    return null;
+  }
+  return {
+    id: value.id,
+    startOffset,
+    endOffset,
+    quote: value.quote,
+    quoteFingerprint: value.quoteFingerprint,
+    sourceFingerprint: value.sourceFingerprint,
+  };
+};
+
+const parseProvenanceClaim = (value: unknown): ProvenanceClaim | null => {
+  if (!isObject(value)) return null;
+  if (typeof value.id !== 'string' || !value.id.trim()) return null;
+  if (typeof value.nodeId !== 'string' || !value.nodeId.trim()) return null;
+  if (typeof value.claimText !== 'string' || !value.claimText.trim()) return null;
+  if (typeof value.claimFingerprint !== 'string') return null;
+  if (!isStringArray(value.sourceFragmentIds) || !isStringArray(value.viaNodeIds)) return null;
+  if (typeof value.derivation !== 'string' || !DERIVATIONS.has(value.derivation as ProvenanceDerivation)) {
+    return null;
+  }
+  return {
+    id: value.id,
+    nodeId: value.nodeId,
+    claimText: value.claimText,
+    claimFingerprint: value.claimFingerprint,
+    sourceFragmentIds: [...value.sourceFragmentIds],
+    viaNodeIds: [...value.viaNodeIds],
+    derivation: value.derivation as ProvenanceDerivation,
+  };
+};
+
+const parseProvenanceGraph = (value: unknown): ValidationResult<ProvenanceGraph> => {
+  if (!isObject(value)) return { ok: false, error: 'Workspace provenance must be an object.' };
+  if (value.version !== 1 || typeof value.sourceFingerprint !== 'string') {
+    return { ok: false, error: 'Workspace provenance version or source fingerprint is invalid.' };
+  }
+  if (!Array.isArray(value.fragments) || !Array.isArray(value.claims)) {
+    return { ok: false, error: 'Workspace provenance must contain fragments[] and claims[].' };
+  }
+
+  const fragments: SourceFragment[] = [];
+  for (const raw of value.fragments) {
+    const fragment = parseSourceFragment(raw);
+    if (!fragment) return { ok: false, error: 'Workspace provenance contains an invalid source fragment.' };
+    fragments.push(fragment);
+  }
+  if (!hasUniqueIds(fragments)) {
+    return { ok: false, error: 'Workspace provenance contains duplicate source fragment ids.' };
+  }
+
+  const claims: ProvenanceClaim[] = [];
+  for (const raw of value.claims) {
+    const claim = parseProvenanceClaim(raw);
+    if (!claim) return { ok: false, error: 'Workspace provenance contains an invalid claim.' };
+    claims.push(claim);
+  }
+  if (!hasUniqueIds(claims)) {
+    return { ok: false, error: 'Workspace provenance contains duplicate claim ids.' };
+  }
+
+  const fragmentIds = new Set(fragments.map((fragment) => fragment.id));
+  if (claims.some((claim) => claim.sourceFragmentIds.some((id) => !fragmentIds.has(id)))) {
+    return { ok: false, error: 'Workspace provenance claim references an unknown source fragment.' };
+  }
+
+  return {
+    ok: true,
+    data: {
+      version: 1,
+      sourceFingerprint: value.sourceFingerprint,
+      fragments,
+      claims,
+    },
+  };
+};
+
 export const validateWorkspaceDocument = (value: unknown): ValidationResult<WorkspaceDocument> => {
   if (!isObject(value)) return { ok: false, error: 'Workspace must be an object.' };
 
@@ -73,6 +180,13 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
   const id = typeof value.id === 'string' && value.id ? value.id : null;
   if (!id) return { ok: false, error: 'Workspace id is required.' };
 
+  let provenance: ProvenanceGraph | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, 'provenance') && value.provenance !== undefined) {
+    const provenanceResult = parseProvenanceGraph(value.provenance);
+    if (!provenanceResult.ok) return { ok: false, error: provenanceResult.error };
+    provenance = provenanceResult.data;
+  }
+
   const name = typeof value.name === 'string' && value.name.trim() ? value.name.trim() : 'Untitled workspace';
   const now = new Date().toISOString();
 
@@ -87,6 +201,7 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     nodes: value.nodes,
     edges: value.edges,
     deliverableDraft: parseDeliverableDraft(value.deliverableDraft),
+    provenance,
     viewport:
       isObject(value.viewport) &&
       typeof value.viewport.x === 'number' &&

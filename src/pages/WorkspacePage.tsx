@@ -26,6 +26,7 @@ import type {
 } from '../types';
 import { buildWorkflowValidator } from '../lib/workflowValidator';
 import { invalidateApprovedReviews } from '../lib/reviewState';
+import { upsertSourceFragment } from '../lib/provenance';
 import {
   applySourceToInputNode,
   countDerivedNodes,
@@ -331,6 +332,7 @@ export const WorkspacePage = () => {
       edges: [],
       sourceMaterial: '',
       deliverableDraft: undefined,
+      provenance: undefined,
       meta: {
         ...workspace.meta,
         sourceUserTouched: false,
@@ -402,6 +404,19 @@ export const WorkspacePage = () => {
       return;
     }
     setShowPreview(true);
+  };
+
+  const handleAddSourceFragment = (startOffset: number, endOffset: number) => {
+    patchWorkspace((current) => {
+      const { graph } = upsertSourceFragment(
+        current.provenance,
+        current.sourceMaterial,
+        startOffset,
+        endOffset,
+      );
+      return { ...current, provenance: graph };
+    }, 'provenance');
+    setNotice('Source fragment added for provenance.');
   };
 
   const handleApplyToInput = () => {
@@ -480,6 +495,7 @@ export const WorkspacePage = () => {
         edges: structuredClone(tpl.edges),
         sourceMaterial: source,
         deliverableDraft: undefined,
+        provenance: undefined,
         meta: {
           ...workspace.meta,
           sourceUserTouched: false,
@@ -762,6 +778,7 @@ export const WorkspacePage = () => {
               }), 'source');
               setWorkflowValidator(null);
             }}
+            onAddSourceFragment={handleAddSourceFragment}
             onApplyToInput={handleApplyToInput}
             onSplitIntoNodes={handleSplitIntoNodes}
           />

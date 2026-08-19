@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import { FileInput, ListTree, Sparkles } from 'lucide-react';
 import type { SourceSyncStatus } from '../../types';
 import { SOURCE_SYNC_LABELS } from '../../lib/sourceSync';
@@ -10,6 +11,7 @@ interface SourceIngestPanelProps {
   onChange: (value: string) => void;
   onApplyToInput: () => void;
   onSplitIntoNodes: () => void;
+  onAddSourceFragment: (startOffset: number, endOffset: number) => void;
   onUseSample?: () => void;
 }
 
@@ -21,8 +23,40 @@ export const SourceIngestPanel = ({
   onChange,
   onApplyToInput,
   onSplitIntoNodes,
+  onAddSourceFragment,
   onUseSample,
 }: SourceIngestPanelProps) => {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [selection, setSelection] = useState({ start: 0, end: 0 });
+  const hasSelection = selection.end > selection.start;
+
+  const captureSelection = () => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    setSelection({ start: textarea.selectionStart, end: textarea.selectionEnd });
+  };
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return undefined;
+    const handleNativeSelect = () => {
+      setSelection({ start: textarea.selectionStart, end: textarea.selectionEnd });
+    };
+    textarea.addEventListener('select', handleNativeSelect);
+    return () => textarea.removeEventListener('select', handleNativeSelect);
+  }, []);
+
+  const handleSourceChange = (value: string) => {
+    setSelection({ start: 0, end: 0 });
+    onChange(value);
+  };
+
+  const handleAddSourceFragment = () => {
+    if (!hasSelection) return;
+    onAddSourceFragment(selection.start, selection.end);
+    setSelection({ start: 0, end: 0 });
+  };
+
   const syncClass =
     syncStatus === 'in_sync'
       ? 'text-emerald-300 border-emerald-500/30 bg-emerald-500/10'
@@ -63,6 +97,15 @@ export const SourceIngestPanel = ({
           )}
           <button
             type="button"
+            onClick={handleAddSourceFragment}
+            disabled={!hasSelection}
+            className="text-xs px-3 py-1.5 rounded-md border border-violet-500/30 text-violet-300 hover:bg-violet-500/10 disabled:cursor-not-allowed disabled:opacity-40"
+            title="Select exact source text below, then save that range as provenance evidence"
+          >
+            Add source fragment
+          </button>
+          <button
+            type="button"
             onClick={onApplyToInput}
             className="text-xs px-3 py-1.5 rounded-md border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/10"
           >
@@ -90,13 +133,20 @@ export const SourceIngestPanel = ({
         </p>
       )}
       <textarea
+        ref={textareaRef}
         value={sourceMaterial}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => handleSourceChange(e.target.value)}
+        onSelect={captureSelection}
+        onMouseUp={captureSelection}
+        onKeyUp={captureSelection}
         rows={4}
         className="w-full bg-[#1e1e24] border border-gray-800 rounded-lg px-3 py-2 text-sm text-gray-100 font-mono focus:outline-none focus:border-blue-500 resize-y min-h-[96px]"
         placeholder="Paste fragmented notes, transcripts, logs, or research here…"
         aria-label="Source material"
       />
+      <p className="text-[11px] text-gray-500">
+        Select exact source text to enable provenance capture. Saved fragments remain anchored to the captured range and are marked stale if that source changes.
+      </p>
     </div>
   );
 };
