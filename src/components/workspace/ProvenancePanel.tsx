@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import type {
   ProvenanceDerivation,
-  ProvenanceStatus,
   WorkspaceDocument,
 } from '../../types';
 import {
@@ -10,6 +9,7 @@ import {
   upsertProvenanceClaim,
   validateSourceFragment,
 } from '../../lib/provenance';
+import type { ProvenanceStatus } from '../../lib/provenance';
 
 interface ProvenancePanelProps {
   workspace: WorkspaceDocument;
