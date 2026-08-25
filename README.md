@@ -2,6 +2,8 @@
 
 **Turn fragmented information into a structured, reusable deliverable workflow.**
 
+**[Canonical project page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/weavestudio) · [Public demo](https://weavestudio-nine.vercel.app/) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)**
+
 **Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
 
 ### What is this?
