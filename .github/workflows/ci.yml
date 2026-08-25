@@ -25,6 +25,7 @@ jobs:
           node-version: 24.x
           cache: npm
       - run: npm ci
+      - run: npm audit --omit=dev
       - run: npm test
       - run: npm run lint
       - run: npm run typecheck
