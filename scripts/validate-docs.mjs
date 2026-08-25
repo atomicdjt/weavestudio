@@ -81,7 +81,7 @@ function runValidation() {
   
   const isAcquisitionFile = (file) => {
     const f = file.replace(/\\/g, '/');
-    if (f === 'ACQUISITION_LISTING.md' || f === 'README.md' || f === 'src/pages/AcquirePage.tsx' || f === 'src/pages/DocsPage.tsx') {
+    if (f === 'docs/buyer/ACQUISITION_LISTING.md' || f === 'README.md' || f === 'src/pages/AcquirePage.tsx' || f === 'src/pages/DocsPage.tsx') {
       return true;
     }
     if (f.startsWith('docs/buyer/') && f.endsWith('.md')) {
