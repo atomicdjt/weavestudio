@@ -4,6 +4,8 @@
 
 **[Canonical project page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/weavestudio) · [Public demo](https://weavestudio-nine.vercel.app/) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)**
 
+**License:** **Proprietary / All Rights Reserved.** Public source visibility is for evaluation, portfolio review, technical critique, and prospective collaboration or acquisition review only. This repository is **not open source**; see [LICENSE.md](LICENSE.md).
+
 **Built by David Turner · [atomicdjt](https://github.com/atomicdjt)**
 
 ### What is this?
