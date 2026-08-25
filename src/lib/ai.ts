@@ -33,9 +33,9 @@ export const runAIRequest = async (request: AIRequest, signal: AbortSignal): Pro
       if (typeof json.output_text !== 'string' || !json.output_text.trim()) throw new AIProviderError('malformed', 'OpenAI returned no usable text output.');
       return { text: json.output_text, usage: { inputTokens: json.usage?.input_tokens, outputTokens: json.usage?.output_tokens } };
     }
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(request.model)}:generateContent?key=${encodeURIComponent(request.apiKey)}`, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(request.model)}:generateContent`, {
       method: 'POST', signal,
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': request.apiKey },
       body: JSON.stringify({ contents: [{ role: 'user', parts: [{ text: request.prompt }] }] }),
     });
     if (!response.ok) throw normaliseError('gemini', response.status);
