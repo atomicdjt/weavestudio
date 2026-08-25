@@ -24,14 +24,14 @@ The source/IP acquisition page is available at `/acquire`; `/buyer` redirects th
 - Addresses the recurring problem of converting variable, unstructured professional inputs into consistent outputs.
 - Local-first design differentiates it from cloud-first workflow and automation tools.
 - Reusable templates, Workflow Validator validation, and versioning create a repeatability engine beyond basic diagramming.
-- Modular structure and optional BYOK AI blueprint give acquirers clear extension paths.
+- Modular structure and optional consent-gated OpenAI/Gemini BYOK assistance give acquirers a working AI path plus clear extension options.
 - Accelerates development for productivity, documentation, and operations tooling by providing a working canvas, persistence, validation, and export foundation.
 
 ## Included Assets
 
 - Frontend source code (React, TypeScript, Vite, Tailwind CSS, `@xyflow/react`).
 - Current product name and UI assets.
-- Workflow templates including an optional AI Assist Blueprint node.
+- Workflow templates including optional AI Assist nodes with explicit-consent BYOK assistance.
 - Local autosave and snapshot versioning features.
 - Deterministic Workflow Validator for workflow completeness and export-readiness.
 - Markdown, JSON, and print-oriented PDF export modules.
@@ -54,7 +54,7 @@ Most existing options are either general-purpose diagramming libraries or cloud 
 Wiring a canvas is the starting point, not the finished product. WeaveStudio includes the surrounding system: template application, workflow validation, snapshot-based iteration, local persistence, and coordinated Markdown, JSON, and PDF export pipelines.
 
 **Does the AI feature create reliability or lock-in concerns?**
-AI Assist is optional and implemented as a BYOK-ready blueprint. The core canvas, templates, Workflow Validator validation, versioning, and exports function without AI or external services.
+AI Assist is optional and uses user-supplied OpenAI or Gemini keys only after explicit per-request consent; generated output remains a draft for human review. The core canvas, templates, Workflow Validator validation, versioning, and exports function without AI or any required external service.
 
 ## Monetization Paths
 
@@ -72,8 +72,8 @@ $6,500
 
 - Browser localStorage is not a substitute for durable cloud or filesystem storage.
 - No collaboration, authentication, or cloud sync in this release.
-- Generation is deterministic and assistive; it does not verify facts or rewrite content through AI.
-- AI Assist is a blueprint node only; no API keys or live provider calls are included.
+- The standard generator is deterministic and assistive; it does not verify facts or rewrite content through AI. Optional AI Assist produces provider-generated drafts only after explicit consent and still requires human review.
+- AI Assist includes direct browser BYOK provider calls after consent; no API keys are bundled, persisted, or included in exports.
 - Not suitable for regulated sensitive-work claims without additional product, legal, privacy, and security review.
 
 ## Handoff Terms

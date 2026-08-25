@@ -98,7 +98,7 @@ export const DocsPage = () => {
           <h2 className="text-xl font-bold text-white mb-4">Limitations</h2>
           <p className="text-sm leading-relaxed">
             WeaveStudio structures user-provided content. It does not verify facts or provide legal, medical, or
-            financial advice. Review exports before sharing. See repository <code className="text-blue-300">KNOWN_LIMITATIONS.md</code>{' '}
+            financial advice. Review exports before sharing. See repository <code className="text-blue-300">docs/KNOWN_LIMITATIONS.md</code>{' '}
             for full detail.
           </p>
         </section>

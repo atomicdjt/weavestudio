@@ -7,7 +7,7 @@ This document summarizes what is included with the WeaveStudio local-first editi
 - React, TypeScript, Vite, Tailwind v4, and `@xyflow/react` source code.
 - Local-first workflow canvas with draggable and connectable nodes.
 - Standard nodes: Input, Transform, Decision, Review, Output.
-- Optional AI Assist Blueprint node for future BYOK provider adapters.
+- Optional AI Assist node with explicit-consent OpenAI/Gemini BYOK provider adapters.
 - Starter templates for proposals, meetings, incidents, research, SOPs, specs, feedback, and optional AI Assist review.
 - Local autosave and version snapshots backed by browser localStorage.
 - Deterministic Workflow Validator for workflow completeness and export readiness.
@@ -17,10 +17,10 @@ This document summarizes what is included with the WeaveStudio local-first editi
 ## Current Architecture
 
 - Static frontend only.
-- No backend, authentication, account system, external API, cloud sync, or database.
+- No backend, authentication, account system, cloud sync, or database. The standard workflow needs no external API; optional AI Assist can make a direct browser request to OpenAI or Gemini only after explicit per-request consent.
 - No obsolete `reactflow` dependency; canvas uses `@xyflow/react`.
 - PDF export uses lazy `jspdf` import to keep the initial app bundle smaller.
-- AI Assist Blueprint includes no API keys and does not make provider calls by default.
+- AI Assist includes no bundled API keys and makes no provider call until the user confirms an individual request; supplied keys remain in volatile tab memory.
 
 ## Technical Foundation
 
@@ -35,9 +35,9 @@ This document summarizes what is included with the WeaveStudio local-first editi
 - JSON export
 - PDF/print export
 
-## AI Assist Extension Path
+## AI Assist and Proxy Extension Path
 
-A buyer can wire provider-specific API calls into the AI Assist Blueprint later by adding an adapter module, adding secure BYOK input handling, and routing returned draft content back through a Review node. Suggested extension points:
+The shipped AI Assist already supports direct browser OpenAI/Gemini BYOK requests after explicit consent and routes returned text back as a reviewable draft. A buyer can add a server-side provider proxy later by adding authentication, rate limiting, audit controls, and server-side secret handling. Suggested extension points:
 
 - `src/types/index.ts` for adapter metadata and node fields.
 - `src/components/workspace/WorkspacePanels.tsx` for settings and inspector controls.
@@ -56,7 +56,7 @@ The current MVP remains deterministic and local-first because no live AI provide
 
 ## Deployment Checklist
 
-1. Run `npm install`.
+1. Run `npm ci`.
 2. Run `npm run build`.
 3. Deploy `dist/` to a static host.
 4. Configure SPA fallback to `index.html` for direct visits to `/app`, `/templates`, `/exports`, `/docs`, and `/acquire`.

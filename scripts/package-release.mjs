@@ -4,7 +4,7 @@ import { cpSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFi
 import { dirname, join, relative } from 'node:path';
 const root = process.cwd(), out = join(root, 'release'), stage = join(out, 'weavestudio-acquisition-package'), zip = join(out, 'weavestudio-acquisition-package.zip');
 const excluded = new Set(['node_modules', '.git', '.vercel', 'dist', 'release', 'work', '.env', '.env.local', 'test-results', 'playwright-report', '.seller-private', '.worktrees', '__pycache__']);
-const excludedPaths = new Set(['OUTREACH_MESSAGES.md', 'docs/buyer/OUTREACH.md']);
+const excludedPaths = new Set(['docs/buyer/OUTREACH_MESSAGES.md', 'docs/buyer/OUTREACH.md']);
 const copy = (source, destination) => { const name = source.split(/[\\/]/).pop(), sourcePath = relative(root, source).replaceAll('\\', '/'); if (excluded.has(name) || excludedPaths.has(sourcePath) || name.endsWith('.log') || name.endsWith('.pyc')) return; const info = statSync(source); if (info.isDirectory()) { mkdirSync(destination, { recursive: true }); for (const child of readdirSync(source).sort()) copy(join(source, child), join(destination, child)); } else { mkdirSync(dirname(destination), { recursive: true }); cpSync(source, destination); } };
 rmSync(out, { recursive: true, force: true }); mkdirSync(stage, { recursive: true }); for (const name of readdirSync(root)) copy(join(root, name), join(stage, name));
 const files = []; const walk = (directory) => { for (const name of readdirSync(directory).sort()) { const file = join(directory, name), info = statSync(file); if (info.isDirectory()) walk(file); else files.push({ path: relative(stage, file).replaceAll('\\', '/'), bytes: info.size, sha256: createHash('sha256').update(readFileSync(file)).digest('hex') }); } }; walk(stage);

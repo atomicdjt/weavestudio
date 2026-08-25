@@ -10,7 +10,7 @@ This index gives a prospective buyer a direct path from common diligence questio
 | What is actually implemented? | `docs/buyer/FEATURE_REALITY.md`, live demo, source review |
 | What is included in the purchase? | `docs/buyer/ASSET_SCHEDULE.md` |
 | What is excluded? | `docs/buyer/EXCLUDED_ASSETS.md` |
-| What are the product limitations? | `KNOWN_LIMITATIONS.md`, `docs/buyer/FEATURE_REALITY.md` |
+| What are the product limitations? | `docs/KNOWN_LIMITATIONS.md`, `docs/buyer/FEATURE_REALITY.md` |
 | How does a buyer verify the release? | `README.md`, `docs/buyer/TRANSFER_CHECKLIST.md`, `scripts/verify-buyer.mjs` |
 | How is the package produced? | `scripts/package-release.mjs`, `scripts/create-deterministic-zip.py`, `.github/workflows/acquisition-release.yml` |
 | How does ownership transfer work operationally? | `docs/buyer/TRANSFER_CHECKLIST.md`, `docs/buyer/CLOSING_RUNBOOK.md` |

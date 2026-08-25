@@ -22,7 +22,7 @@ Yes! [Open the canonical public demo](https://weavestudio-nine.vercel.app/)
 Yes. [Try the demo and leave candid feedback](https://github.com/atomicdjt/weavestudio/issues/21). I am specifically looking for confusing steps, missing capabilities, trust concerns, unmet expectations, and reasons you would not use it in real work.
 
 ### Where is the evidence?
-The codebase includes a comprehensive [Case study](CASE_STUDY.md), architectural documentation, [Known limitations](KNOWN_LIMITATIONS.md), and a separate [Acquisition overview](https://weavestudio-nine.vercel.app/acquire) for buyer review.
+The codebase includes a comprehensive [Case study](docs/CASE_STUDY.md), architectural documentation, [Known limitations](docs/KNOWN_LIMITATIONS.md), and a separate [Acquisition overview](https://weavestudio-nine.vercel.app/acquire) for buyer review.
 
 **More by David Turner:** [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [Validation Ledger](https://github.com/atomicdjt/validation-ledger) · [GitHub profile](https://github.com/atomicdjt)
 
@@ -136,7 +136,7 @@ The manually dispatched or acquisition-tag-triggered workflow in [`.github/workf
 - Dense graph editing is most efficient on desktop; mobile includes dedicated Inspector and Snapshot sheets but remains better suited to review and lighter edits.
 - It is not legal, medical, financial, compliance, or security software.
 
-See [KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md) for full details.
+See [KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md) for full details.
 
 ## License
 

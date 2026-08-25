@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 FORBIDDEN_PATHS = {
-    "OUTREACH_MESSAGES.md",
+    "docs/buyer/OUTREACH_MESSAGES.md",
     "docs/buyer/OUTREACH.md",
 }
 REQUIRED_PATHS = {

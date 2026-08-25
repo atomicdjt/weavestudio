@@ -23,10 +23,10 @@ WeaveStudio enables professionals to turn variable real-world inputs into struct
 ## Current Architecture
 
 - Static frontend only.
-- No backend, authentication, account system, external API, cloud sync, or database.
+- No backend, authentication, account system, cloud sync, or database. The standard workflow needs no external API; optional AI Assist can make a direct browser request to OpenAI or Gemini only after explicit per-request consent.
 - Canvas uses `@xyflow/react` (current maintained package).
 - PDF export uses lazy `jspdf` import to keep the initial app bundle smaller.
-- AI Assist includes no API keys and makes no provider call until a user confirms that individual request.
+- AI Assist includes no bundled API keys and makes no provider call until a user confirms that individual request; supplied keys remain in volatile tab memory.
 
 ## Technical Foundation
 
@@ -60,7 +60,7 @@ The current release remains local-first because no live AI provider is required 
 
 ## Deployment Checklist
 
-1. Run `npm install`.
+1. Run `npm ci`.
 2. Run `npm run build`.
 3. Deploy `dist/` to a static host.
 4. Configure SPA fallback to `index.html` for direct visits to `/app`, `/templates`, `/exports`, `/docs`, and `/acquire`.

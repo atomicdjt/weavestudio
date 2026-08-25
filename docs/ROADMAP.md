@@ -4,7 +4,7 @@ WeaveStudio is a local-first visual workflow canvas for turning messy profession
 
 ## Near Term
 
-- Workflow import/export using a dedicated `.weavestudio.json` format for portability between browsers and devices.
+- Broader portability validation and recovery UX across browsers and devices, building on the shipped `.weavestudio.json` import/export format.
 - Richer PDF layout options while keeping export generation local.
 - Template duplication and template editing inside the app.
 - More keyboard shortcuts and canvas accessibility refinements.
