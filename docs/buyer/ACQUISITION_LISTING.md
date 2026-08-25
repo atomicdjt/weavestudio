@@ -72,7 +72,7 @@ $6,500
 
 - Browser localStorage is not a substitute for durable cloud or filesystem storage.
 - No collaboration, authentication, or cloud sync in this release.
-- Generation is deterministic and assistive; it does not verify facts or rewrite content through AI.
+- The standard generator is deterministic and assistive; it does not verify facts or rewrite content through AI. Optional AI Assist produces provider-generated drafts only after explicit consent and still requires human review.
 - AI Assist includes direct browser BYOK provider calls after consent; no API keys are bundled, persisted, or included in exports.
 - Not suitable for regulated sensitive-work claims without additional product, legal, privacy, and security review.
 
