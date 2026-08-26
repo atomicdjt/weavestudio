@@ -663,7 +663,7 @@ export const WorkspacePage = () => {
                 type="button"
                 onClick={handleWorkflowValidator}
                 aria-label="Validate"
-                className="bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-2 rounded-lg font-semibold shadow-md flex items-center space-x-2"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 rounded-lg font-semibold shadow-md flex items-center space-x-2"
               >
                 <ClipboardCheck className="w-4 h-4" />
                 <span className="hidden sm:inline">Validate</span>
