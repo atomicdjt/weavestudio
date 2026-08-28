@@ -39,6 +39,15 @@ const compareSemanticEdges = (left: ReturnType<typeof semanticEdge>, right: Retu
   compareCodeUnits(edgeSortKey(left), edgeSortKey(right)) ||
   compareCodeUnits(JSON.stringify(left), JSON.stringify(right));
 
+const isNodeRecord = (node: unknown): node is AppNode => {
+  if (!node || typeof node !== 'object') return false;
+  const candidate = node as Partial<AppNode>;
+  return typeof candidate.id === 'string' &&
+    typeof candidate.type === 'string' &&
+    !!candidate.data &&
+    typeof candidate.data === 'object';
+};
+
 /**
  * Collects the set of node IDs reachable by traversing edges backwards (upstream)
  * from a given starting node. Uses a visited set for cycle safety and guaranteed
@@ -194,7 +203,7 @@ export const invalidateApprovedReviews = (params: {
 
   // Quick exit: if there are no approved review nodes, nothing to invalidate
   const approvedReviews = params.nextNodes.filter(
-    (n) => n.type === 'review' && n.data?.status === 'approved',
+    (n) => isNodeRecord(n) && n.type === 'review' && n.data.status === 'approved',
   );
   if (approvedReviews.length === 0) return params.nextNodes;
 
@@ -202,6 +211,10 @@ export const invalidateApprovedReviews = (params: {
   const invalidatedIds = new Set<string>();
 
   try {
+    if (!params.previousNodes.every(isNodeRecord) || !params.nextNodes.every(isNodeRecord)) {
+      throw new TypeError('Cannot build review dependencies from malformed nodes.');
+    }
+
     // Build lookup structures for previous state
     const prevNodeById = new Map(params.previousNodes.map((n) => [n.id, n]));
     const prevNodeIds = new Set(params.previousNodes.map((n) => n.id));
@@ -254,7 +267,7 @@ export const invalidateApprovedReviews = (params: {
   if (invalidatedIds.size === 0) return params.nextNodes;
 
   return params.nextNodes.map((node) =>
-    invalidatedIds.has(node.id)
+    isNodeRecord(node) && invalidatedIds.has(node.id)
       ? { ...node, data: { ...node.data, status: 'pending' } }
       : node,
   );

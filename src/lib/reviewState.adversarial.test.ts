@@ -198,6 +198,44 @@ describe('Adversarial — stale approval attacks', () => {
     }
   });
 
+  it('null and undefined node entries are ignored when no review is approved', () => {
+    for (const malformedNode of [null, undefined]) {
+      const nodes = [makeNode('input', 'input'), malformedNode] as unknown as AppNode[];
+
+      expect(invalidateApprovedReviews({
+        previousNodes: nodes,
+        nextNodes: nodes,
+        previousEdges: [],
+        nextEdges: [],
+      })).toBe(nodes);
+    }
+  });
+
+  it('malformed entries in either node collection fail closed for approved reviews', () => {
+    for (const malformedNode of [null, undefined]) {
+      const validNodes = [makeNode('input', 'input'), approvedReview('review')];
+      const edges: AppEdge[] = [{ id: 'e1', source: 'input', target: 'review' }];
+
+      const malformedNext = [...validNodes, malformedNode] as unknown as AppNode[];
+      const nextResult = invalidateApprovedReviews({
+        previousNodes: validNodes,
+        nextNodes: malformedNext,
+        previousEdges: edges,
+        nextEdges: edges,
+      });
+      expect(getStatus(nextResult, 'review')).toBe('pending');
+      expect(nextResult.at(-1)).toBe(malformedNode);
+
+      const previousResult = invalidateApprovedReviews({
+        previousNodes: [...validNodes, malformedNode] as unknown as AppNode[],
+        nextNodes: validNodes,
+        previousEdges: edges,
+        nextEdges: edges,
+      });
+      expect(getStatus(previousResult, 'review')).toBe('pending');
+    }
+  });
+
   it('empty graph: no crash, returns empty array', () => {
     const result = invalidateApprovedReviews({
       previousNodes: [],
