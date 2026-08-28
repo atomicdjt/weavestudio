@@ -356,6 +356,27 @@ describe('Invariant E — deterministic results', () => {
 
     expect(getStatus(result, 'review')).toBe('approved');
   });
+
+  it('canonical-equivalent Unicode node IDs and edge keys stay deterministic', () => {
+    const nodes: AppNode[] = [
+      makeNode('é', 'input'),
+      makeNode('e\u0301', 'input'),
+      approvedReview('review'),
+    ];
+    const edges: AppEdge[] = [
+      { id: 'e1', source: 'é', target: 'review' },
+      { id: 'e2', source: 'e\u0301', target: 'review' },
+    ];
+
+    const result = invalidateApprovedReviews({
+      previousNodes: nodes,
+      nextNodes: [...nodes].reverse(),
+      previousEdges: edges,
+      nextEdges: [...edges].reverse(),
+    });
+
+    expect(getStatus(result, 'review')).toBe('approved');
+  });
 });
 
 // ─── Invariant F: Safety — cycles and malformed data ──────────────────────

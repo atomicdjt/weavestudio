@@ -30,11 +30,14 @@ const semanticEdge = (edge: AppEdge) => ({
 const edgeSortKey = (e: ReturnType<typeof semanticEdge>) =>
   `${e.source}:${e.sourceHandle ?? ''}->${e.target}:${e.targetHandle ?? ''}`;
 
+const compareCodeUnits = (left: string, right: string) => (left < right ? -1 : left > right ? 1 : 0);
+
 const compareSemanticNodes = (left: ReturnType<typeof semanticNode>, right: ReturnType<typeof semanticNode>) =>
-  left.id.localeCompare(right.id) || JSON.stringify(left).localeCompare(JSON.stringify(right));
+  compareCodeUnits(left.id, right.id) || compareCodeUnits(JSON.stringify(left), JSON.stringify(right));
 
 const compareSemanticEdges = (left: ReturnType<typeof semanticEdge>, right: ReturnType<typeof semanticEdge>) =>
-  edgeSortKey(left).localeCompare(edgeSortKey(right)) || JSON.stringify(left).localeCompare(JSON.stringify(right));
+  compareCodeUnits(edgeSortKey(left), edgeSortKey(right)) ||
+  compareCodeUnits(JSON.stringify(left), JSON.stringify(right));
 
 /**
  * Collects the set of node IDs reachable by traversing edges backwards (upstream)
@@ -191,7 +194,7 @@ export const invalidateApprovedReviews = (params: {
 
   // Quick exit: if there are no approved review nodes, nothing to invalidate
   const approvedReviews = params.nextNodes.filter(
-    (n) => n.type === 'review' && n.data.status === 'approved',
+    (n) => n.type === 'review' && n.data?.status === 'approved',
   );
   if (approvedReviews.length === 0) return params.nextNodes;
 

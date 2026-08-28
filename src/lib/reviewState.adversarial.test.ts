@@ -177,6 +177,27 @@ describe('Adversarial — stale approval attacks', () => {
     expect(getStatus(result, 'review')).toBe('pending');
   });
 
+  it('malformed review nodes without data are skipped without throwing', () => {
+    for (const data of [null, undefined]) {
+      const nodes: AppNode[] = [
+        makeNode('input', 'input'),
+        {
+          id: 'malformed-review',
+          type: 'review',
+          position: { x: 0, y: 0 },
+          data,
+        } as unknown as AppNode,
+      ];
+
+      expect(invalidateApprovedReviews({
+        previousNodes: nodes,
+        nextNodes: nodes,
+        previousEdges: [],
+        nextEdges: [],
+      })).toBe(nodes);
+    }
+  });
+
   it('empty graph: no crash, returns empty array', () => {
     const result = invalidateApprovedReviews({
       previousNodes: [],
@@ -239,7 +260,7 @@ describe('Adversarial — stale approval attacks', () => {
     expect(getStatus(result, 'review')).toBe('approved');
   });
 
-  it('review upstream of another review: only the affected one invalidates', () => {
+  it('review upstream of another review: changes propagate to both reviews', () => {
     /**
      *  input → reviewA → reviewB
      *
