@@ -71,7 +71,7 @@ jobs:
           cat release/SHA256SUMS.txt
 
       - name: Upload private acquisition artifact
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v7
         with:
           name: weavestudio-acquisition-${{ github.sha }}
           path: release/**
