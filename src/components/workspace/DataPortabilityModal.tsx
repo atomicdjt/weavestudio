@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DatabaseX, Download, Upload, X, HardDrive } from 'lucide-react';
 import type { WorkspaceDocument } from '../../types';
 import {
@@ -31,6 +31,14 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
   const fileInputRef = useRef<HTMLInputElement>(null);
   const projectFileInputRef = useRef<HTMLInputElement>(null);
   const clearDialogRef = useRef<HTMLDivElement>(null);
+  const clearTriggerRef = useRef<HTMLButtonElement>(null);
+
+  const closeClearConfirmation = useCallback(() => {
+    clearTriggerRef.current?.focus();
+    setClearOpen(false);
+    setClearText('');
+    window.setTimeout(() => clearTriggerRef.current?.focus(), 0);
+  }, []);
 
   useEffect(() => {
     const calculateStorage = async () => {
@@ -50,13 +58,12 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
       const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], [role="alertdialog"]'));
       if (!dialog || dialogs.at(-1) !== dialog) return;
       event.preventDefault();
-      setClearOpen(false);
-      setClearText('');
+      closeClearConfirmation();
     };
 
     document.addEventListener('keydown', onDocumentKeyDown, true);
     return () => document.removeEventListener('keydown', onDocumentKeyDown, true);
-  }, [clearOpen]);
+  }, [clearOpen, closeClearConfirmation]);
 
   const handleDownloadProject = () => {
     try {
@@ -136,7 +143,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
     clearAllLocalData();
     setMessage('All WeaveStudio browser data was cleared.');
     onReload();
-    setClearOpen(false);
+    closeClearConfirmation();
   };
 
   return (
@@ -217,6 +224,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
             <button
               type="button"
               onClick={() => setClearOpen(true)}
+              ref={clearTriggerRef}
               className="w-full bg-panel hover:bg-red-900/20 text-gray-200 border border-border p-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-3"
             >
               <DatabaseX className="w-4 h-4 text-red-400" />
@@ -233,7 +241,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
             <p className="mt-2 text-sm text-gray-300">This permanently removes {loadIndex().workspaces.length} workspace(s), {getSnapshots().length} snapshot(s), and about {formatStorageUsage(getStorageUsage().bytes)} of WeaveStudio data. This cannot be undone.</p>
             <p className="mt-2 text-xs text-amber-200">Download a backup first. Type <strong>CLEAR</strong> to enable deletion.</p>
             <input autoFocus value={clearText} onChange={(e) => setClearText(e.target.value)} aria-label="Type CLEAR to confirm" className="mt-3 w-full rounded border border-gray-700 bg-[#1e1e24] px-3 py-2 text-white" />
-            <div className="mt-4 flex gap-2"><button type="button" onClick={handleDownloadAll} className="rounded border border-border px-3 py-2 text-sm text-blue-300">Download backup first</button><button type="button" onClick={() => { setClearOpen(false); setClearText(''); }} className="rounded border border-border px-3 py-2 text-sm text-gray-200">Cancel</button><button type="button" disabled={clearText !== 'CLEAR'} onClick={handleClear} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Permanently clear data</button></div>
+            <div className="mt-4 flex gap-2"><button type="button" onClick={handleDownloadAll} className="rounded border border-border px-3 py-2 text-sm text-blue-300">Download backup first</button><button type="button" onClick={closeClearConfirmation} className="rounded border border-border px-3 py-2 text-sm text-gray-200">Cancel</button><button type="button" disabled={clearText !== 'CLEAR'} onClick={handleClear} className="rounded bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50">Permanently clear data</button></div>
           </div>
         </div>}
         <ConfirmDialog open={Boolean(importFile)} title="Import project as a new workspace?" description="The current workspace will remain unchanged. Full browser backups must use the dedicated restore flow." confirmLabel="Import new workspace" onCancel={() => { setImportFile(null); if (projectFileInputRef.current) projectFileInputRef.current.value = ''; }} onConfirm={completeImport} />

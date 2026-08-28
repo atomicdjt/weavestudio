@@ -109,6 +109,7 @@ test('data-clear confirmation closes with Escape without clearing data', async (
   await page.keyboard.press('Escape');
   await expect(confirmation).toBeHidden();
   await expect(portability).toBeVisible();
+  await expect(portability.getByRole('button', { name: /clear all local data/i })).toBeFocused();
 });
 
 test('workflow outline exposes a linear, selectable node flow', async ({ page }) => {
