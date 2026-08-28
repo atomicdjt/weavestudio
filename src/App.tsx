@@ -29,7 +29,7 @@ function App() {
           </div>
           <div>
             <span className="font-semibold text-lg tracking-tight">WeaveStudio</span>
-            <div className="text-[11px] text-gray-500 leading-none">Local-first workflow canvas</div>
+            <div className="text-[11px] text-gray-400 leading-none">Local-first workflow canvas</div>
           </div>
         </Link>
         <div className="hidden lg:flex items-center gap-1">
@@ -54,7 +54,7 @@ function App() {
       <main id="main-content" className="flex-1 flex flex-col min-h-0 overflow-hidden">
         <Outlet />
       </main>
-      <footer className="shrink-0 border-t border-border bg-panel/80 px-4 sm:px-6 py-2 text-xs text-gray-500 flex flex-wrap items-center justify-between gap-3">
+      <footer className="shrink-0 border-t border-border bg-panel/80 px-4 sm:px-6 py-2 text-xs text-gray-400 flex flex-wrap items-center justify-between gap-3">
         <span>© 2026 WeaveStudio · Local-first by default. Human-reviewed. Exportable.</span>
         <span className="flex gap-3"><Link to="/docs#privacy" className="hover:text-gray-300 transition-colors">Privacy</Link><Link to="/docs#license" className="hover:text-gray-300 transition-colors">License</Link><Link to="/docs" className="hover:text-gray-300 transition-colors">Usage guide</Link><Link to="/acquire" className="hover:text-gray-300 transition-colors">Acquire</Link></span>
       </footer>

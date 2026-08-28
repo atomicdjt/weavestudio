@@ -653,6 +653,7 @@ export const WorkspacePage = () => {
               <button
                 type="button"
                 onClick={handleResetDemo}
+                aria-label="Guided demo"
                 className="bg-panel border border-border text-gray-300 hover:text-white px-3 py-2 rounded-lg shadow-md flex items-center space-x-2 text-sm font-semibold"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -661,7 +662,8 @@ export const WorkspacePage = () => {
               <button
                 type="button"
                 onClick={handleWorkflowValidator}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-2 rounded-lg font-semibold shadow-md flex items-center space-x-2"
+                aria-label="Validate"
+                className="bg-emerald-700 hover:bg-emerald-800 text-white px-3 py-2 rounded-lg font-semibold shadow-md flex items-center space-x-2"
               >
                 <ClipboardCheck className="w-4 h-4" />
                 <span className="hidden sm:inline">Validate</span>

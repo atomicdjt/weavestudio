@@ -105,7 +105,7 @@ export const LandingPage = () => {
             <span>Blank workspace</span>
           </button>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-400">
           Golden path: template → paste source → structure nodes → validate → generate → export → reopen.
         </p>
       </section>

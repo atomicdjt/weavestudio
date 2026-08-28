@@ -32,7 +32,7 @@ export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHis
 
   return (
     <aside className="w-full lg:w-64 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 flex flex-col lg:h-full max-h-96 lg:max-h-none overflow-y-auto">
-      <h3 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-4">Version Snapshots</h3>
+      <h3 className="font-bold text-sm uppercase tracking-wider text-gray-400 mb-4">Version Snapshots</h3>
       <p className="text-xs text-gray-400 mb-4">
         Snapshots capture nodes, edges, source material, deliverable draft, template, and sync metadata.
       </p>
@@ -55,14 +55,14 @@ export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHis
           <Save className="w-4 h-4" />
           <span>Save Snapshot</span>
         </button>
-        {!title.trim() && <p className="text-xs text-gray-500">Enter a name to save.</p>}
+        {!title.trim() && <p className="text-xs text-gray-400">Enter a name to save.</p>}
       </div>
 
       <div className="space-y-3">
         {versions.length === 0 && (
           <div className="rounded-lg border border-dashed border-gray-700 bg-[#1e1e24] px-4 py-6 text-center">
             <div className="text-sm font-semibold text-gray-300 mb-1">No snapshots yet</div>
-            <p className="text-xs text-gray-500">Name the current workflow and save a checkpoint before major edits.</p>
+            <p className="text-xs text-gray-400">Name the current workflow and save a checkpoint before major edits.</p>
           </div>
         )}
         {versions.map((v) => (

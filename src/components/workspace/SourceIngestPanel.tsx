@@ -72,7 +72,7 @@ export const SourceIngestPanel = ({
             <FileInput className="w-4 h-4 text-emerald-400" />
             Source material
           </h3>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-gray-400 mt-0.5">
             {inputInstructions ||
               'Paste unstructured notes, transcripts, or logs. Then structure them into canvas nodes.'}
           </p>
@@ -144,7 +144,7 @@ export const SourceIngestPanel = ({
         placeholder="Paste fragmented notes, transcripts, logs, or research here…"
         aria-label="Source material"
       />
-      <p className="text-[11px] text-gray-500">
+      <p className="text-[11px] text-gray-400">
         Select exact source text to enable provenance capture. Saved fragments remain anchored to the captured range and are marked stale if that source changes.
       </p>
     </div>
