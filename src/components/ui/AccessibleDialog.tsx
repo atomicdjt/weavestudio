@@ -23,8 +23,20 @@ export const AccessibleDialog = ({ children, className = '', label, onClose, lab
     return () => { window.clearTimeout(timer); openerRef.current?.focus(); };
   }, []);
 
+  useEffect(() => {
+    const onDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], [role="alertdialog"]'));
+      if (dialogs.at(-1) !== dialogRef.current) return;
+      event.preventDefault();
+      onClose();
+    };
+
+    document.addEventListener('keydown', onDocumentKeyDown, true);
+    return () => document.removeEventListener('keydown', onDocumentKeyDown, true);
+  }, [onClose]);
+
   const onKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === 'Escape') { event.preventDefault(); onClose(); return; }
     if (event.key !== 'Tab') return;
     const focusable = Array.from(dialogRef.current?.querySelectorAll<HTMLElement>(focusableSelector) ?? []);
     if (!focusable.length) { event.preventDefault(); dialogRef.current?.focus(); return; }
@@ -39,3 +51,4 @@ export const AccessibleDialog = ({ children, className = '', label, onClose, lab
     </div>
   </div>;
 };
+
