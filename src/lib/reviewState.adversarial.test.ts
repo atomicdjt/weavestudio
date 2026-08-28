@@ -236,6 +236,50 @@ describe('Adversarial — stale approval attacks', () => {
     }
   });
 
+  it('duplicate IDs in previousNodes fail closed for approved reviews', () => {
+    const nodes = [makeNode('input', 'input'), approvedReview('review')];
+    const duplicateInput = makeNode('input', 'input', { content: 'UNTRACKED CHANGE' });
+    const edges: AppEdge[] = [{ id: 'e1', source: 'input', target: 'review' }];
+
+    const result = invalidateApprovedReviews({
+      previousNodes: [duplicateInput, ...nodes],
+      nextNodes: nodes,
+      previousEdges: edges,
+      nextEdges: edges,
+    });
+
+    expect(getStatus(result, 'review')).toBe('pending');
+  });
+
+  it('duplicate IDs in nextNodes fail closed for approved reviews', () => {
+    const nodes = [makeNode('input', 'input'), approvedReview('review')];
+    const duplicateInput = makeNode('input', 'input', { content: 'UNTRACKED CHANGE' });
+    const edges: AppEdge[] = [{ id: 'e1', source: 'input', target: 'review' }];
+
+    const result = invalidateApprovedReviews({
+      previousNodes: nodes,
+      nextNodes: [duplicateInput, ...nodes],
+      previousEdges: edges,
+      nextEdges: edges,
+    });
+
+    expect(getStatus(result, 'review')).toBe('pending');
+  });
+
+  it('unique node IDs preserve approval when no semantic input changes', () => {
+    const nodes = [makeNode('input', 'input'), approvedReview('review')];
+    const edges: AppEdge[] = [{ id: 'e1', source: 'input', target: 'review' }];
+
+    const result = invalidateApprovedReviews({
+      previousNodes: nodes,
+      nextNodes: nodes,
+      previousEdges: edges,
+      nextEdges: edges,
+    });
+
+    expect(getStatus(result, 'review')).toBe('approved');
+  });
+
   it('empty graph: no crash, returns empty array', () => {
     const result = invalidateApprovedReviews({
       previousNodes: [],

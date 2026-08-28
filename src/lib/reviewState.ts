@@ -48,6 +48,9 @@ const isNodeRecord = (node: unknown): node is AppNode => {
     typeof candidate.data === 'object';
 };
 
+const hasUniqueNodeIds = (nodes: readonly AppNode[]) =>
+  new Set(nodes.map((node) => node.id)).size === nodes.length;
+
 /**
  * Collects the set of node IDs reachable by traversing edges backwards (upstream)
  * from a given starting node. Uses a visited set for cycle safety and guaranteed
@@ -211,8 +214,13 @@ export const invalidateApprovedReviews = (params: {
   const invalidatedIds = new Set<string>();
 
   try {
-    if (!params.previousNodes.every(isNodeRecord) || !params.nextNodes.every(isNodeRecord)) {
-      throw new TypeError('Cannot build review dependencies from malformed nodes.');
+    if (
+      !params.previousNodes.every(isNodeRecord) ||
+      !params.nextNodes.every(isNodeRecord) ||
+      !hasUniqueNodeIds(params.previousNodes) ||
+      !hasUniqueNodeIds(params.nextNodes)
+    ) {
+      throw new TypeError('Cannot build review dependencies from malformed or duplicate nodes.');
     }
 
     // Build lookup structures for previous state
