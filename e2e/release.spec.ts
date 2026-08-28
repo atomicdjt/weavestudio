@@ -98,6 +98,20 @@ test('workspace dialogs close with Escape and return focus to their trigger', as
   await expect(generate).toBeFocused();
 });
 
+test('data-clear confirmation closes with Escape without clearing data', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop toolbar dialog coverage; mobile uses the same data portability flow in a sheet.');
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Data portability' }).click();
+  const portability = page.getByRole('dialog', { name: 'Data portability' });
+  await portability.getByRole('button', { name: /clear all local data/i }).click();
+  const confirmation = page.getByRole('alertdialog', { name: /clear all local data/i });
+  await expect(confirmation).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(confirmation).toBeHidden();
+  await expect(portability).toBeVisible();
+  await expect(portability.getByRole('button', { name: /clear all local data/i })).toBeFocused();
+});
+
 test('workflow outline exposes a linear, selectable node flow', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('open-guided-demo').click();
