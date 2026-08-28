@@ -30,6 +30,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
   const [message, setMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const projectFileInputRef = useRef<HTMLInputElement>(null);
+  const clearDialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const calculateStorage = async () => {
@@ -39,6 +40,23 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
     };
     calculateStorage();
   }, []);
+
+  useEffect(() => {
+    if (!clearOpen) return;
+
+    const onDocumentKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      const dialog = clearDialogRef.current;
+      const dialogs = Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"], [role="alertdialog"]'));
+      if (!dialog || dialogs.at(-1) !== dialog) return;
+      event.preventDefault();
+      setClearOpen(false);
+      setClearText('');
+    };
+
+    document.addEventListener('keydown', onDocumentKeyDown, true);
+    return () => document.removeEventListener('keydown', onDocumentKeyDown, true);
+  }, [clearOpen]);
 
   const handleDownloadProject = () => {
     try {
@@ -210,7 +228,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
           </div>
         </div>
         {clearOpen && <div className="absolute inset-0 z-10 flex items-center bg-black/75 p-5">
-          <div className="w-full rounded-xl border border-red-500/40 bg-[#18181b] p-5" role="alertdialog" aria-modal="true" aria-labelledby="clear-title">
+          <div ref={clearDialogRef} className="w-full rounded-xl border border-red-500/40 bg-[#18181b] p-5" role="alertdialog" aria-modal="true" aria-labelledby="clear-title">
             <h3 id="clear-title" className="font-bold text-white">Clear all local data?</h3>
             <p className="mt-2 text-sm text-gray-300">This permanently removes {loadIndex().workspaces.length} workspace(s), {getSnapshots().length} snapshot(s), and about {formatStorageUsage(getStorageUsage().bytes)} of WeaveStudio data. This cannot be undone.</p>
             <p className="mt-2 text-xs text-amber-200">Download a backup first. Type <strong>CLEAR</strong> to enable deletion.</p>
