@@ -1,5 +1,7 @@
 # WeaveStudio
 
+[![CI](https://github.com/atomicdjt/weavestudio/actions/workflows/ci.yml/badge.svg)](https://github.com/atomicdjt/weavestudio/actions/workflows/ci.yml)
+
 **Turn fragmented information into a structured, reusable deliverable workflow.**
 
 **[Canonical project page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/weavestudio) · [Public demo](https://weavestudio-nine.vercel.app/) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)**
