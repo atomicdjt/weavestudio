@@ -168,4 +168,3 @@ Fast-sale and transaction materials:
 Draft legal-review templates are available under [`docs/buyer/legal/`](docs/buyer/legal/). They are working templates only and are not legal advice or self-executing transaction documents.
 
 No revenue, customer, active-user, compliance-certification, or completed-acquisition claim is included with this asset.
-
