@@ -3,7 +3,7 @@
 ## Release scope
 
 - **Release:** WeaveStudio v1.0.0
-- **Authoritative branch:** `master`
+- **Authoritative branch:** `main` (`master` is retained only as a legacy compatibility branch)
 - **Production URL:** [https://weavestudio-nine.vercel.app/](https://weavestudio-nine.vercel.app/)
 - **Production-tested base commit:** `742a017388547e1e89b996c8d01bea9e79f9a55d`
 
