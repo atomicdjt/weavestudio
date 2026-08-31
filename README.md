@@ -146,7 +146,7 @@ No revenue, customer, active-user, compliance-certification, or completed-acquis
 
 ## License
 
-[Proprietary — All Rights Reserved](LICENSE.md). Public visibility is provided for evaluation and portfolio review only. It does not grant a license to copy, redistribute, commercialize, or reuse the source or associated intellectual property.
+[Proprietary — All Rights Reserved](LICENSE.md). Public source visibility is for evaluation, portfolio review, technical critique, and prospective collaboration. It does not grant a license to copy, redistribute, commercialize, or reuse the source or associated intellectual property.
 
 ## More projects
 
