@@ -90,6 +90,102 @@ describe('validateWorkspaceDocument', () => {
     const result = validateWorkspaceDocument({ ...validWorkspace, provenance: malformed });
     expect(result.ok).toBe(false);
   });
+
+  it('rejects duplicate node IDs in workspace', () => {
+    const duplicateNodes = [
+      validWorkspace.nodes[0],
+      { ...validWorkspace.nodes[0], position: { x: 10, y: 20 } },
+    ];
+    const result = validateWorkspaceDocument({ ...validWorkspace, nodes: duplicateNodes });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain('duplicate node IDs');
+    }
+  });
+
+  it('rejects duplicate edge IDs in workspace', () => {
+    const duplicateEdges = [
+      { id: 'e1', source: 'n1', target: 'n2' },
+      { id: 'e1', source: 'n2', target: 'n3' },
+    ];
+    const result = validateWorkspaceDocument({ ...validWorkspace, edges: duplicateEdges });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain('duplicate edge IDs');
+    }
+  });
+
+  it('rejects duplicate node IDs differing only by case', () => {
+    const nodes = [
+      { id: 'nodeA', type: 'input' as const, position: { x: 0, y: 0 }, data: { title: 'A' } },
+      { id: 'NODEA', type: 'transform' as const, position: { x: 10, y: 20 }, data: { title: 'B' } },
+    ];
+    const result = validateWorkspaceDocument({ ...validWorkspace, nodes });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain('duplicate node IDs');
+    }
+  });
+
+  it('rejects duplicate edge IDs differing only by case', () => {
+    const nodes = [
+      { id: 'n1', type: 'input' as const, position: { x: 0, y: 0 }, data: { title: '1' } },
+      { id: 'n2', type: 'output' as const, position: { x: 0, y: 0 }, data: { title: '2' } },
+    ];
+    const edges = [
+      { id: 'edge1', source: 'n1', target: 'n2' },
+      { id: 'EDGE1', source: 'n1', target: 'n2' },
+    ];
+    const result = validateWorkspaceDocument({ ...validWorkspace, nodes, edges });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain('duplicate edge IDs');
+    }
+  });
+
+  it('rejects whitespace-only node and edge IDs', () => {
+    const whitespaceNode = [{ id: '   ', type: 'input' as const, position: { x: 0, y: 0 }, data: { title: 'Space' } }];
+    expect(validateWorkspaceDocument({ ...validWorkspace, nodes: whitespaceNode }).ok).toBe(false);
+
+    const whitespaceEdge = [{ id: '   ', source: 'n1', target: 'n1' }];
+    expect(validateWorkspaceDocument({ ...validWorkspace, edges: whitespaceEdge }).ok).toBe(false);
+  });
+
+  it('rejects dangling edges that reference non-existent nodes', () => {
+    const danglingEdges = [{ id: 'e1', source: 'n1', target: 'ghostNode' }];
+    const result = validateWorkspaceDocument({ ...validWorkspace, edges: danglingEdges });
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain('reference non-existent nodes');
+    }
+  });
+
+  it('rejects edges with empty or whitespace source/target', () => {
+    const emptySource = [{ id: 'e1', source: '', target: 'n1' }];
+    expect(validateWorkspaceDocument({ ...validWorkspace, edges: emptySource }).ok).toBe(false);
+
+    const whitespaceTarget = [{ id: 'e2', source: 'n1', target: '   ' }];
+    expect(validateWorkspaceDocument({ ...validWorkspace, edges: whitespaceTarget }).ok).toBe(false);
+  });
+
+  it('rejects unknown or malformed node types', () => {
+    const unknownType = [{ id: 'n1', type: 'unsupportedNodeType', position: { x: 0, y: 0 }, data: { title: 'Test' } }];
+    expect(validateWorkspaceDocument({ ...validWorkspace, nodes: unknownType }).ok).toBe(false);
+
+    const numericType = [{ id: 'n1', type: 123, position: { x: 0, y: 0 }, data: { title: 'Test' } }];
+    expect(validateWorkspaceDocument({ ...validWorkspace, nodes: numericType }).ok).toBe(false);
+
+    const nullType = [{ id: 'n1', type: null, position: { x: 0, y: 0 }, data: { title: 'Test' } }];
+    expect(validateWorkspaceDocument({ ...validWorkspace, nodes: nullType }).ok).toBe(false);
+  });
+
+  it('rejects nodes with missing or empty type', () => {
+    const invalidNodes = [
+      { id: 'n1', position: { x: 0, y: 0 }, data: { title: 'Test' } }, // missing type
+    ];
+    const result = validateWorkspaceDocument({ ...validWorkspace, nodes: invalidNodes });
+    expect(result.ok).toBe(false);
+  });
 });
 
 describe('validateProjectExportFile', () => {
