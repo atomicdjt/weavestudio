@@ -3,9 +3,14 @@ import type { AppEdge, AppNode } from '../types';
 /**
  * Extracts the semantically meaningful fields from a node for signature comparison.
  * Deliberately excludes: position, measured dimensions, selected state, dragging state,
- * and `status` (so that approving/rejecting a review doesn't trigger a signature change).
+ * and `status` for the evaluated review node itself (so that approving/rejecting a review
+ * does not trigger a self-invalidation loop).
+ *
+ * For upstream nodes (isSelf = false), `status` IS included so that status transitions on
+ * upstream checkpoints (such as rejecting or resetting an upstream review) propagate
+ * invalidation downstream to dependent reviews.
  */
-const semanticNode = (node: AppNode) => ({
+const semanticNode = (node: AppNode, isSelf = false) => ({
   id: node.id,
   type: node.type,
   title: node.data.title,
@@ -18,6 +23,9 @@ const semanticNode = (node: AppNode) => ({
   expectedOutput: node.data.expectedOutput ?? '',
   provider: node.data.provider ?? null,
   modelName: node.data.modelName ?? '',
+  baseUrl: node.data.baseUrl ?? '',
+  providerNote: node.data.providerNote ?? '',
+  status: isSelf ? null : (node.data.status ?? null),
 });
 
 const semanticEdge = (edge: AppEdge) => ({
@@ -106,13 +114,22 @@ const reviewSubgraphSignature = (
   const subgraphNodes: ReturnType<typeof semanticNode>[] = [];
   for (const id of upstream) {
     const node = nodeById.get(id);
-    if (node) subgraphNodes.push(semanticNode(node));
+    if (node) subgraphNodes.push(semanticNode(node, id === reviewId));
   }
 
-  // Collect edges where both endpoints are in the upstream set
-  const subgraphEdges = edges
-    .filter((e) => upstream.has(e.source) && upstream.has(e.target))
-    .map(semanticEdge);
+  // Collect edges where both endpoints are in the upstream set, deduplicated by edge key
+  const seenEdges = new Set<string>();
+  const subgraphEdges: ReturnType<typeof semanticEdge>[] = [];
+  for (const edge of edges) {
+    if (upstream.has(edge.source) && upstream.has(edge.target)) {
+      const se = semanticEdge(edge);
+      const key = JSON.stringify(se);
+      if (!seenEdges.has(key)) {
+        seenEdges.add(key);
+        subgraphEdges.push(se);
+      }
+    }
+  }
 
   return JSON.stringify({
     sourceMaterial,

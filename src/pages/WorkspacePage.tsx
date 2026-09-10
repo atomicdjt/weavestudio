@@ -177,6 +177,8 @@ export const WorkspacePage = () => {
     if (!next) return;
 
     setWorkspace(next);
+    historyRef.current.reset(next);
+    setHistoryVersion((v) => v + 1);
     setIndexEntries(loadIndex().workspaces);
     setSelectedNodeId(null);
     setWorkflowValidator(null);
@@ -279,6 +281,7 @@ export const WorkspacePage = () => {
 
   const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
     if (restoringHistoryRef.current) return;
+    let invalidated = false;
     setWorkspace((current) => {
       if (JSON.stringify(canvasNodes) === JSON.stringify(current.nodes)) return current;
       const guardedNodes = invalidateApprovedReviews({
@@ -289,17 +292,24 @@ export const WorkspacePage = () => {
         previousSource: current.sourceMaterial,
         nextSource: current.sourceMaterial,
       });
+      if (guardedNodes.some((node, i) => node.data.status !== canvasNodes[i]?.data.status)) {
+        invalidated = true;
+      }
       const next = { ...current, nodes: guardedNodes };
       historyRef.current.record(next, 'canvas');
       setHistoryVersion((value) => value + 1);
       return next;
     });
     setWorkflowValidator(null);
+    if (invalidated) {
+      setGraphEpoch((e) => e + 1);
+    }
   };
   const handleAutoLayout = () => replaceGraph({ nodes: autoLayoutNodes(workspace.nodes, workspace.edges) });
 
   const handleCanvasEdgesChange = (canvasEdges: WorkspaceDocument['edges']) => {
     if (restoringHistoryRef.current) return;
+    let invalidated = false;
     setWorkspace((current) => {
       if (JSON.stringify(canvasEdges) === JSON.stringify(current.edges)) return current;
       const guardedNodes = invalidateApprovedReviews({
@@ -310,12 +320,18 @@ export const WorkspacePage = () => {
         previousSource: current.sourceMaterial,
         nextSource: current.sourceMaterial,
       });
+      if (guardedNodes.some((node, i) => node.data.status !== current.nodes[i]?.data.status)) {
+        invalidated = true;
+      }
       const next = { ...current, nodes: guardedNodes, edges: canvasEdges };
       historyRef.current.record(next, 'canvas');
       setHistoryVersion((value) => value + 1);
       return next;
     });
     setWorkflowValidator(null);
+    if (invalidated) {
+      setGraphEpoch((e) => e + 1);
+    }
   };
 
   const handleAddNode = (type: NodeType) => {
@@ -346,11 +362,10 @@ export const WorkspacePage = () => {
 
   const handlePortabilityReload = () => {
     const active = getActiveWorkspace();
-    if (active) {
-      setWorkspace(active);
-    } else {
-      setWorkspace(createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
-    }
+    const target = active ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+    setWorkspace(target);
+    historyRef.current.reset(target);
+    setHistoryVersion((v) => v + 1);
     setIndexEntries(loadIndex().workspaces);
     setWorkflowValidator(null);
     setSelectedNodeId(null);
@@ -360,14 +375,16 @@ export const WorkspacePage = () => {
 
   const handleResetDemo = () => {
     const openDemo = () => {
-    const intentId = createId('intent');
-    const next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
-    if (!next) return;
-    setWorkspace(next);
-    setIndexEntries(loadIndex().workspaces);
-    setWorkflowValidator(null);
-    setSelectedNodeId(null);
-    setGraphEpoch((e) => e + 1);
+      const intentId = createId('intent');
+      const next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
+      if (!next) return;
+      setWorkspace(next);
+      historyRef.current.reset(next);
+      setHistoryVersion((v) => v + 1);
+      setIndexEntries(loadIndex().workspaces);
+      setWorkflowValidator(null);
+      setSelectedNodeId(null);
+      setGraphEpoch((e) => e + 1);
     };
     if (!workspace.meta?.guidedDemo) {
       setConfirmation({ title: 'Open guided demo?', description: 'This will replace the current workspace in the canvas. Your existing workspace remains saved in this browser and can be reopened from the workspace menu.', label: 'Open guided demo', action: openDemo });
@@ -381,6 +398,8 @@ export const WorkspacePage = () => {
     if (checkpoint.result.status !== 'saved') { setNotice(checkpoint.result.error ?? 'Could not save recovery checkpoint. Restore cancelled.'); return; }
     const { workspace: restored, legacyIncomplete } = applySnapshotToWorkspace(workspace, snapshot);
     setWorkspace(restored);
+    historyRef.current.reset(restored);
+    setHistoryVersion((v) => v + 1);
     setWorkflowValidator(null);
     setSelectedNodeId(null);
     setGraphEpoch((e) => e + 1);
@@ -551,7 +570,10 @@ export const WorkspacePage = () => {
     deleteWorkspace(workspace.id);
     const index = loadIndex();
     const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
-    setWorkspace(next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
+    const active = next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+    setWorkspace(active);
+    historyRef.current.reset(active);
+    setHistoryVersion((v) => v + 1);
     setIndexEntries(loadIndex().workspaces);
     setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
@@ -594,6 +616,8 @@ export const WorkspacePage = () => {
               onCreate={() => {
                 const next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
                 setWorkspace(next);
+                historyRef.current.reset(next);
+                setHistoryVersion((v) => v + 1);
                 setIndexEntries(loadIndex().workspaces);
                 setWorkflowValidator(null);
                 setSelectedNodeId(null);
@@ -603,6 +627,8 @@ export const WorkspacePage = () => {
                 const copy = duplicateWorkspace(workspace.id);
                 if (!copy) return;
                 setWorkspace(copy);
+                historyRef.current.reset(copy);
+                setHistoryVersion((v) => v + 1);
                 setIndexEntries(loadIndex().workspaces);
                 setWorkflowValidator(null);
                 setGraphEpoch((e) => e + 1);
@@ -613,11 +639,10 @@ export const WorkspacePage = () => {
                 deleteWorkspace(workspace.id);
                 const index = loadIndex();
                 const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId!) : null;
-                if (next) {
-                  setWorkspace(next!);
-                } else {
-                  setWorkspace(createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] }));
-                }
+                const active = next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+                setWorkspace(active);
+                historyRef.current.reset(active);
+                setHistoryVersion((v) => v + 1);
                 setIndexEntries(loadIndex().workspaces);
                 setWorkflowValidator(null);
                 setGraphEpoch((e) => e + 1);
@@ -733,52 +758,72 @@ export const WorkspacePage = () => {
             sample={template?.messyInputSample}
             syncStatus={syncStatus}
             onChange={(value) => {
-              patchWorkspace((current) => ({
-                ...current,
-                sourceMaterial: value,
-                nodes: invalidateApprovedReviews({
+              let invalidated = false;
+              patchWorkspace((current) => {
+                const guardedNodes = invalidateApprovedReviews({
                   previousNodes: current.nodes,
                   nextNodes: current.nodes,
                   previousEdges: current.edges,
                   nextEdges: current.edges,
                   previousSource: current.sourceMaterial,
                   nextSource: value,
-                }),
-                meta: {
-                  ...current.meta,
-                  sourceUserTouched: true,
-                  sourceSyncStatus: computeSourceSyncStatus(
-                    value,
-                    current.nodes,
-                    typeof current.meta?.appliedSourceFingerprint === 'string'
-                      ? current.meta.appliedSourceFingerprint
-                      : undefined,
-                  ),
-                },
-              }), 'source');
+                });
+                if (guardedNodes.some((node, i) => node.data.status !== current.nodes[i]?.data.status)) {
+                  invalidated = true;
+                }
+                return {
+                  ...current,
+                  sourceMaterial: value,
+                  nodes: guardedNodes,
+                  meta: {
+                    ...current.meta,
+                    sourceUserTouched: true,
+                    sourceSyncStatus: computeSourceSyncStatus(
+                      value,
+                      current.nodes,
+                      typeof current.meta?.appliedSourceFingerprint === 'string'
+                        ? current.meta.appliedSourceFingerprint
+                        : undefined,
+                    ),
+                  },
+                };
+              }, 'source');
               setWorkflowValidator(null);
+              if (invalidated) {
+                setGraphEpoch((e) => e + 1);
+              }
             }}
             onUseSample={() => {
               if (!template?.messyInputSample) return;
               const value = template.messyInputSample;
-              patchWorkspace((current) => ({
-                ...current,
-                sourceMaterial: value,
-                nodes: invalidateApprovedReviews({
+              let invalidated = false;
+              patchWorkspace((current) => {
+                const guardedNodes = invalidateApprovedReviews({
                   previousNodes: current.nodes,
                   nextNodes: current.nodes,
                   previousEdges: current.edges,
                   nextEdges: current.edges,
                   previousSource: current.sourceMaterial,
                   nextSource: value,
-                }),
-                meta: {
-                  ...current.meta,
-                  sourceUserTouched: true,
-                  sourceSyncStatus: 'source_ahead',
-                },
-              }), 'source');
+                });
+                if (guardedNodes.some((node, i) => node.data.status !== current.nodes[i]?.data.status)) {
+                  invalidated = true;
+                }
+                return {
+                  ...current,
+                  sourceMaterial: value,
+                  nodes: guardedNodes,
+                  meta: {
+                    ...current.meta,
+                    sourceUserTouched: true,
+                    sourceSyncStatus: 'source_ahead',
+                  },
+                };
+              }, 'source');
               setWorkflowValidator(null);
+              if (invalidated) {
+                setGraphEpoch((e) => e + 1);
+              }
             }}
             onAddSourceFragment={handleAddSourceFragment}
             onApplyToInput={handleApplyToInput}

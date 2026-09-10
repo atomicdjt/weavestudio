@@ -63,6 +63,74 @@ const hasUpstreamInput = (nodeId: string, nodes: AppNode[], edges: AppEdge[]) =>
   return false;
 };
 
+export const findCycleNodeIds = (nodes: AppNode[], edges: AppEdge[]): Set<string> => {
+  const nodeIds = new Set(nodes.map((n) => n.id));
+  const validEdges = edges.filter((e) => nodeIds.has(e.source) && nodeIds.has(e.target));
+
+  const adj = new Map<string, string[]>();
+  nodes.forEach((n) => adj.set(n.id, []));
+  validEdges.forEach((e) => adj.get(e.source)?.push(e.target));
+
+  const cycleNodeIds = new Set<string>();
+
+  // Any node with a self-loop is trivially in a cycle
+  validEdges.forEach((e) => {
+    if (e.source === e.target) {
+      cycleNodeIds.add(e.source);
+    }
+  });
+
+  // Tarjan's Strongly Connected Components (SCC) algorithm
+  let index = 0;
+  const indices = new Map<string, number>();
+  const lowlinks = new Map<string, number>();
+  const onStack = new Set<string>();
+  const stack: string[] = [];
+
+  const strongconnect = (v: string) => {
+    indices.set(v, index);
+    lowlinks.set(v, index);
+    index++;
+    stack.push(v);
+    onStack.add(v);
+
+    const neighbors = adj.get(v) ?? [];
+    for (const w of neighbors) {
+      if (!indices.has(w)) {
+        strongconnect(w);
+        lowlinks.set(v, Math.min(lowlinks.get(v)!, lowlinks.get(w)!));
+      } else if (onStack.has(w)) {
+        lowlinks.set(v, Math.min(lowlinks.get(v)!, indices.get(w)!));
+      }
+    }
+
+    if (lowlinks.get(v) === indices.get(v)) {
+      const scc: string[] = [];
+      let w: string;
+      do {
+        w = stack.pop()!;
+        onStack.delete(w);
+        scc.push(w);
+      } while (w !== v);
+
+      // Components with >1 node are directed cycles
+      if (scc.length > 1) {
+        for (const id of scc) {
+          cycleNodeIds.add(id);
+        }
+      }
+    }
+  };
+
+  nodes.forEach((node) => {
+    if (!indices.has(node.id)) {
+      strongconnect(node.id);
+    }
+  });
+
+  return cycleNodeIds;
+};
+
 const addIssue = (issues: workflowValidatorIssue[], issue: workflowValidatorIssue) => {
   issues.push(issue);
 };
@@ -111,6 +179,19 @@ export const buildWorkflowValidator = (nodes: AppNode[], edges: AppEdge[]): Work
       suggestedFix: 'Add an Output node and draft the final brief, SOP, plan, or report content.',
     });
   }
+
+  const cycleNodeIds = findCycleNodeIds(nodes, validEdges);
+  cycleNodeIds.forEach((nodeId) => {
+    const node = nodes.find((n) => n.id === nodeId);
+    addIssue(issues, {
+      id: `cycle-${nodeId}`,
+      status: 'Incomplete',
+      title: 'Circular dependency detected',
+      detail: `${node?.data.title || 'Workflow node'} is part of a circular dependency loop. Workflows must be acyclic.`,
+      suggestedFix: 'Remove the circular connection to establish a valid step sequence.',
+      nodeId,
+    });
+  });
 
   nodes.forEach((node) => {
     if (!connectedNodeIds.has(node.id) && nodes.length > 1) {
