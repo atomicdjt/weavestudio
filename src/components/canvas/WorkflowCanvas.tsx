@@ -24,6 +24,8 @@ import { createId } from '../../lib/ids';
  * State ownership:
  * - Parent (WorkspacePage) is authoritative for workspace document nodes/edges data and inspector selection.
  * - Canvas holds React Flow interaction state and syncs from parent when `graphEpoch` changes.
+ * - Approval-status invalidation is also reconciled directly from parent state so a deferred
+ *   parent epoch bump cannot leave stale approved state rendered in the canvas.
  * - Viewport is preserved across ordinary updates; fitView only on first mount of a workspace.
  * - Do NOT remount this tree for source apply / node data edits — bump graphEpoch instead.
  */
@@ -129,6 +131,25 @@ const WorkflowCanvasInner = ({
     // parentNodes/parentEdges read from the render that bumped graphEpoch
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [graphEpoch, workspaceId, setNodes, setEdges]);
+
+  // Approval invalidation is correctness-sensitive and must not rely solely on the timing of
+  // a parent graphEpoch update. Reconcile a parent-owned status change by node id directly.
+  // This is deliberately status-scoped so ordinary position/selection interaction remains local
+  // until the normal epoch synchronization boundary is crossed.
+  useEffect(() => {
+    const localStatusById = new Map(nodes.map((node) => [node.id, node.data.status]));
+    const approvalStatusChanged = parentNodes.some(
+      (node) => localStatusById.has(node.id) && localStatusById.get(node.id) !== node.data.status,
+    );
+
+    if (!approvalStatusChanged) return;
+
+    applyingExternalRef.current = true;
+    setNodes(structuredClone(parentNodes));
+    requestAnimationFrame(() => {
+      applyingExternalRef.current = false;
+    });
+  }, [nodes, parentNodes, setNodes]);
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((current) => addEdge(params, current)),
