@@ -281,7 +281,6 @@ export const WorkspacePage = () => {
 
   const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
     if (restoringHistoryRef.current) return;
-    let invalidated = false;
     setWorkspace((current) => {
       if (JSON.stringify(canvasNodes) === JSON.stringify(current.nodes)) return current;
       const guardedNodes = invalidateApprovedReviews({
@@ -292,24 +291,18 @@ export const WorkspacePage = () => {
         previousSource: current.sourceMaterial,
         nextSource: current.sourceMaterial,
       });
-      if (guardedNodes.some((node, i) => node.data.status !== canvasNodes[i]?.data.status)) {
-        invalidated = true;
-      }
       const next = { ...current, nodes: guardedNodes };
       historyRef.current.record(next, 'canvas');
       setHistoryVersion((value) => value + 1);
       return next;
     });
     setWorkflowValidator(null);
-    if (invalidated) {
-      setGraphEpoch((e) => e + 1);
-    }
+    setGraphEpoch((e) => e + 1);
   };
   const handleAutoLayout = () => replaceGraph({ nodes: autoLayoutNodes(workspace.nodes, workspace.edges) });
 
   const handleCanvasEdgesChange = (canvasEdges: WorkspaceDocument['edges']) => {
     if (restoringHistoryRef.current) return;
-    let invalidated = false;
     setWorkspace((current) => {
       if (JSON.stringify(canvasEdges) === JSON.stringify(current.edges)) return current;
       const guardedNodes = invalidateApprovedReviews({
@@ -320,18 +313,13 @@ export const WorkspacePage = () => {
         previousSource: current.sourceMaterial,
         nextSource: current.sourceMaterial,
       });
-      if (guardedNodes.some((node, i) => node.data.status !== current.nodes[i]?.data.status)) {
-        invalidated = true;
-      }
       const next = { ...current, nodes: guardedNodes, edges: canvasEdges };
       historyRef.current.record(next, 'canvas');
       setHistoryVersion((value) => value + 1);
       return next;
     });
     setWorkflowValidator(null);
-    if (invalidated) {
-      setGraphEpoch((e) => e + 1);
-    }
+    setGraphEpoch((e) => e + 1);
   };
 
   const handleAddNode = (type: NodeType) => {
@@ -758,7 +746,6 @@ export const WorkspacePage = () => {
             sample={template?.messyInputSample}
             syncStatus={syncStatus}
             onChange={(value) => {
-              let invalidated = false;
               patchWorkspace((current) => {
                 const guardedNodes = invalidateApprovedReviews({
                   previousNodes: current.nodes,
@@ -768,9 +755,6 @@ export const WorkspacePage = () => {
                   previousSource: current.sourceMaterial,
                   nextSource: value,
                 });
-                if (guardedNodes.some((node, i) => node.data.status !== current.nodes[i]?.data.status)) {
-                  invalidated = true;
-                }
                 return {
                   ...current,
                   sourceMaterial: value,
@@ -789,14 +773,11 @@ export const WorkspacePage = () => {
                 };
               }, 'source');
               setWorkflowValidator(null);
-              if (invalidated) {
-                setGraphEpoch((e) => e + 1);
-              }
+              setGraphEpoch((e) => e + 1);
             }}
             onUseSample={() => {
               if (!template?.messyInputSample) return;
               const value = template.messyInputSample;
-              let invalidated = false;
               patchWorkspace((current) => {
                 const guardedNodes = invalidateApprovedReviews({
                   previousNodes: current.nodes,
@@ -806,9 +787,6 @@ export const WorkspacePage = () => {
                   previousSource: current.sourceMaterial,
                   nextSource: value,
                 });
-                if (guardedNodes.some((node, i) => node.data.status !== current.nodes[i]?.data.status)) {
-                  invalidated = true;
-                }
                 return {
                   ...current,
                   sourceMaterial: value,
@@ -821,9 +799,7 @@ export const WorkspacePage = () => {
                 };
               }, 'source');
               setWorkflowValidator(null);
-              if (invalidated) {
-                setGraphEpoch((e) => e + 1);
-              }
+              setGraphEpoch((e) => e + 1);
             }}
             onAddSourceFragment={handleAddSourceFragment}
             onApplyToInput={handleApplyToInput}
