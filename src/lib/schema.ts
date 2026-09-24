@@ -19,12 +19,27 @@ export type ValidationResult<T> =
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
+const VALID_NODE_TYPES = new Set<string>([
+  'input',
+  'transform',
+  'decision',
+  'review',
+  'aiAssist',
+  'output',
+]);
+
+const hasUniqueCaseInsensitiveIds = (items: Array<{ id: string }>) =>
+  new Set(items.map((item) => item.id.toLowerCase())).size === items.length;
+
 const isNodeArray = (value: unknown): value is AppNode[] => {
   if (!Array.isArray(value)) return false;
   return value.every(
     (node) =>
       isObject(node) &&
       typeof node.id === 'string' &&
+      node.id.trim() !== '' &&
+      typeof node.type === 'string' &&
+      VALID_NODE_TYPES.has(node.type) &&
       isObject(node.position) &&
       typeof (node.position as { x?: unknown }).x === 'number' &&
       typeof (node.position as { y?: unknown }).y === 'number' &&
@@ -38,8 +53,11 @@ const isEdgeArray = (value: unknown): value is AppEdge[] => {
     (edge) =>
       isObject(edge) &&
       typeof edge.id === 'string' &&
+      edge.id.trim() !== '' &&
       typeof edge.source === 'string' &&
-      typeof edge.target === 'string',
+      edge.source.trim() !== '' &&
+      typeof edge.target === 'string' &&
+      edge.target.trim() !== '',
   );
 };
 
@@ -163,6 +181,31 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     return {
       ok: false,
       error: 'Workspace nodes/edges are missing or invalid.',
+      partial: value as Partial<WorkspaceDocument>,
+    };
+  }
+
+  if (!hasUniqueCaseInsensitiveIds(value.nodes)) {
+    return {
+      ok: false,
+      error: 'Workspace contains duplicate node IDs.',
+      partial: value as Partial<WorkspaceDocument>,
+    };
+  }
+
+  if (!hasUniqueCaseInsensitiveIds(value.edges)) {
+    return {
+      ok: false,
+      error: 'Workspace contains duplicate edge IDs.',
+      partial: value as Partial<WorkspaceDocument>,
+    };
+  }
+
+  const nodeIds = new Set(value.nodes.map((n) => n.id));
+  if (value.edges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) {
+    return {
+      ok: false,
+      error: 'Workspace edges reference non-existent nodes.',
       partial: value as Partial<WorkspaceDocument>,
     };
   }
