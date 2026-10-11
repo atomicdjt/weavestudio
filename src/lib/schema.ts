@@ -11,6 +11,7 @@ import type {
   WorkspaceIndex,
 } from '../types';
 import { WORKSPACE_SCHEMA_VERSION } from '../types';
+import { verifyReviewApprovalSignatures } from './reviewState';
 
 export type ValidationResult<T> =
   | { ok: true; data: T }
@@ -241,7 +242,11 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
     sourceMaterial: typeof value.sourceMaterial === 'string' ? value.sourceMaterial : '',
-    nodes: value.nodes,
+    nodes: verifyReviewApprovalSignatures({
+      nodes: value.nodes,
+      edges: value.edges,
+      sourceMaterial: typeof value.sourceMaterial === 'string' ? value.sourceMaterial : '',
+    }),
     edges: value.edges,
     deliverableDraft: parseDeliverableDraft(value.deliverableDraft),
     provenance,
