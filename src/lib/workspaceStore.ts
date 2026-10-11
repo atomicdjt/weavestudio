@@ -8,6 +8,7 @@ import type {
   WorkspaceIndex,
 } from '../types';
 import { SNAPSHOT_FORMAT_VERSION, WORKSPACE_SCHEMA_VERSION } from '../types';
+import { verifyReviewApprovalSignatures } from './reviewState';
 import { createId } from './ids';
 import {
   ensureMigratedStore,
@@ -226,7 +227,9 @@ export const importProjectFile = (
   // Full localStorage backup (legacy portability)
   if (isLegacyLocalStorageBackup(raw)) {
     try {
-      for (const [key, value] of Object.entries(raw)) {
+      const inspected = inspectFullBrowserBackup(raw);
+      if (!inspected.ok) return { ok: false, error: inspected.error };
+      for (const [key, value] of Object.entries(inspected.data.records)) {
         if (key.startsWith('weavestudio_') && typeof value === 'string') {
           localStorage.setItem(key, value);
         }
@@ -345,13 +348,16 @@ export const applySnapshotToWorkspace = (
     snapshot.deliverableDraft !== undefined;
 
   if (isFull) {
+    const nodes = structuredClone(snapshot.nodes);
+    const edges = structuredClone(snapshot.edges);
+    const sourceMaterial = snapshot.sourceMaterial ?? '';
     return {
       legacyIncomplete: false,
       workspace: {
         ...workspace,
-        nodes: structuredClone(snapshot.nodes),
-        edges: structuredClone(snapshot.edges),
-        sourceMaterial: snapshot.sourceMaterial ?? '',
+        nodes: verifyReviewApprovalSignatures({ nodes, edges, sourceMaterial }),
+        edges,
+        sourceMaterial,
         deliverableDraft: snapshot.deliverableDraft
           ? structuredClone(snapshot.deliverableDraft)
           : undefined,
@@ -375,7 +381,11 @@ export const applySnapshotToWorkspace = (
     legacyIncomplete: true,
     workspace: {
       ...workspace,
-      nodes: structuredClone(snapshot.nodes),
+      nodes: verifyReviewApprovalSignatures({
+        nodes: structuredClone(snapshot.nodes),
+        edges: structuredClone(snapshot.edges),
+        sourceMaterial: workspace.sourceMaterial,
+      }),
       edges: structuredClone(snapshot.edges),
       deliverableDraft: undefined,
       provenance: undefined,
@@ -428,6 +438,7 @@ export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBr
     return { ok: false, error: 'Backup contains invalid or non-WeaveStudio records.' };
   }
   const parsed: Record<string, unknown> = {};
+  const normalizedRecords = { ...(records as Record<string, string>) };
   try { for (const key of keys) parsed[key] = JSON.parse(records[key] as string); } catch { return { ok: false, error: 'Backup contains invalid JSON and was not restored.' }; }
   if (parsed[INDEX_KEY]) {
     const index = validateWorkspaceIndex(parsed[INDEX_KEY]);
@@ -436,12 +447,13 @@ export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBr
       const document = parsed[workspaceKey(entry.id)];
       const valid = validateWorkspaceDocument(document);
       if (!valid.ok) return { ok: false, error: `Workspace “${entry.name}” is invalid: ${valid.error}` };
+      normalizedRecords[workspaceKey(entry.id)] = JSON.stringify(valid.data);
     }
   }
   const snapshots = parsed[SNAPSHOTS_KEY] ?? parsed[LEGACY_VERSIONS_KEY];
   if (snapshots !== undefined && !Array.isArray(snapshots)) return { ok: false, error: 'Backup snapshots are invalid.' };
   const workspaceCount = parsed[INDEX_KEY] ? (validateWorkspaceIndex(parsed[INDEX_KEY]).ok ? (validateWorkspaceIndex(parsed[INDEX_KEY]) as { ok: true; data: WorkspaceIndex }).data.workspaces.length : 0) : 0;
-  return { ok: true, data: { records: records as Record<string, string>, workspaceCount, snapshotCount: Array.isArray(snapshots) ? snapshots.length : 0 } };
+  return { ok: true, data: { records: normalizedRecords, workspaceCount, snapshotCount: Array.isArray(snapshots) ? snapshots.length : 0 } };
 };
 
 /** Replace only owned keys after a successful staged inspection. */

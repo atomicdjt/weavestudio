@@ -17,6 +17,7 @@
     "verify": "npm test && npm run lint && npm run typecheck && npm run build && npm run test:browser && npm run verify:buyer && npm run package:acquisition"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@tailwindcss/typography": "^0.5.20",
     "@xyflow/react": "^12.11.5",
     "clsx": "^2.1.1",

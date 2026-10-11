@@ -28,6 +28,10 @@ export interface NodeData extends Record<string, unknown> {
     | 'warning'
     | 'incomplete'
     | 'ready';
+  /** SHA-256 digest of the semantic upstream graph approved by a human reviewer. */
+  approvalSignature?: string;
+  /** Identifies the digest format so a missing digest is distinguishable from a legacy approval. */
+  approvalAttestationVersion?: 1;
   category?: NodeCategory;
   reviewRequired?: boolean;
   provider?: 'openai' | 'gemini';
