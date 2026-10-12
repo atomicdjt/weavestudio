@@ -47,12 +47,12 @@ const getDefaultNodeData = (type: NodeType): AppNode['data'] => {
     return {
       title: 'New AI Assist Blueprint',
       description: 'Optional BYOK AI step. Live network calls require explicit consent.',
-      content: 'Blueprint only by default. Use Mock offline, or allow a network call to run a provider.',
+      content: 'Optional blueprint. Edit it locally, or explicitly confirm an OpenAI/Gemini request.',
       status: 'pending',
       promptInstruction: '',
       expectedInput: '',
       expectedOutput: '',
-      providerNote: 'Requires a user-supplied key or local Ollama. No bundled API keys. Live calls are gated.',
+      providerNote: 'OpenAI/Gemini require a user-supplied API key. Keys stay in tab memory; every request requires consent.',
       reviewRequired: true,
     };
   }

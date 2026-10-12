@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type { VersionSnapshot, WorkspaceDocument } from '../../types';
 import { getVersions, saveVersion, deleteVersion } from '../../lib/storage';
 import { Save, Trash2, RotateCcw } from 'lucide-react';
@@ -9,9 +9,9 @@ interface VersionHistoryProps {
   onRestore: (snapshot: VersionSnapshot) => void;
 }
 
-export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHistoryProps) => {
-  const [revision, setRevision] = useState(0);
-  const versions = useMemo(() => getVersions().filter((v) => v.workspaceId === workspace.id), [revision, clearSignal, workspace.id]);
+export const VersionHistory = ({ workspace, onRestore }: VersionHistoryProps) => {
+  const [, setRevision] = useState(0);
+  const versions = getVersions().filter((v) => v.workspaceId === workspace.id);
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
 

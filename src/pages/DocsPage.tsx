@@ -33,9 +33,9 @@ export const DocsPage = () => {
           <ul className="list-disc list-inside space-y-2 text-sm">
             <li>Workspaces autosave to browser localStorage with a visible save status.</li>
             <li>Clearing site data, private browsing, or another browser will not see your work — export important projects.</li>
-            <li>The golden path (templates, canvas, validate, export) does not require network access.</li>
+            <li>After its assets load, the core workflow works locally. There is no offline-install guarantee; optional AI and remote-image loading require networking.</li>
             <li>
-              Optional AI Assist live provider calls are <strong>off until you confirm</strong>. Prefer Mock (offline).
+              Optional AI Assist live provider calls are <strong>off until you confirm</strong>. The core workflow needs no provider.
               API keys stay in session memory only and are not written to localStorage.
             </li>
           </ul>

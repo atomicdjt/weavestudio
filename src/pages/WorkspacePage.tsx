@@ -73,11 +73,11 @@ const getNewNodeData = (type: NodeType): AppNode['data'] => {
   return {
     ...base,
     description: 'Optional BYOK-ready AI adapter step. Live network calls require explicit consent.',
-    content: 'Blueprint only by default. Use Mock offline, or allow a network call to run a provider.',
+    content: 'Optional blueprint. Edit it locally, or explicitly confirm an OpenAI/Gemini request.',
     promptInstruction: '',
     expectedInput: '',
     expectedOutput: '',
-    providerNote: 'Requires a user-supplied key or local Ollama. No bundled API keys. Live calls are gated.',
+    providerNote: 'OpenAI/Gemini require a user-supplied API key. Keys stay in tab memory; every request requires consent.',
     reviewRequired: true,
   };
 };
