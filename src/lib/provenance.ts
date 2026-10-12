@@ -23,6 +23,17 @@ export const fingerprintText = (value: string): string => {
   return `fnv1a32:${hash.toString(16).padStart(8, '0')}`;
 };
 
+/** Stable claim identity ignores line wrapping and repeated whitespace. */
+export const normalizeClaimText = (value: string): string =>
+  value
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 const validOffsets = (startOffset: number, endOffset: number, sourceLength: number): boolean =>
   Number.isInteger(startOffset) &&
   Number.isInteger(endOffset) &&
@@ -60,8 +71,8 @@ export const createProvenanceClaim = (args: {
 }): ProvenanceClaim => ({
   id: args.id ?? createId('claim'),
   nodeId: args.nodeId,
-  claimText: args.claimText,
-  claimFingerprint: fingerprintText(args.claimText),
+  claimText: normalizeClaimText(args.claimText),
+  claimFingerprint: fingerprintText(normalizeClaimText(args.claimText)),
   sourceFragmentIds: [...args.sourceFragmentIds],
   viaNodeIds: [...(args.viaNodeIds ?? [])],
   derivation: args.derivation,
@@ -155,7 +166,7 @@ export const upsertProvenanceClaim = (
   if (missingFragment) throw new Error(`Unknown source fragment: ${missingFragment}`);
 
   const existingIndex = graph.claims.findIndex(
-    (claim) => claim.nodeId === args.nodeId && claim.claimText === args.claimText,
+    (claim) => claim.nodeId === args.nodeId && claim.claimText === normalizeClaimText(args.claimText),
   );
   const existing = existingIndex >= 0 ? graph.claims[existingIndex] : undefined;
   const claim = createProvenanceClaim({
@@ -186,7 +197,7 @@ export const validateProvenanceClaim = (
 
   if (
     fingerprintText(claim.claimText) !== claim.claimFingerprint ||
-    !origin.data.content.includes(claim.claimText)
+    !claimParts(origin.data.content).some((candidate) => candidate === normalizeClaimText(claim.claimText))
   ) {
     return 'stale';
   }
@@ -243,7 +254,7 @@ const claimParts = (content: string): string[] => {
   const parts: string[] = [];
   let paragraph: string[] = [];
   const flush = () => {
-    const value = paragraph.join(' ').trim();
+    const value = normalizeClaimText(paragraph.join(' '));
     if (value) parts.push(value);
     paragraph = [];
   };
@@ -257,7 +268,7 @@ const claimParts = (content: string): string[] => {
     const bullet = line.match(/^[-*+]\s+(.+)$/);
     if (bullet) {
       flush();
-      const value = bullet[1].trim();
+      const value = normalizeClaimText(bullet[1]);
       if (value) parts.push(value);
       continue;
     }

@@ -433,11 +433,11 @@ export const WorkspacePage = () => {
   };
 
   const handleWorkflowValidator = () => {
-    setWorkflowValidator(buildWorkflowValidator(nodes, edges));
+    setWorkflowValidator(buildWorkflowValidator(nodes, edges, template));
   };
 
   const handleOpenPreview = () => {
-    const liveValidation = buildWorkflowValidator(nodes, edges);
+    const liveValidation = buildWorkflowValidator(nodes, edges, template);
     if (liveValidation.exportReadiness === 'Incomplete' || liveValidation.exportReadiness === 'Needs Review') {
       setWorkflowValidator(liveValidation);
       setNotice('Resolve blocking validation issues and approve required human review before generating or exporting.');

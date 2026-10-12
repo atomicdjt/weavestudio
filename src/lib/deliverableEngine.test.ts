@@ -41,6 +41,50 @@ const edges: AppEdge[] = [
 ];
 
 describe('composeDeliverableMarkdown', () => {
+  it('keeps categorized transforms in their own template sections instead of matching by type', () => {
+    const template = {
+      schemaVersion: TEMPLATE_SCHEMA_VERSION,
+      id: 'routing',
+      title: 'Routing',
+      description: '',
+      idealUser: '',
+      inputInstructions: '',
+      messyInputSample: '',
+      expectedOutputType: 'Plan',
+      valueProposition: '',
+      stages: [],
+      nodes: [],
+      edges: [],
+      pack: 'primary' as const,
+      completionCriteria: [],
+      exportBehavior: { defaultFilenameStem: 'routing', includeProcessAppendix: false },
+      outputStructure: {
+        title: 'Routing plan',
+        requiredSections: [
+          { id: 'actions', title: 'Action items', categories: ['action' as const], nodeTypes: ['transform'], required: true },
+          { id: 'decisions', title: 'Decisions', categories: ['decision' as const], required: true },
+          { id: 'questions', title: 'Open questions', categories: ['open_question' as const], required: true },
+        ],
+        optionalSections: [],
+      },
+    } satisfies WorkflowTemplate;
+    const categorized: AppNode[] = [
+      { id: 'action', type: 'transform', position: { x: 0, y: 0 }, data: { title: 'Action', description: '', content: 'Book the review.', category: 'action' } },
+      { id: 'decision', type: 'transform', position: { x: 0, y: 0 }, data: { title: 'Decision', description: '', content: 'Use the local workflow.', category: 'decision' } },
+      { id: 'question', type: 'transform', position: { x: 0, y: 0 }, data: { title: 'Question', description: '', content: 'Who owns follow-up?', category: 'open_question' } },
+    ];
+
+    const markdown = composeDeliverableMarkdown(categorized, [], { template });
+    const actions = markdown.slice(markdown.indexOf('## Action items'), markdown.indexOf('## Decisions'));
+    const decisions = markdown.slice(markdown.indexOf('## Decisions'), markdown.indexOf('## Open questions'));
+
+    expect(actions).toContain('Book the review.');
+    expect(actions).not.toContain('Use the local workflow.');
+    expect(actions).not.toContain('Who owns follow-up?');
+    expect(decisions).toContain('Use the local workflow.');
+    expect(markdown).toContain('## Open questions\n\nWho owns follow-up?');
+  });
+
   it('builds structured markdown without dumping full inventory by default', () => {
     const md = composeDeliverableMarkdown(nodes, edges, { title: 'Test Brief' });
     expect(md).toContain('# Test Brief');

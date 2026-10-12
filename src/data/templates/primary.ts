@@ -122,7 +122,12 @@ export const PRIMARY_TEMPLATES: WorkflowTemplate[] = [
       { id: 'review', title: 'Review', guidance: 'Check source quality and overclaiming.', recommendedNodeTypes: ['review'] },
       { id: 'deliver', title: 'Deliver', guidance: 'Compose the brief for a reader who was not in the research.', recommendedNodeTypes: ['output'] },
     ],
-    nodes: research.nodes,
+    nodes: research.nodes.map((node) => {
+      if (node.id === 'n_t1') return { ...node, data: { ...node.data, category: 'conclusion' as const } };
+      if (node.id === 'n_t2') return { ...node, data: { ...node.data, category: 'evidence' as const } };
+      if (node.id === 'n_t3') return { ...node, data: { ...node.data, category: 'risk' as const } };
+      return node;
+    }),
     edges: research.edges,
     outputStructure: {
       title: 'Research Brief',
