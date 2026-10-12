@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { VersionSnapshot, WorkspaceDocument } from '../../types';
 import { getVersions, saveVersion, deleteVersion } from '../../lib/storage';
 import { Save, Trash2, RotateCcw } from 'lucide-react';
@@ -10,19 +10,16 @@ interface VersionHistoryProps {
 }
 
 export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHistoryProps) => {
-  const [versions, setVersions] = useState<VersionSnapshot[]>(() => getVersions().filter((v) => v.workspaceId === workspace.id));
+  const [revision, setRevision] = useState(0);
+  const versions = useMemo(() => getVersions().filter((v) => v.workspaceId === workspace.id), [revision, clearSignal, workspace.id]);
   const [title, setTitle] = useState('');
   const [error, setError] = useState('');
-
-  useEffect(() => {
-    setVersions(getVersions().filter((v) => v.workspaceId === workspace.id));
-  }, [clearSignal, workspace.id]);
 
   const handleSave = () => {
     if (!title.trim()) return;
     try {
       saveVersion(title, workspace);
-      setVersions(getVersions().filter((snapshot) => snapshot.workspaceId === workspace.id));
+      setRevision((value) => value + 1);
       setTitle('');
       setError('');
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Snapshot could not be saved.'); }
@@ -32,7 +29,7 @@ export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHis
     const result = deleteVersion(id);
     if (result.status !== 'saved') { setError(result.error || 'Snapshot could not be deleted.'); return; }
     setError('');
-    setVersions(getVersions().filter((snapshot) => snapshot.workspaceId === workspace.id));
+    setRevision((value) => value + 1);
   };
 
   return (
@@ -74,9 +71,9 @@ export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHis
         {versions.map((v) => (
           <div key={v.id} className="bg-[#1e1e24] border border-gray-800 rounded-lg p-3">
             <h4 className="font-semibold text-sm text-gray-200 truncate">{v.title}</h4>
-            <div className="text-xs text-gray-500 mt-1">{new Date(v.timestamp).toLocaleString()}</div>
-            <div className="text-xs text-gray-500 mt-1">{v.workspaceNameAtCreation ?? v.workspaceName ?? workspace.name}</div>
-            <div className="text-[10px] text-gray-600 mt-1">
+            <div className="text-xs text-gray-400 mt-1">{new Date(v.timestamp).toLocaleString()}</div>
+            <div className="text-xs text-gray-400 mt-1">{v.workspaceNameAtCreation ?? v.workspaceName ?? workspace.name}</div>
+            <div className="text-[10px] text-gray-400 mt-1">
               {(v.snapshotVersion ?? 1) >= 2 ? 'Full workspace' : 'Legacy graph-only'}
             </div>
             <div className="flex items-center space-x-2 mt-3">

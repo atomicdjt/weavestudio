@@ -24,6 +24,22 @@ test('delayed AI draft belongs to its original node and revision', async ({ page
   await expect(page.getByText(/draft no longer matches/i)).toBeVisible();
 });
 
+test('cancelling a dispatched AI request never exposes an apply-able draft', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop async cancellation regression.');
+  let pending: Route | undefined;
+  await page.route(/api\.openai\.com/, (route) => { pending = route; });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Add AI Assist node' }).click();
+  await page.getByLabel('API key (memory only)').fill('test-key');
+  await page.getByRole('button', { name: /run live provider/i }).click();
+  await page.getByRole('button', { name: /confirm and send/i }).click();
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await page.getByRole('button', { name: 'Cancel request', exact: true }).click();
+  await expect(page.getByText('The request was cancelled.')).toBeVisible();
+  await pending!.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output_text: 'Cancelled draft' }) }).catch(() => undefined);
+  await expect(page.getByRole('button', { name: 'Apply to node' })).toHaveCount(0);
+});
+
 test('landing page renders without browser console errors', async ({ page }) => {
   const errors: string[] = [];
   page.on('console', (message) => {

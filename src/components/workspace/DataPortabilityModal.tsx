@@ -168,7 +168,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
               Workspaces stay in this browser unless you export them. Golden-path work never requires a network call.
             </p>
             <div className="flex items-center gap-2 mt-4 bg-[#1e1e24] border border-gray-800 p-3 rounded-lg text-xs font-mono">
-              <span className="text-gray-500 uppercase font-bold tracking-wider">Local storage:</span>
+              <span className="text-gray-400 uppercase font-bold tracking-wider">Local storage:</span>
               <span className={storageUsage.level === 'elevated' ? 'text-amber-300' : 'text-emerald-400'}>{storageUsage.label}</span>
             </div>
             <p className="mt-2 text-xs text-gray-400">{storageUsage.message}</p>
@@ -184,13 +184,13 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
               <Download className="w-4 h-4 text-emerald-400" />
               <div className="text-left">
                 <div className="text-emerald-400">Export current project</div>
-                <div className="text-xs text-gray-500 font-normal">.weavestudio.json (round-trip)</div>
+                <div className="text-xs text-gray-400 font-normal">.weavestudio.json (round-trip)</div>
               </div>
             </button>
 
             <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full bg-panel hover:bg-gray-800 text-gray-200 border border-border p-3 rounded-lg text-sm font-semibold transition-colors flex items-center gap-3">
               <Upload className="w-4 h-4 text-cyan-400" />
-              <div className="text-left"><div className="text-cyan-300">Restore full browser backup</div><div className="text-xs text-gray-500 font-normal">Validates first, then replaces WeaveStudio records only</div></div>
+              <div className="text-left"><div className="text-cyan-300">Restore full browser backup</div><div className="text-xs text-gray-400 font-normal">Validates first, then replaces WeaveStudio records only</div></div>
             </button>
 
             <button
@@ -201,7 +201,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
               <Download className="w-4 h-4 text-blue-400" />
               <div className="text-left">
                 <div className="text-blue-400">Download all local data</div>
-                <div className="text-xs text-gray-500 font-normal">Full browser backup</div>
+                <div className="text-xs text-gray-400 font-normal">Full browser backup</div>
               </div>
             </button>
 
@@ -213,7 +213,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
               <Upload className="w-4 h-4 text-amber-400" />
               <div className="text-left">
                 <div className="text-amber-400">Import project / backup</div>
-                <div className="text-xs text-gray-500 font-normal">Creates a new workspace by default</div>
+                <div className="text-xs text-gray-400 font-normal">Creates a new workspace by default</div>
               </div>
               <input
                 type="file"
@@ -234,7 +234,7 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
               <DatabaseX className="w-4 h-4 text-red-400" />
               <div className="text-left">
                 <div className="text-red-400">Clear all local data</div>
-                <div className="text-xs text-gray-500 font-normal">Wipe this browser&apos;s WeaveStudio storage</div>
+                <div className="text-xs text-gray-400 font-normal">Wipe this browser&apos;s WeaveStudio storage</div>
               </div>
             </button>
           </div>

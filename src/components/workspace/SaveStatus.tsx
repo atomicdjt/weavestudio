@@ -46,7 +46,7 @@ export const SaveStatusChip = ({ status, error, workspaceName }: SaveStatusProps
       <Icon className={`w-3.5 h-3.5 ${status === 'saving' ? 'animate-spin' : ''}`} />
       <span>{label}</span>
       {workspaceName && status === 'saved' && (
-        <span className="hidden sm:inline text-gray-500 truncate max-w-[10rem]">· {workspaceName}</span>
+        <span className="hidden sm:inline text-gray-400 truncate max-w-[10rem]">· {workspaceName}</span>
       )}
     </div>
   );

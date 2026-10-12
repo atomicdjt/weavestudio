@@ -31,24 +31,24 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
           <ClipboardCheck className="w-4 h-4 text-blue-300" />
           <h3 id="workflow-validator-title" className="font-bold text-sm uppercase tracking-wider text-white">Workflow Validator</h3>
         </div>
-        <button type="button" onClick={onClose} className="p-1 text-gray-500 hover:text-white transition-colors" aria-label="Close Workflow Validator">
+        <button type="button" onClick={onClose} className="p-1 text-gray-400 hover:text-white transition-colors" aria-label="Close Workflow Validator">
           <X className="w-4 h-4" />
         </button>
       </div>
 
-      <div className="p-4 overflow-y-auto flex-1 space-y-5">
+      <div role="region" aria-label="Validation results" tabIndex={0} className="p-4 overflow-y-auto flex-1 space-y-5">
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
-            <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Completeness</div>
+            <div className="text-xs uppercase tracking-wider text-gray-400 mb-1">Completeness</div>
             <div className="text-3xl font-bold text-white">{result.completenessScore}%</div>
             <p className="mt-2 text-[11px] text-gray-400">{getCompletenessHelperText(result)}</p>
           </div>
           <div className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
-            <div className="text-xs uppercase tracking-wider text-gray-500 mb-1">Issues Found</div>
+            <div className="text-xs uppercase tracking-wider text-gray-400 mb-1">Issues Found</div>
             <div className="text-3xl font-bold text-white">{result.issueCount}</div>
           </div>
           <div className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
-            <div className="text-xs uppercase tracking-wider text-gray-500 mb-2">Export Readiness</div>
+            <div className="text-xs uppercase tracking-wider text-gray-400 mb-2">Export Readiness</div>
             <StatusBadge status={result.exportReadiness} />
           </div>
         </div>
@@ -79,7 +79,7 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
         <section className="rounded-lg border border-gray-800 bg-[#1e1e24] p-4">
           <h4 className="font-semibold text-white mb-3">Step-by-step walkthrough</h4>
           {result.walkthrough.length === 0 ? (
-            <div className="rounded border border-dashed border-gray-700 p-4 text-center text-sm text-gray-500">
+            <div className="rounded border border-dashed border-gray-700 p-4 text-center text-sm text-gray-400">
               Add workflow nodes to produce a walkthrough.
             </div>
           ) : (
@@ -92,10 +92,10 @@ export const WorkflowValidatorPanel = ({ result, onClose }: WorkflowValidatorPan
                   <div>
                     <div className="flex flex-wrap items-center gap-2">
                       <span className="font-semibold text-sm text-white">{step.title}</span>
-                      <span className="text-[11px] uppercase tracking-wider text-gray-500">{step.type}</span>
+                      <span className="text-[11px] uppercase tracking-wider text-gray-400">{step.type}</span>
                     </div>
                     <p className="text-xs text-gray-400">{step.action}</p>
-                    <p className="text-[11px] text-gray-500">
+                    <p className="text-[11px] text-gray-400">
                       Review: {step.requiresReview ? 'Required or recommended' : 'Not required for this step'}
                     </p>
                   </div>
