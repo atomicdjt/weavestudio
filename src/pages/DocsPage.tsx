@@ -14,7 +14,7 @@ export const DocsPage = () => {
           <h2 className="text-xl font-bold text-white mb-4">Golden path</h2>
           <ol className="list-decimal list-inside space-y-2 text-sm">
             <li>
-              <Link to="/templates" className="text-blue-400 hover:underline">
+              <Link to="/templates" className="text-blue-400 underline hover:no-underline">
                 Choose a template
               </Link>{' '}
               (or open the guided demo from Home).
@@ -33,9 +33,9 @@ export const DocsPage = () => {
           <ul className="list-disc list-inside space-y-2 text-sm">
             <li>Workspaces autosave to browser localStorage with a visible save status.</li>
             <li>Clearing site data, private browsing, or another browser will not see your work — export important projects.</li>
-            <li>The golden path (templates, canvas, validate, export) does not require network access.</li>
+            <li>After its assets load, the core workflow works locally. There is no offline-install guarantee; optional AI and remote-image loading require networking.</li>
             <li>
-              Optional AI Assist live provider calls are <strong>off until you confirm</strong>. Prefer Mock (offline).
+              Optional AI Assist live provider calls are <strong>off until you confirm</strong>. The core workflow needs no provider.
               API keys stay in session memory only and are not written to localStorage.
             </li>
           </ul>
@@ -91,7 +91,7 @@ export const DocsPage = () => {
 
         <section id="license" className="bg-panel border border-border rounded-lg p-6">
           <h2 className="text-xl font-bold text-white mb-4">License and acquisition inquiries</h2>
-          <p className="text-sm leading-relaxed">This build is distributed as proprietary source/IP for evaluation and acquisition discussions; no public redistribution license is granted by this preview. For source/IP acquisition, request the current scope and transfer materials at <a className="text-blue-300 hover:underline" href="mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry">davidelsey9513@gmail.com</a>.</p>
+          <p className="text-sm leading-relaxed">This build is distributed as proprietary source/IP for evaluation and acquisition discussions; no public redistribution license is granted by this preview. For source/IP acquisition, request the current scope and transfer materials at <a className="text-blue-300 underline hover:no-underline" href="mailto:davidelsey9513@gmail.com?subject=WeaveStudio%20acquisition%20inquiry">davidelsey9513@gmail.com</a>.</p>
         </section>
 
         <section className="bg-panel border border-border rounded-lg p-6">

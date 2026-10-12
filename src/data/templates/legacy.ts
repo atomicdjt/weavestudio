@@ -216,11 +216,11 @@ export const LEGACY_TEMPLATES: WorkflowTemplate[] = [
         data: {
           title: 'AI Assist Blueprint',
           description: 'Optional BYOK adapter — live calls require explicit consent',
-          content: 'Blueprint only until you allow a network call. Prefer Mock for offline demos.',
+          content: 'Optional blueprint. Core editing and composition work locally without a provider.',
           promptInstruction: 'Draft candidate sections from the provided notes without adding unsupported facts.',
           expectedInput: 'Raw project notes from the Input node',
           expectedOutput: 'Candidate summary sections for reviewer approval',
-          providerNote: 'Requires user-supplied key or local Ollama. No bundled API keys. Live calls are gated.',
+          providerNote: 'OpenAI/Gemini require a user-supplied API key and explicit request consent.',
           reviewRequired: true,
           status: 'pending',
         },

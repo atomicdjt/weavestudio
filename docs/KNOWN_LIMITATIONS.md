@@ -18,10 +18,10 @@
 ## AI Assist
 
 - AI Assist is optional.
-- The offline/mock path is the default recommended path.
+- The core workflow is local by default; live OpenAI/Gemini are optional.
 - Live provider calls require explicit user confirmation and may send prompt/context over the network.
 - No API keys are bundled, and keys are not stored in `localStorage`.
-- Provider URL and model fields can be stored on a local node if the user enters them.
+- Provider/model and prompt/context are stored on the node; keys remain in tab memory. Drafts apply only to their requested workspace, node, and input revision.
 
 ## Collaboration and export
 

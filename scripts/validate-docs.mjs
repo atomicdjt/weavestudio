@@ -11,6 +11,21 @@ function runValidation() {
     hasErrors = true;
   };
 
+  // Current operational guidance must match the implemented providers.
+  for (const file of [
+    'docs/KNOWN_LIMITATIONS.md', 'docs/RELEASE_VERIFICATION.md',
+    'docs/audit/FEATURE-REALITY-MATRIX.md', 'docs/audit/LOCAL-FIRST-PRIVACY-AUDIT.md',
+    'docs/audit/TECHNICAL-DEBT-REGISTER.md', 'docs/product/TEST-STRATEGY.md',
+    'docs/product/GOLDEN-PATH-SPECIFICATION.md', 'docs/product/DELIVERABLE-ENGINE-SPECIFICATION.md',
+    'src/pages/DocsPage.tsx', 'src/pages/WorkspacePage.tsx',
+    'src/components/canvas/WorkflowCanvas.tsx', 'src/data/templates/legacy.ts',
+  ]) {
+    const guidance = readFileSync(join(rootDir, file), 'utf8');
+    if (/\bMock\b|\bOllama\b|offline\/mock/i.test(guidance)) fail(`Error: Retired provider guidance in ${file}.`);
+    if (/npm test[^\n]*\d+ tests passing/i.test(guidance)) fail(`Error: Frozen verification count in ${file}; use the commit-bound receipt.`);
+    if (/golden path works offline|AI Mock offline|E2E suite[^\n]*Planned|ACCEPTANCE-CRITERIA\.md/i.test(guidance)) fail(`Error: Stale product guidance in ${file}.`);
+  }
+
   // 1. Verify .seller-private is ignored
   try {
     execSync('git check-ignore .seller-private/foo.txt', { stdio: 'ignore' });

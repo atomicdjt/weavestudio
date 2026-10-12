@@ -115,7 +115,7 @@ export const ProvenancePanel = ({ workspace, onWorkspacePatch }: ProvenancePanel
   const canSave = Boolean(graph && selectedCandidate && selectedFragmentIds.length > 0);
 
   return (
-    <div className="h-full overflow-y-auto bg-slate-50 p-5 text-slate-900" data-testid="provenance-panel">
+    <div tabIndex={0} role="region" aria-label="Provenance details" className="h-full overflow-y-auto bg-slate-50 p-5 text-slate-900" data-testid="provenance-panel">
       <div className="mx-auto max-w-4xl space-y-5">
         <div className="rounded-lg border border-slate-300 bg-white p-4">
           <h3 className="text-lg font-semibold">Provenance review</h3>

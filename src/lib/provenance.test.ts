@@ -107,6 +107,29 @@ describe('source fragment annotation upsert', () => {
 });
 
 describe('claim trace resolution', () => {
+  it('keeps a newly linked soft-wrapped claim valid', () => {
+    const multiline = 'Alpha evidence\ncontinues on a soft line.';
+    const nodes = [node('out_1', 'output', multiline, 'output')];
+    const candidate = extractClaimCandidates(nodes)[0];
+    const fragment = createSourceFragment({ sourceMaterial: source, startOffset: 0, endOffset: 15, id: 'frag_alpha' });
+    const graph: ProvenanceGraph = {
+      version: 1,
+      sourceFingerprint: fingerprintText(source),
+      fragments: [fragment],
+      claims: [],
+    };
+
+    const linked = upsertProvenanceClaim(graph, {
+      id: 'claim_multiline',
+      nodeId: candidate.nodeId,
+      claimText: candidate.text,
+      sourceFragmentIds: [fragment.id],
+      derivation: 'direct',
+    });
+
+    expect(resolveClaimTrace({ claim: linked.claim, graph: linked.graph, sourceMaterial: source, nodes }).status).toBe('valid');
+  });
+
   it('resolves a direct source claim as valid', () => {
     const { claim, graph, nodes } = buildDirectFixture();
     const trace = resolveClaimTrace({ claim, graph, sourceMaterial: source, nodes });
