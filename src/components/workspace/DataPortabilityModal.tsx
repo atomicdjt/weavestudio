@@ -140,7 +140,11 @@ export const DataPortabilityModal = ({ workspace, onClose, onReload }: DataPorta
   };
 
   const handleClear = () => {
-    clearAllLocalData();
+    const result = clearAllLocalData();
+    if (result.status !== 'saved') {
+      setMessage(result.error ?? 'Could not clear local data. Existing data was preserved.');
+      return;
+    }
     setMessage('All WeaveStudio browser data was cleared.');
     onReload();
     closeClearConfirmation();

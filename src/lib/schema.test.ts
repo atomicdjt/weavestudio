@@ -74,6 +74,19 @@ describe('validateWorkspaceDocument', () => {
     expect(result.ok).toBe(false);
   });
 
+  it('rejects a node with structurally invalid persisted data', () => {
+    const result = validateWorkspaceDocument({
+      ...validWorkspace,
+      nodes: [{
+        ...validWorkspace.nodes[0],
+        data: { title: 'Input', description: '', content: { leaked: 'object' } },
+      }],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/node data/i);
+  });
+
   it.each([
     ['negative fragment offset', { ...provenance, fragments: [{ ...provenance.fragments[0], startOffset: -1 }] }],
     ['reversed fragment offsets', { ...provenance, fragments: [{ ...provenance.fragments[0], startOffset: 10, endOffset: 2 }] }],

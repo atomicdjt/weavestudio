@@ -112,6 +112,35 @@ test('data-clear confirmation closes with Escape without clearing data', async (
   await expect(portability.getByRole('button', { name: /clear all local data/i })).toBeFocused();
 });
 
+test('cancelling a derived-node split preserves exact storage bytes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The same confirmation component is exercised on desktop where the source controls stay visible.');
+  await page.goto('/app#legacy-split-flow');
+  await page.getByLabel('Source material').fill('First source block\n\nSecond source block');
+  await page.getByLabel('Add Transform node', { exact: true }).click();
+  await page.waitForTimeout(1_100);
+
+  const before = await page.evaluate(() => Object.fromEntries(
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('weavestudio_'))
+      .sort()
+      .map((key) => [key, localStorage.getItem(key)]),
+  ));
+
+  await page.getByRole('button', { name: 'Split into nodes' }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Replace derived nodes?' });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole('button', { name: 'Cancel' }).click();
+  await page.waitForTimeout(1_100);
+
+  const after = await page.evaluate(() => Object.fromEntries(
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('weavestudio_'))
+      .sort()
+      .map((key) => [key, localStorage.getItem(key)]),
+  ));
+  expect(after).toEqual(before);
+});
+
 test('workflow outline exposes a linear, selectable node flow', async ({ page }) => {
   await page.goto('/');
   await page.getByTestId('open-guided-demo').click();

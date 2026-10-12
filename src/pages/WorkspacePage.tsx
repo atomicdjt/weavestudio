@@ -38,6 +38,7 @@ import { createId } from '../lib/ids';
 import { getTemplateById, resolveTemplateId, TEMPLATES } from '../data/templates';
 import {
   applySnapshotToWorkspace,
+  createEmptyWorkspaceDocument,
   createWorkspace,
   deleteWorkspace,
   duplicateWorkspace,
@@ -92,7 +93,13 @@ const defaultWorkspace = (): WorkspaceDocument => {
   const existing = getActiveWorkspace();
   if (existing) return existing;
 
-  return createWorkspace({ name: 'Blank workspace', nodes: [], edges: [], sourceMaterial: '' });
+  try {
+    return createWorkspace({ name: 'Blank workspace', nodes: [], edges: [], sourceMaterial: '' });
+  } catch {
+    // The delayed save effect will surface the storage error while keeping the
+    // user's unsaved canvas available for an export/retry.
+    return createEmptyWorkspaceDocument('Blank workspace');
+  }
 };
 
 const readHistoryState = (): LocationState => {
@@ -109,7 +116,13 @@ export const WorkspacePage = () => {
   const locationState = location.state as LocationState;
 
   const [workspace, setWorkspace] = useState<WorkspaceDocument>(() => {
-    const fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
+    let fromNav: WorkspaceDocument | null = null;
+    try {
+      fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
+    } catch {
+      // The fallback remains in memory and the ordinary save path reports the
+      // persistence error without losing a user-entered canvas.
+    }
     return fromNav ?? defaultWorkspace();
   });
   const historyRef = useRef(createWorkspaceHistory(workspace));
@@ -173,7 +186,13 @@ export const WorkspacePage = () => {
     }
     if (navConsumedKey === location.key) return;
 
-    const next = resolveWorkspaceFromNav(locationState);
+    let next: WorkspaceDocument | null = null;
+    try {
+      next = resolveWorkspaceFromNav(locationState);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not create the requested workspace.');
+      return;
+    }
     if (!next) return;
 
     setWorkspace(next);
@@ -350,7 +369,15 @@ export const WorkspacePage = () => {
 
   const handlePortabilityReload = () => {
     const active = getActiveWorkspace();
-    const target = active ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+    let target = active;
+    if (!target) {
+      try {
+        target = createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Could not create a replacement workspace.');
+        return;
+      }
+    }
     setWorkspace(target);
     historyRef.current.reset(target);
     setHistoryVersion((v) => v + 1);
@@ -364,7 +391,13 @@ export const WorkspacePage = () => {
   const handleResetDemo = () => {
     const openDemo = () => {
       const intentId = createId('intent');
-      const next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
+      let next: WorkspaceDocument | null = null;
+      try {
+        next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Could not open the guided demo.');
+        return;
+      }
       if (!next) return;
       setWorkspace(next);
       historyRef.current.reset(next);
@@ -446,36 +479,16 @@ export const WorkspacePage = () => {
     }
 
     const derived = countDerivedNodes(workspace.nodes);
-    let replaceDerived = false;
-
     if (derived > 0) {
       setConfirmation({ title: 'Replace derived nodes?', description: `There are ${derived} derived node(s). This creates a fresh split from the source panel.`, label: 'Replace derived nodes', destructive: true, action: () => {
         const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, { replaceDerived: true });
         replaceGraph({ nodes: result.nodes, edges: result.edges, meta: { ...workspace.meta, appliedSourceFingerprint: workspace.sourceMaterial, sourceSyncStatus: 'in_sync' } });
       } });
-      if (window.location.hash === '#legacy-split-flow') {
-      const replace = Boolean(
-        `Split into nodes can restructure derived canvas content.\n\n` +
-          `There are currently ${derived} transform/decision/AI node(s).\n\n` +
-          `OK = REPLACE those derived nodes with a fresh split from the source panel (Input content also updates).\n` +
-          `Cancel = choose append-only or abort next.`,
-      );
-      if (!replace) {
-        const append = Boolean(
-          'Append split nodes without removing existing derived nodes?\n\n' +
-            'OK = append new nodes from source (Input content updates; existing derived nodes stay).\n' +
-            'Cancel = do nothing — canvas is preserved.',
-        );
-        if (!append) return;
-        replaceDerived = false;
-      } else {
-        replaceDerived = true;
-      }
-    }
+      return;
     }
 
     const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, {
-      replaceDerived,
+      replaceDerived: false,
     });
 
     replaceGraph({
@@ -545,7 +558,11 @@ export const WorkspacePage = () => {
   const switchWorkspace = (id: string) => {
     const next = loadWorkspaceById(id);
     if (!next) return;
-    setActiveWorkspaceId(id);
+    const result = setActiveWorkspaceId(id);
+    if (result.status !== 'saved') {
+      setNotice(result.error ?? 'Could not switch the active workspace.');
+      return;
+    }
     setWorkspace(next);
     historyRef.current.reset(next);
     setHistoryVersion((v) => v + 1);
@@ -555,10 +572,22 @@ export const WorkspacePage = () => {
   };
 
   const removeWorkspace = () => {
-    deleteWorkspace(workspace.id);
+    const result = deleteWorkspace(workspace.id);
+    if (result.status !== 'saved') {
+      setNotice(result.error ?? 'Could not delete this workspace.');
+      return;
+    }
     const index = loadIndex();
     const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
-    const active = next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+    let active = next;
+    if (!active) {
+      try {
+        active = createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Workspace was deleted, but a replacement workspace could not be created.');
+        return;
+      }
+    }
     setWorkspace(active);
     historyRef.current.reset(active);
     setHistoryVersion((v) => v + 1);
@@ -602,7 +631,13 @@ export const WorkspacePage = () => {
               onSelect={switchWorkspace}
               onRename={(name) => patchWorkspace({ name })}
               onCreate={() => {
-                const next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
+                let next: WorkspaceDocument;
+                try {
+                  next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
+                } catch (error) {
+                  setNotice(error instanceof Error ? error.message : 'Could not create a new workspace.');
+                  return;
+                }
                 setWorkspace(next);
                 historyRef.current.reset(next);
                 setHistoryVersion((v) => v + 1);
@@ -612,7 +647,13 @@ export const WorkspacePage = () => {
                 setGraphEpoch((e) => e + 1);
               }}
               onDuplicate={() => {
-                const copy = duplicateWorkspace(workspace.id);
+                let copy: WorkspaceDocument | null;
+                try {
+                  copy = duplicateWorkspace(workspace.id);
+                } catch (error) {
+                  setNotice(error instanceof Error ? error.message : 'Could not duplicate this workspace.');
+                  return;
+                }
                 if (!copy) return;
                 setWorkspace(copy);
                 historyRef.current.reset(copy);
@@ -623,18 +664,6 @@ export const WorkspacePage = () => {
               }}
               onDelete={() => {
                 setConfirmation({ title: `Delete “${workspace.name}”?`, description: 'This removes the workspace and its snapshots from this browser. Export a backup first if you may need it later.', label: 'Delete workspace', destructive: true, action: removeWorkspace });
-                if (window.location.hash === '#legacy-delete-flow') {
-                deleteWorkspace(workspace.id);
-                const index = loadIndex();
-                const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId!) : null;
-                const active = next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
-                setWorkspace(active);
-                historyRef.current.reset(active);
-                setHistoryVersion((v) => v + 1);
-                setIndexEntries(loadIndex().workspaces);
-                setWorkflowValidator(null);
-                setGraphEpoch((e) => e + 1);
-                }
               }}
             />
             <div className="pointer-events-auto flex flex-wrap items-center gap-2">

@@ -7,6 +7,7 @@ import type {
   ProvenanceDerivation,
   ProvenanceGraph,
   SourceFragment,
+  VersionSnapshot,
   WorkspaceDocument,
   WorkspaceIndex,
 } from '../types';
@@ -28,8 +29,53 @@ const VALID_NODE_TYPES = new Set<string>([
   'output',
 ]);
 
+const VALID_NODE_CATEGORIES = new Set<string>([
+  'source',
+  'evidence',
+  'action',
+  'risk',
+  'decision',
+  'conclusion',
+  'open_question',
+  'output',
+  'other',
+]);
+
+const VALID_NODE_STATUSES = new Set<string>([
+  'pending',
+  'approved',
+  'rejected',
+  'running',
+  'complete',
+  'needs_review',
+  'warning',
+  'incomplete',
+  'ready',
+]);
+
 const hasUniqueCaseInsensitiveIds = (items: Array<{ id: string }>) =>
   new Set(items.map((item) => item.id.toLowerCase())).size === items.length;
+
+const isValidNodeData = (value: unknown): boolean => {
+  if (!isObject(value)) return false;
+  if (
+    typeof value.title !== 'string' ||
+    typeof value.description !== 'string' ||
+    typeof value.content !== 'string'
+  ) {
+    return false;
+  }
+  if (value.category !== undefined && (typeof value.category !== 'string' || !VALID_NODE_CATEGORIES.has(value.category))) {
+    return false;
+  }
+  if (value.status !== undefined && (typeof value.status !== 'string' || !VALID_NODE_STATUSES.has(value.status))) {
+    return false;
+  }
+  if (value.reviewRequired !== undefined && typeof value.reviewRequired !== 'boolean') return false;
+  if (value.provider !== undefined && value.provider !== 'openai' && value.provider !== 'gemini') return false;
+  return ['baseUrl', 'modelName', 'promptInstruction', 'expectedInput', 'expectedOutput', 'providerNote']
+    .every((key) => value[key] === undefined || typeof value[key] === 'string');
+};
 
 const isNodeArray = (value: unknown): value is AppNode[] => {
   if (!Array.isArray(value)) return false;
@@ -43,6 +89,8 @@ const isNodeArray = (value: unknown): value is AppNode[] => {
       isObject(node.position) &&
       typeof (node.position as { x?: unknown }).x === 'number' &&
       typeof (node.position as { y?: unknown }).y === 'number' &&
+      Number.isFinite((node.position as { x: number }).x) &&
+      Number.isFinite((node.position as { y: number }).y) &&
       isObject(node.data),
   );
 };
@@ -61,14 +109,25 @@ const isEdgeArray = (value: unknown): value is AppEdge[] => {
   );
 };
 
-const parseDeliverableDraft = (value: unknown): DeliverableDraft | undefined => {
-  if (!isObject(value)) return undefined;
-  if (typeof value.title !== 'string' || typeof value.markdown !== 'string') return undefined;
+const parseDeliverableDraft = (value: unknown): ValidationResult<DeliverableDraft> => {
+  if (!isObject(value) || typeof value.title !== 'string' || typeof value.markdown !== 'string') {
+    return { ok: false, error: 'Workspace deliverable draft is invalid.' };
+  }
   return {
-    title: value.title,
-    markdown: value.markdown,
-    userEdited: Boolean(value.userEdited),
+    ok: true,
+    data: {
+      title: value.title,
+      markdown: value.markdown,
+      userEdited: Boolean(value.userEdited),
+    },
   };
+};
+
+const parseViewport = (value: unknown): { x: number; y: number; zoom: number } | null => {
+  if (!isObject(value)) return null;
+  if (typeof value.x !== 'number' || typeof value.y !== 'number' || typeof value.zoom !== 'number') return null;
+  if (!Number.isFinite(value.x) || !Number.isFinite(value.y) || !Number.isFinite(value.zoom)) return null;
+  return { x: value.x, y: value.y, zoom: value.zoom };
 };
 
 const DERIVATIONS = new Set<ProvenanceDerivation>([
@@ -201,6 +260,14 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     };
   }
 
+  if (value.nodes.some((node) => !isValidNodeData(node.data))) {
+    return {
+      ok: false,
+      error: 'Workspace node data is invalid.',
+      partial: value as Partial<WorkspaceDocument>,
+    };
+  }
+
   const nodeIds = new Set(value.nodes.map((n) => n.id));
   if (value.edges.some((edge) => !nodeIds.has(edge.source) || !nodeIds.has(edge.target))) {
     return {
@@ -230,6 +297,23 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     provenance = provenanceResult.data;
   }
 
+  let deliverableDraft: DeliverableDraft | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, 'deliverableDraft') && value.deliverableDraft !== undefined) {
+    const draftResult = parseDeliverableDraft(value.deliverableDraft);
+    if (!draftResult.ok) return { ok: false, error: draftResult.error };
+    deliverableDraft = draftResult.data;
+  }
+
+  let viewport: { x: number; y: number; zoom: number } | undefined;
+  if (Object.prototype.hasOwnProperty.call(value, 'viewport') && value.viewport !== undefined) {
+    viewport = parseViewport(value.viewport) ?? undefined;
+    if (!viewport) return { ok: false, error: 'Workspace viewport is invalid.' };
+  }
+
+  if (Object.prototype.hasOwnProperty.call(value, 'meta') && value.meta !== undefined && !isObject(value.meta)) {
+    return { ok: false, error: 'Workspace metadata is invalid.' };
+  }
+
   const name = typeof value.name === 'string' && value.name.trim() ? value.name.trim() : 'Untitled workspace';
   const now = new Date().toISOString();
 
@@ -243,37 +327,127 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     sourceMaterial: typeof value.sourceMaterial === 'string' ? value.sourceMaterial : '',
     nodes: value.nodes,
     edges: value.edges,
-    deliverableDraft: parseDeliverableDraft(value.deliverableDraft),
+    deliverableDraft,
     provenance,
-    viewport:
-      isObject(value.viewport) &&
-      typeof value.viewport.x === 'number' &&
-      typeof value.viewport.y === 'number' &&
-      typeof value.viewport.zoom === 'number'
-        ? { x: value.viewport.x, y: value.viewport.y, zoom: value.viewport.zoom }
-        : undefined,
+    viewport,
     meta: isObject(value.meta) ? value.meta : undefined,
   };
 
   return { ok: true, data: doc };
 };
 
+export const validateVersionSnapshot = (value: unknown): ValidationResult<VersionSnapshot> => {
+  if (!isObject(value)) return { ok: false, error: 'Snapshot must be an object.' };
+  if (typeof value.id !== 'string' || !value.id.trim()) return { ok: false, error: 'Snapshot id is invalid.' };
+  if (typeof value.title !== 'string' || !value.title.trim()) return { ok: false, error: 'Snapshot title is invalid.' };
+  if (typeof value.timestamp !== 'number' || !Number.isFinite(value.timestamp)) {
+    return { ok: false, error: 'Snapshot timestamp is invalid.' };
+  }
+
+  const graph = validateWorkspaceDocument({
+    id: `snapshot-${value.id}`,
+    nodes: value.nodes,
+    edges: value.edges,
+  });
+  if (!graph.ok) return { ok: false, error: `Snapshot graph is invalid: ${graph.error}` };
+
+  if (
+    (value.workspaceId !== undefined && (typeof value.workspaceId !== 'string' || !value.workspaceId.trim())) ||
+    (value.workspaceName !== undefined && typeof value.workspaceName !== 'string') ||
+    (value.workspaceNameAtCreation !== undefined && typeof value.workspaceNameAtCreation !== 'string') ||
+    (value.sourceMaterial !== undefined && typeof value.sourceMaterial !== 'string') ||
+    (value.appliedSourceFingerprint !== undefined && typeof value.appliedSourceFingerprint !== 'string') ||
+    (value.templateId !== undefined && value.templateId !== null && typeof value.templateId !== 'string') ||
+    (value.snapshotVersion !== undefined && (
+      typeof value.snapshotVersion !== 'number' ||
+      !Number.isInteger(value.snapshotVersion) ||
+      value.snapshotVersion < 1
+    ))
+  ) {
+    return { ok: false, error: 'Snapshot metadata is invalid.' };
+  }
+
+  let deliverableDraft: DeliverableDraft | undefined;
+  if (value.deliverableDraft !== undefined) {
+    const draft = parseDeliverableDraft(value.deliverableDraft);
+    if (!draft.ok) return { ok: false, error: draft.error };
+    deliverableDraft = draft.data;
+  }
+
+  let provenance: ProvenanceGraph | undefined;
+  if (value.provenance !== undefined) {
+    const parsedProvenance = parseProvenanceGraph(value.provenance);
+    if (!parsedProvenance.ok) return { ok: false, error: parsedProvenance.error };
+    provenance = parsedProvenance.data;
+  }
+
+  let viewport: { x: number; y: number; zoom: number } | undefined;
+  if (value.viewport !== undefined) {
+    viewport = parseViewport(value.viewport) ?? undefined;
+    if (!viewport) return { ok: false, error: 'Snapshot viewport is invalid.' };
+  }
+
+  return {
+    ok: true,
+    data: {
+      id: value.id,
+      timestamp: value.timestamp,
+      title: value.title,
+      nodes: graph.data.nodes,
+      edges: graph.data.edges,
+      workspaceId: value.workspaceId as string | undefined,
+      workspaceName: value.workspaceName as string | undefined,
+      workspaceNameAtCreation: value.workspaceNameAtCreation as string | undefined,
+      snapshotVersion: value.snapshotVersion as number | undefined,
+      sourceMaterial: value.sourceMaterial as string | undefined,
+      deliverableDraft,
+      provenance,
+      templateId: value.templateId as string | null | undefined,
+      viewport,
+      appliedSourceFingerprint: value.appliedSourceFingerprint as string | undefined,
+    },
+  };
+};
+
 export const validateWorkspaceIndex = (value: unknown): ValidationResult<WorkspaceIndex> => {
   if (!isObject(value)) return { ok: false, error: 'Workspace index must be an object.' };
   if (!Array.isArray(value.workspaces)) return { ok: false, error: 'Workspace index is missing workspaces[].' };
 
-  const workspaces = value.workspaces
-    .filter(isObject)
-    .filter((entry) => typeof entry.id === 'string' && typeof entry.name === 'string')
-    .map((entry) => ({
-      id: entry.id as string,
-      name: entry.name as string,
-      updatedAt: typeof entry.updatedAt === 'string' ? entry.updatedAt : new Date().toISOString(),
+  if (value.workspaces.some(
+    (entry) =>
+      !isObject(entry) ||
+      typeof entry.id !== 'string' ||
+      !entry.id.trim() ||
+      typeof entry.name !== 'string' ||
+      !entry.name.trim() ||
+      typeof entry.updatedAt !== 'string' ||
+      (entry.templateId !== undefined && entry.templateId !== null && typeof entry.templateId !== 'string'),
+  )) {
+    return { ok: false, error: 'Workspace index contains an invalid workspace entry.' };
+  }
+
+  const workspaces = value.workspaces.map((entry) => {
+    const record = entry as Record<string, unknown>;
+    return {
+      id: record.id as string,
+      name: record.name as string,
+      updatedAt: record.updatedAt as string,
       templateId:
-        typeof entry.templateId === 'string' || entry.templateId === null
-          ? (entry.templateId as string | null)
+        typeof record.templateId === 'string' || record.templateId === null
+          ? (record.templateId as string | null)
           : null,
-    }));
+    };
+  });
+  if (!hasUniqueCaseInsensitiveIds(workspaces)) {
+    return { ok: false, error: 'Workspace index contains duplicate workspace ids.' };
+  }
+  if (
+    value.activeWorkspaceId !== undefined &&
+    value.activeWorkspaceId !== null &&
+    (typeof value.activeWorkspaceId !== 'string' || !workspaces.some((entry) => entry.id === value.activeWorkspaceId))
+  ) {
+    return { ok: false, error: 'Workspace index active workspace is invalid.' };
+  }
 
   return {
     ok: true,
