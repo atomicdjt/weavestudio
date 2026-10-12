@@ -1,4 +1,28 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Route } from '@playwright/test';
+
+test('delayed AI draft belongs to its original node and revision', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop exercises async inspector selection.');
+  let pending: Route | undefined;
+  await page.route(/api\.openai\.com/, (route) => { pending = route; });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Add AI Assist node' }).click();
+  await page.getByLabel('Title', { exact: true }).fill('AI target A');
+  await page.getByLabel('API key (memory only)').fill('test-key');
+  await page.getByRole('button', { name: /run live provider/i }).click();
+  await page.getByRole('button', { name: /confirm and send/i }).click();
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await page.getByLabel('Add AI Assist node', { exact: true }).click();
+  await page.getByLabel('Title', { exact: true }).fill('AI target B');
+  await pending!.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output_text: 'Delayed draft for A' }) });
+  await expect(page.getByRole('button', { name: /run live provider/i })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Apply to node' })).toHaveCount(0);
+  await page.getByRole('button', { name: /workflow outline/i }).click();
+  await page.getByRole('region', { name: /workflow outline/i }).getByRole('button', { name: /AI target A/ }).click();
+  await expect(page.getByText('Delayed draft for A')).toBeVisible();
+  await page.getByLabel('Prompt', { exact: true }).fill('New revision after response');
+  await expect(page.getByRole('button', { name: 'Apply to node' })).toHaveCount(0);
+  await expect(page.getByText(/draft no longer matches/i)).toBeVisible();
+});
 
 test('landing page renders without browser console errors', async ({ page }) => {
   const errors: string[] = [];

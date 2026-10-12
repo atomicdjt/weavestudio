@@ -859,11 +859,11 @@ export const WorkspacePage = () => {
         </div>
       </div>
 
-      <div className="hidden lg:contents"><NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
+      <div className="hidden lg:contents"><NodeInspector workspaceId={workspace.id} selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
 
       {mobilePanel && <AccessibleDialog label={mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'} onClose={() => setMobilePanel(null)} className="mx-auto flex h-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-2xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3"><h2 className="font-semibold">{mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}</h2><button type="button" onClick={() => setMobilePanel(null)} aria-label={`Close ${mobilePanel === 'inspector' ? 'inspector' : 'snapshots'}`} className="rounded p-2"><X className="w-5 h-5" /></button></div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector workspaceId={workspace.id} selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
       </AccessibleDialog>}
 
       {showOutline && <AccessibleDialog label="Workflow outline" onClose={() => setShowOutline(false)} className="h-full w-full max-w-lg overflow-hidden rounded-xl border border-border bg-panel shadow-2xl"><WorkflowOutline workspace={workspace} selectedNodeId={selectedNodeId} onSelect={(node) => { setSelectedNodeId(node.id); setShowOutline(false); }} onClose={() => setShowOutline(false)} /></AccessibleDialog>}
