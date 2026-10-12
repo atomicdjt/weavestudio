@@ -70,6 +70,9 @@ test('remote Markdown images wait for opt-in and long PDF contains its final pag
 test('snapshot write failure preserves exact owned storage and shows recovery feedback', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Desktop has the persistent snapshot panel.');
   await seed(page, readyWorkspace());
+  // Wait for the initial React Flow layout and its debounced persistence to finish
+  // before measuring the failed snapshot operation's storage invariance.
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('weavestudio_workspace'))).not.toBeNull();
   await page.waitForTimeout(1_100);
   const before = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((key) => key.startsWith('weavestudio_')).sort().map((key) => [key, localStorage.getItem(key)])));
   await page.evaluate(() => {
