@@ -1,10 +1,27 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { WorkspaceDocument } from '../types';
 import { createWorkspaceHistory } from './workspaceHistory';
 
 const workspace = (name: string): WorkspaceDocument => ({ schemaVersion: 1, id: 'ws-1', name, templateId: null, createdAt: '', updatedAt: '', sourceMaterial: '', nodes: [], edges: [] });
 
 describe('workspace history', () => {
+  it('keeps consecutive discrete commands in separate undo steps', () => {
+    const history = createWorkspaceHistory(workspace('One'));
+    history.record(workspace('Two'));
+    history.record(workspace('Three'));
+    expect(history.undo()?.name).toBe('Two');
+    expect(history.undo()?.name).toBe('One');
+  });
+  it('starts a new text undo step after an idle pause', () => {
+    vi.useFakeTimers();
+    try {
+      const history = createWorkspaceHistory(workspace('One'));
+      history.record(workspace('Two'), 'text:node');
+      vi.advanceTimersByTime(2_000);
+      history.record(workspace('Three'), 'text:node');
+      expect(history.undo()?.name).toBe('Two');
+    } finally { vi.useRealTimers(); }
+  });
   it('undoes and redoes a document mutation', () => {
     const history = createWorkspaceHistory(workspace('One'));
     history.record(workspace('Two'));

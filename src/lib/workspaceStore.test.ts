@@ -207,6 +207,17 @@ describe('project provenance portability', () => {
 describe('provenance snapshot portability', () => {
   beforeEach(() => localStorage.clear());
 
+  it('round-trips an edited full draft through project import and a snapshot', () => {
+    const workspace = { ...buildTraceableWorkspace(), deliverableDraft: { title: 'Edited draft', markdown: '# Edited\n\nComplete body and final line.', userEdited: true } };
+    const imported = importProjectFile(buildProjectExport(workspace), 'as-new');
+    expect(imported.ok).toBe(true);
+    if (!imported.ok) throw new Error(imported.error);
+    expect(imported.workspace.deliverableDraft).toEqual(workspace.deliverableDraft);
+    const snapshot = saveSnapshot('Full draft', imported.workspace);
+    const recovered = applySnapshotToWorkspace({ ...imported.workspace, deliverableDraft: undefined }, snapshot);
+    expect(recovered.workspace.deliverableDraft).toEqual(workspace.deliverableDraft);
+  });
+
   it('deeply preserves provenance through save and full snapshot restore', () => {
     const workspace = buildTraceableWorkspace();
     const expected: ProvenanceGraph = structuredClone(workspace.provenance!);

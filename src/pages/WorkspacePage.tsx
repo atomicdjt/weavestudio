@@ -226,7 +226,7 @@ export const WorkspacePage = () => {
 
   const patchWorkspace = (
     patch: Partial<WorkspaceDocument> | ((current: WorkspaceDocument) => WorkspaceDocument),
-    historyGroup: string | false = 'mutation',
+    historyGroup: string | false | undefined = undefined,
   ) => {
     setWorkspace((current) => {
       const next = typeof patch === 'function' ? patch(current) : { ...current, ...patch };
@@ -267,7 +267,7 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
   };
 
-  const handleUpdateNode = (id: string, data: Partial<AppNode['data']>) => {
+  const handleUpdateNode = (id: string, data: Partial<AppNode['data']>, command = false) => {
     patchWorkspace((current) => {
       const nextNodes = current.nodes.map((node) =>
         node.id === id ? { ...node, data: { ...node.data, ...data } } : node,
@@ -283,7 +283,7 @@ export const WorkspacePage = () => {
           nextSource: current.sourceMaterial,
         }),
       };
-    }, `node:${id}`);
+    }, !command && Object.keys(data).length === 1 && ['title', 'description', 'content', 'promptInstruction', 'expectedInput', 'expectedOutput'].includes(Object.keys(data)[0]) ? `text:node:${id}:${Object.keys(data)[0]}` : undefined);
     setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
   };
@@ -298,7 +298,7 @@ export const WorkspacePage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace.nodes, workspace.edges]);
 
-  const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
+  const handleCanvasNodesChange = (canvasNodes: AppNode[], historyGroup?: string) => {
     if (restoringHistoryRef.current) return;
     setWorkspace((current) => {
       if (JSON.stringify(canvasNodes) === JSON.stringify(current.nodes)) return current;
@@ -311,7 +311,8 @@ export const WorkspacePage = () => {
         nextSource: current.sourceMaterial,
       });
       const next = { ...current, nodes: guardedNodes };
-      historyRef.current.record(next, 'canvas');
+      const semantic = (nodes: AppNode[]) => nodes.map(({ id, type, position, data }) => ({ id, type, position, data }));
+      if (JSON.stringify(semantic(current.nodes)) !== JSON.stringify(semantic(guardedNodes))) historyRef.current.record(next, historyGroup);
       setHistoryVersion((value) => value + 1);
       return next;
     });
@@ -800,7 +801,7 @@ export const WorkspacePage = () => {
                     ),
                   },
                 };
-              }, 'source');
+              }, 'text:source');
               setWorkflowValidator(null);
               setGraphEpoch((e) => e + 1);
             }}

@@ -28,6 +28,11 @@ const base: WorkspaceDocument = {
 };
 
 describe('applySnapshotToWorkspace', () => {
+  it('rejects malformed snapshots before applying any recovered content', () => {
+    const malformed = { id: 'broken', timestamp: 1, title: 'Bad', nodes: [{ id: 'bad', data: { content: 3 } }], edges: [] } as unknown as VersionSnapshot;
+    expect(() => applySnapshotToWorkspace(base, malformed)).toThrow(/snapshot/i);
+    expect(base.sourceMaterial).toBe('current source');
+  });
   it('restores full v2 snapshot including deliverable and source', () => {
     const snap: VersionSnapshot = {
       id: 's1',

@@ -284,7 +284,7 @@ export const OutputPreviewPanel = ({
               </div>
               <div>
                 <div className="font-semibold text-sm text-blue-300">Markdown</div>
-                <div className="text-xs opacity-70">Editable text file</div>
+                <div className="text-xs opacity-70">Complete editable deliverable</div>
               </div>
             </button>
 
@@ -301,7 +301,7 @@ export const OutputPreviewPanel = ({
                 <div className="font-semibold text-sm text-purple-300">
                   {isExportingPdf ? 'Preparing PDF' : 'PDF report'}
                 </div>
-                <div className="text-xs opacity-70">Local print-oriented file</div>
+                <div className="text-xs opacity-70">Paginated reading view</div>
               </div>
             </button>
 
@@ -320,7 +320,7 @@ export const OutputPreviewPanel = ({
             </button>
 
             <p className="text-[11px] text-gray-500 leading-relaxed">
-              Project JSON round-trips nodes, edges, source material, template id, deliverable draft, and provenance. No server upload.
+              Use Markdown for the complete editable text and Project JSON for a recoverable workspace. JSON includes nodes, edges, source, template, draft, and provenance. PDF is a reading view with simplified formatting. No server upload.
             </p>
           </div>
         </div>

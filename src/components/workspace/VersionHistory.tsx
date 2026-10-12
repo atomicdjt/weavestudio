@@ -12,6 +12,7 @@ interface VersionHistoryProps {
 export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHistoryProps) => {
   const [versions, setVersions] = useState<VersionSnapshot[]>(() => getVersions().filter((v) => v.workspaceId === workspace.id));
   const [title, setTitle] = useState('');
+  const [error, setError] = useState('');
 
   useEffect(() => {
     setVersions(getVersions().filter((v) => v.workspaceId === workspace.id));
@@ -19,20 +20,25 @@ export const VersionHistory = ({ workspace, clearSignal, onRestore }: VersionHis
 
   const handleSave = () => {
     if (!title.trim()) return;
-    const v = saveVersion(title, workspace);
-    setVersions(getVersions().filter((snapshot) => snapshot.workspaceId === workspace.id));
-    setTitle('');
-    void v;
+    try {
+      saveVersion(title, workspace);
+      setVersions(getVersions().filter((snapshot) => snapshot.workspaceId === workspace.id));
+      setTitle('');
+      setError('');
+    } catch (cause) { setError(cause instanceof Error ? cause.message : 'Snapshot could not be saved.'); }
   };
 
   const handleDelete = (id: string) => {
-    deleteVersion(id);
-    setVersions(getVersions());
+    const result = deleteVersion(id);
+    if (result.status !== 'saved') { setError(result.error || 'Snapshot could not be deleted.'); return; }
+    setError('');
+    setVersions(getVersions().filter((snapshot) => snapshot.workspaceId === workspace.id));
   };
 
   return (
     <aside className="w-full lg:w-64 bg-panel border-t lg:border-t-0 lg:border-l border-border p-4 flex flex-col lg:h-full max-h-96 lg:max-h-none overflow-y-auto">
       <h3 className="font-bold text-sm uppercase tracking-wider text-gray-400 mb-4">Version Snapshots</h3>
+      {error && <p role="status" className="mb-3 text-xs text-red-300">{error}</p>}
       <p className="text-xs text-gray-400 mb-4">
         Snapshots capture nodes, edges, source material, deliverable draft, template, and sync metadata.
       </p>

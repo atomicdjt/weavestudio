@@ -401,6 +401,8 @@ export const applySnapshotToWorkspace = (
   workspace: WorkspaceDocument,
   snapshot: VersionSnapshot,
 ): { workspace: WorkspaceDocument; legacyIncomplete: boolean } => {
+  const validation = validateVersionSnapshot(snapshot);
+  if (!validation.ok) throw new Error(`Invalid snapshot: ${validation.error}`);
   if (snapshot.workspaceId && snapshot.workspaceId !== workspace.id) {
     throw new Error('This snapshot belongs to another workspace. Create a workspace from it instead.');
   }
