@@ -174,6 +174,38 @@ describe('full browser backup recovery', () => {
     expect(result.status).toBe('quota');
     expect(ownedBytes()).toEqual(before);
   });
+
+  it('preserves every owned byte when storage persistently denies writes to existing records', () => {
+    const workspace = createWorkspace({ name: 'Workspace A' });
+    createWorkspace({ name: 'Workspace B' });
+    saveSnapshot('Existing checkpoint', workspace);
+    const before = ownedBytes();
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new DOMException('Storage is unavailable', 'SecurityError');
+    });
+
+    const result = saveWorkspaceDocument({ ...workspace, name: 'Edited workspace A' });
+
+    setItem.mockRestore();
+    expect(result.status).toBe('error');
+    expect(ownedBytes()).toEqual(before);
+  });
+
+  it('returns a save failure instead of throwing when reading an existing record is denied', () => {
+    const workspace = createWorkspace({ name: 'Protected read' });
+    const before = ownedBytes();
+    const originalGetItem = Storage.prototype.getItem;
+    const getItem = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(function (this: Storage, key: string) {
+      if (key === workspaceKey(workspace.id)) throw new DOMException('Storage is blocked', 'SecurityError');
+      return originalGetItem.call(this, key);
+    });
+
+    const result = saveWorkspaceDocument({ ...workspace, name: 'Edited' });
+
+    getItem.mockRestore();
+    expect(result.status).toBe('error');
+    expect(ownedBytes()).toEqual(before);
+  });
 });
 
 describe('project provenance portability', () => {
@@ -200,6 +232,25 @@ describe('project provenance portability', () => {
 
     expect(imported.ok).toBe(false);
     if (!imported.ok) expect(imported.error).toMatch(/restore/i);
+    expect(ownedBytes()).toEqual(before);
+  });
+
+  it('reports a failed imported document write and restores exact prior bytes', () => {
+    const source = createWorkspace({ name: 'Import source' });
+    const project = buildProjectExport(source);
+    const before = ownedBytes();
+    const originalSetItem = Storage.prototype.setItem;
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(function (this: Storage, key: string, value: string) {
+      if (key.startsWith('weavestudio_v1_ws_') && !Object.prototype.hasOwnProperty.call(before, key)) {
+        throw new DOMException('Quota exceeded', 'QuotaExceededError');
+      }
+      return originalSetItem.call(this, key, value);
+    });
+
+    const result = importProjectFile(project, 'as-new');
+
+    setItem.mockRestore();
+    expect(result.ok).toBe(false);
     expect(ownedBytes()).toEqual(before);
   });
 });

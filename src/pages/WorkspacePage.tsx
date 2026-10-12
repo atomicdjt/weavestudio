@@ -157,6 +157,30 @@ export const WorkspacePage = () => {
       : null,
   );
 
+  const persistWorkspaceBeforeLeaving = useCallback((current: WorkspaceDocument): boolean => {
+    try {
+      const result = saveWorkspaceDocument(current);
+      setSaveStatus(result.status === 'saved' ? 'saved' : result.status);
+      setSaveError(result.error ?? null);
+      if (result.status !== 'saved') {
+        setNotice(result.error ?? 'Could not save the current workspace. The workspace change was cancelled.');
+        return false;
+      }
+      try {
+        setIndexEntries(loadIndex().workspaces);
+      } catch {
+        // The document write succeeded; a temporary list-read failure should not discard it.
+      }
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save the current workspace.';
+      setSaveStatus('error');
+      setSaveError(message);
+      setNotice(`${message} The workspace change was cancelled.`);
+      return false;
+    }
+  }, []);
+
   const nodes = workspace.nodes;
   const edges = workspace.edges;
   const template = useMemo(
@@ -185,6 +209,7 @@ export const WorkspacePage = () => {
       return;
     }
     if (navConsumedKey === location.key) return;
+    if (!persistWorkspaceBeforeLeaving(workspace)) return;
 
     let next: WorkspaceDocument | null = null;
     try {
@@ -204,7 +229,7 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
     setNavConsumedKey(location.key);
     navigate('/app', { replace: true, state: null });
-  }, [location.key, locationState, navConsumedKey, navigate]);
+  }, [location.key, locationState, navConsumedKey, navigate, persistWorkspaceBeforeLeaving, workspace]);
 
   useEffect(() => {
     if (locationState && (locationState.openGuidedDemo || locationState.blankWorkspace || locationState.loadTemplate)) {
@@ -216,10 +241,19 @@ export const WorkspacePage = () => {
   useEffect(() => {
     setSaveStatus('saving');
     const timer = setTimeout(() => {
-      const result = saveWorkspaceDocument(workspace);
-      setSaveStatus(result.status === 'saved' ? 'saved' : result.status);
-      setSaveError(result.error ?? null);
-      setIndexEntries(loadIndex().workspaces);
+      try {
+        const result = saveWorkspaceDocument(workspace);
+        setSaveStatus(result.status === 'saved' ? 'saved' : result.status);
+        setSaveError(result.error ?? null);
+        try {
+          setIndexEntries(loadIndex().workspaces);
+        } catch (error) {
+          setSaveError(error instanceof Error ? error.message : 'Workspace list could not be refreshed.');
+        }
+      } catch (error) {
+        setSaveStatus('error');
+        setSaveError(error instanceof Error ? error.message : 'Could not save workspace changes.');
+      }
     }, 900);
     return () => clearTimeout(timer);
   }, [workspace]);
@@ -391,6 +425,7 @@ export const WorkspacePage = () => {
 
   const handleResetDemo = () => {
     const openDemo = () => {
+      if (!persistWorkspaceBeforeLeaving(workspace)) return;
       const intentId = createId('intent');
       let next: WorkspaceDocument | null = null;
       try {
@@ -416,9 +451,18 @@ export const WorkspacePage = () => {
   };
 
   const handleRestoreSnapshot = (snapshot: VersionSnapshot) => {
+    let restored: WorkspaceDocument;
+    let legacyIncomplete: boolean;
+    try {
+      const proposed = applySnapshotToWorkspace(workspace, snapshot);
+      restored = proposed.workspace;
+      legacyIncomplete = proposed.legacyIncomplete;
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'This snapshot could not be restored.');
+      return;
+    }
     const checkpoint = saveRecoverySnapshot(`Recovery before restoring ${snapshot.title}`, workspace);
     if (checkpoint.result.status !== 'saved') { setNotice(checkpoint.result.error ?? 'Could not save recovery checkpoint. Restore cancelled.'); return; }
-    const { workspace: restored, legacyIncomplete } = applySnapshotToWorkspace(workspace, snapshot);
     setWorkspace(restored);
     historyRef.current.reset(restored);
     setHistoryVersion((v) => v + 1);
@@ -557,8 +601,10 @@ export const WorkspacePage = () => {
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
 
   const switchWorkspace = (id: string) => {
+    if (id === workspace.id) return;
     const next = loadWorkspaceById(id);
     if (!next) return;
+    if (!persistWorkspaceBeforeLeaving(workspace)) return;
     const result = setActiveWorkspaceId(id);
     if (result.status !== 'saved') {
       setNotice(result.error ?? 'Could not switch the active workspace.');
@@ -632,6 +678,7 @@ export const WorkspacePage = () => {
               onSelect={switchWorkspace}
               onRename={(name) => patchWorkspace({ name })}
               onCreate={() => {
+                if (!persistWorkspaceBeforeLeaving(workspace)) return;
                 let next: WorkspaceDocument;
                 try {
                   next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
@@ -648,6 +695,7 @@ export const WorkspacePage = () => {
                 setGraphEpoch((e) => e + 1);
               }}
               onDuplicate={() => {
+                if (!persistWorkspaceBeforeLeaving(workspace)) return;
                 let copy: WorkspaceDocument | null;
                 try {
                   copy = duplicateWorkspace(workspace.id);

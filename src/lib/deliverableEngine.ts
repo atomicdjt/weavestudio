@@ -78,7 +78,7 @@ export const stripDuplicateLeadingHeadings = (
     const match = line.match(/^#{1,6}\s+(.+)$/);
     if (!match) break;
     const headingNorm = normalizeHeading(match[1]);
-    if (blocked.some((b) => b && (headingNorm === b || headingNorm.includes(b) || b.includes(headingNorm)))) {
+    if (blocked.some((b) => b && headingNorm === b)) {
       i += 1;
       continue;
     }
@@ -93,17 +93,32 @@ export const stripDuplicateLeadingHeadings = (
  * category selector; type matching remains a compatibility fallback for older
  * uncategorized graphs.
  */
-const nodeMatchesSection = (node: AppNode, section: SectionDef): boolean => {
-  if (section.nodeIds?.length) return section.nodeIds.includes(node.id);
+const nodeMatchesSection = (
+  node: AppNode,
+  section: SectionDef,
+  sectionIndex: number,
+  explicitOwners: Map<string, number>,
+): boolean => {
+  const explicitOwner = explicitOwners.get(node.id);
+  if (explicitOwner !== undefined && explicitOwner !== sectionIndex) return false;
+  if (section.nodeIds?.length) return explicitOwner === sectionIndex && section.nodeIds.includes(node.id);
   if (section.categories?.length) {
     if (node.data.category) return section.categories.includes(node.data.category);
     return Boolean(section.nodeTypes?.includes(node.type));
   }
-  return Boolean(section.nodeTypes?.includes(node.type));
+  return !node.data.category && Boolean(section.nodeTypes?.includes(node.type));
 };
 
-const collectSectionNodes = (nodes: AppNode[], section: SectionDef, usedIds: Set<string>): AppNode[] => {
-  const matches = nodes.filter((node) => !usedIds.has(node.id) && nodeMatchesSection(node, section));
+const collectSectionNodes = (
+  nodes: AppNode[],
+  section: SectionDef,
+  sectionIndex: number,
+  usedIds: Set<string>,
+  explicitOwners: Map<string, number>,
+): AppNode[] => {
+  const matches = nodes.filter((node) =>
+    !usedIds.has(node.id) && nodeMatchesSection(node, section, sectionIndex, explicitOwners),
+  );
   const withContent = matches.filter((node) => node.data.content?.trim());
   const selected = withContent.length > 0 ? withContent : matches;
   selected.forEach((node) => usedIds.add(node.id));
@@ -204,9 +219,15 @@ export const buildDeliverableSectionPlan = (
           ...optional.map((section) => ({ ...section, required: false })),
         ]
       : defaultSectionsFromGraph(nodes);
+  const explicitOwners = new Map<string, number>();
+  sections.forEach((section, sectionIndex) => {
+    section.nodeIds?.forEach((nodeId) => {
+      if (!explicitOwners.has(nodeId)) explicitOwners.set(nodeId, sectionIndex);
+    });
+  });
   const usedNodeIds = new Set<string>();
-  const assignments = sections.map((section) => {
-    const matched = collectSectionNodes(nodes, section, usedNodeIds);
+  const assignments = sections.map((section, sectionIndex) => {
+    const matched = collectSectionNodes(nodes, section, sectionIndex, usedNodeIds, explicitOwners);
     return {
       section,
       nodes: matched,

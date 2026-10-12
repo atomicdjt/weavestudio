@@ -22,7 +22,7 @@ vi.mock('./workspaceStore', () => {
   const store = new Map<string, WorkspaceDocument>();
   return {
     loadWorkspaceById: (id: string) => store.get(id) ?? null,
-    setActiveWorkspaceId: vi.fn(),
+    setActiveWorkspaceId: vi.fn(() => ({ status: 'saved' as const })),
     __store: store,
   };
 });

@@ -30,7 +30,15 @@ export const migrateLegacyWorkspace = (
     createdAt: now,
     updatedAt: now,
     sourceMaterial: extractSourceFromNodes(legacy.nodes),
-    nodes: structuredClone(legacy.nodes),
+    nodes: structuredClone(legacy.nodes).map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        title: node.data?.title ?? `New ${node.type} step`,
+        description: node.data?.description ?? '',
+        content: node.data?.content ?? '',
+      },
+    })),
     edges: structuredClone(legacy.edges),
   };
 };
@@ -46,9 +54,36 @@ export const readLegacyWorkspaceFromStorage = (): WorkspaceDocument | null => {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as unknown;
     if (!isLegacyWorkspace(parsed) || parsed.nodes.length === 0) return null;
-    return migrateLegacyWorkspace(parsed);
+    const migrated = migrateLegacyWorkspace(parsed);
+    const validated = validateWorkspaceDocument(migrated);
+    return validated.ok ? validated.data : null;
   } catch {
     return null;
+  }
+};
+
+/** Apply legacy migration records with exact rollback if storage rejects any key. */
+const commitMigrationRecords = (records: Record<string, string>): void => {
+  const previous = new Map(Object.keys(records).map((key) => [key, localStorage.getItem(key)]));
+  const changed: string[] = [];
+  try {
+    for (const [key, value] of Object.entries(records)) {
+      if (previous.get(key) === value) continue;
+      localStorage.setItem(key, value);
+      changed.push(key);
+      if (localStorage.getItem(key) !== value) throw new Error(`Migration could not verify ${key}.`);
+    }
+  } catch (error) {
+    for (const key of changed.reverse()) {
+      try {
+        const oldValue = previous.get(key);
+        if (typeof oldValue === 'string') localStorage.setItem(key, oldValue);
+        else localStorage.removeItem(key);
+      } catch {
+        // Keep the original migration error; legacy records remain available for retry.
+      }
+    }
+    throw error;
   }
 };
 
@@ -97,15 +132,19 @@ export const ensureMigratedStore = (): { index: WorkspaceIndex; active: Workspac
           },
         ],
       };
-      localStorage.setItem(INDEX_KEY, JSON.stringify(index));
-      localStorage.setItem(workspaceKey(migrated.id), JSON.stringify(migrated));
-
       // Migrate snapshots if present
       const legacySnaps = readLegacySnapshots();
+      const records: Record<string, string> = {
+        [workspaceKey(migrated.id)]: JSON.stringify(migrated),
+      };
       if (legacySnaps.length > 0) {
         const tagged = legacySnaps.map((snap) => ({ ...snap, workspaceId: migrated.id }));
-        localStorage.setItem(SNAPSHOTS_KEY, JSON.stringify(tagged));
+        records[SNAPSHOTS_KEY] = JSON.stringify(tagged);
       }
+      // Write the index last so a partial migration cannot make the preserved
+      // legacy workspace unreachable.
+      records[INDEX_KEY] = JSON.stringify(index);
+      commitMigrationRecords(records);
 
       return { index, active: migrated };
     }
@@ -115,7 +154,7 @@ export const ensureMigratedStore = (): { index: WorkspaceIndex; active: Workspac
       activeWorkspaceId: null,
       workspaces: [],
     };
-    localStorage.setItem(INDEX_KEY, JSON.stringify(emptyIndex));
+    commitMigrationRecords({ [INDEX_KEY]: JSON.stringify(emptyIndex) });
     return { index: emptyIndex, active: null };
   } catch {
     return {

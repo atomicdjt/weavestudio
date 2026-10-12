@@ -11,7 +11,7 @@ import type {
   WorkspaceDocument,
   WorkspaceIndex,
 } from '../types';
-import { WORKSPACE_SCHEMA_VERSION } from '../types';
+import { SNAPSHOT_FORMAT_VERSION, WORKSPACE_SCHEMA_VERSION } from '../types';
 
 export type ValidationResult<T> =
   | { ok: true; data: T }
@@ -52,6 +52,7 @@ const VALID_NODE_STATUSES = new Set<string>([
   'incomplete',
   'ready',
 ]);
+const VALID_SOURCE_SYNC_STATUSES = new Set<string>(['in_sync', 'source_ahead', 'canvas_ahead', 'unknown']);
 
 const hasUniqueCaseInsensitiveIds = (items: Array<{ id: string }>) =>
   new Set(items.map((item) => item.id.toLowerCase())).size === items.length;
@@ -112,6 +113,9 @@ const isEdgeArray = (value: unknown): value is AppEdge[] => {
 const parseDeliverableDraft = (value: unknown): ValidationResult<DeliverableDraft> => {
   if (!isObject(value) || typeof value.title !== 'string' || typeof value.markdown !== 'string') {
     return { ok: false, error: 'Workspace deliverable draft is invalid.' };
+  }
+  if (value.userEdited !== undefined && typeof value.userEdited !== 'boolean') {
+    return { ok: false, error: 'Workspace deliverable draft edit state is invalid.' };
   }
   return {
     ok: true,
@@ -277,8 +281,28 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     };
   }
 
-  const schemaVersion =
-    typeof value.schemaVersion === 'number' ? value.schemaVersion : WORKSPACE_SCHEMA_VERSION;
+  if (Object.prototype.hasOwnProperty.call(value, 'schemaVersion') && (
+    typeof value.schemaVersion !== 'number' || !Number.isInteger(value.schemaVersion) || value.schemaVersion < 1
+  )) {
+    return { ok: false, error: 'Workspace schema version is invalid.' };
+  }
+  if (value.name !== undefined && typeof value.name !== 'string') {
+    return { ok: false, error: 'Workspace name is invalid.' };
+  }
+  if (value.templateId !== undefined && value.templateId !== null && typeof value.templateId !== 'string') {
+    return { ok: false, error: 'Workspace template id is invalid.' };
+  }
+  if (value.createdAt !== undefined && typeof value.createdAt !== 'string') {
+    return { ok: false, error: 'Workspace creation time is invalid.' };
+  }
+  if (value.updatedAt !== undefined && typeof value.updatedAt !== 'string') {
+    return { ok: false, error: 'Workspace update time is invalid.' };
+  }
+  if (Object.prototype.hasOwnProperty.call(value, 'sourceMaterial') && typeof value.sourceMaterial !== 'string') {
+    return { ok: false, error: 'Workspace source material is invalid.' };
+  }
+
+  const schemaVersion = typeof value.schemaVersion === 'number' ? value.schemaVersion : WORKSPACE_SCHEMA_VERSION;
 
   if (schemaVersion > WORKSPACE_SCHEMA_VERSION) {
     return {
@@ -287,7 +311,7 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     };
   }
 
-  const id = typeof value.id === 'string' && value.id ? value.id : null;
+  const id = typeof value.id === 'string' && value.id.trim() ? value.id : null;
   if (!id) return { ok: false, error: 'Workspace id is required.' };
 
   let provenance: ProvenanceGraph | undefined;
@@ -310,8 +334,19 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     if (!viewport) return { ok: false, error: 'Workspace viewport is invalid.' };
   }
 
-  if (Object.prototype.hasOwnProperty.call(value, 'meta') && value.meta !== undefined && !isObject(value.meta)) {
+  if (Object.prototype.hasOwnProperty.call(value, 'meta') && !isObject(value.meta)) {
     return { ok: false, error: 'Workspace metadata is invalid.' };
+  }
+  if (isObject(value.meta) && (
+    (value.meta.guidedDemo !== undefined && typeof value.meta.guidedDemo !== 'boolean') ||
+    (value.meta.sourceUserTouched !== undefined && typeof value.meta.sourceUserTouched !== 'boolean') ||
+    (value.meta.appliedSourceFingerprint !== undefined && typeof value.meta.appliedSourceFingerprint !== 'string') ||
+    (value.meta.sourceSyncStatus !== undefined && (
+      typeof value.meta.sourceSyncStatus !== 'string' || !VALID_SOURCE_SYNC_STATUSES.has(value.meta.sourceSyncStatus)
+    )) ||
+    (value.meta.deliverableNeedsRegen !== undefined && typeof value.meta.deliverableNeedsRegen !== 'boolean')
+  )) {
+    return { ok: false, error: 'Workspace metadata contains an invalid field.' };
   }
 
   const name = typeof value.name === 'string' && value.name.trim() ? value.name.trim() : 'Untitled workspace';
@@ -361,10 +396,17 @@ export const validateVersionSnapshot = (value: unknown): ValidationResult<Versio
     (value.snapshotVersion !== undefined && (
       typeof value.snapshotVersion !== 'number' ||
       !Number.isInteger(value.snapshotVersion) ||
-      value.snapshotVersion < 1
+      value.snapshotVersion < 1 ||
+      value.snapshotVersion > SNAPSHOT_FORMAT_VERSION
     ))
   ) {
     return { ok: false, error: 'Snapshot metadata is invalid.' };
+  }
+  if (value.snapshotVersion === SNAPSHOT_FORMAT_VERSION && (
+    typeof value.workspaceId !== 'string' ||
+    typeof value.sourceMaterial !== 'string'
+  )) {
+    return { ok: false, error: 'Full snapshot is missing its workspace or source material.' };
   }
 
   let deliverableDraft: DeliverableDraft | undefined;
@@ -411,6 +453,12 @@ export const validateVersionSnapshot = (value: unknown): ValidationResult<Versio
 
 export const validateWorkspaceIndex = (value: unknown): ValidationResult<WorkspaceIndex> => {
   if (!isObject(value)) return { ok: false, error: 'Workspace index must be an object.' };
+  if (Object.prototype.hasOwnProperty.call(value, 'schemaVersion') && (
+    typeof value.schemaVersion !== 'number' || !Number.isInteger(value.schemaVersion) ||
+    value.schemaVersion < 1 || value.schemaVersion > WORKSPACE_SCHEMA_VERSION
+  )) {
+    return { ok: false, error: 'Workspace index schema version is invalid or unsupported.' };
+  }
   if (!Array.isArray(value.workspaces)) return { ok: false, error: 'Workspace index is missing workspaces[].' };
 
   if (value.workspaces.some(
@@ -467,6 +515,12 @@ export const validateProjectExportFile = (value: unknown): ValidationResult<Proj
 
   // New project format
   if (value.format === 'weavestudio-project') {
+    if (value.formatVersion !== undefined && value.formatVersion !== 1) {
+      return { ok: false, error: 'Project export format version is unsupported.' };
+    }
+    if (value.exportedAt !== undefined && typeof value.exportedAt !== 'string') {
+      return { ok: false, error: 'Project export timestamp is invalid.' };
+    }
     const workspaceResult = validateWorkspaceDocument(value.workspace);
     if (!workspaceResult.ok) return { ok: false, error: workspaceResult.error };
     return {
@@ -494,27 +548,47 @@ export const validateProjectExportFile = (value: unknown): ValidationResult<Proj
     };
   }
 
-  // Legacy output-panel JSON with nodes/edges
-  if (isNodeArray(value.nodes) && isEdgeArray(value.edges)) {
+  // The historical output-panel export was a title/nodes/edges object. Do not
+  // reinterpret a malformed current document as that older, lossy format.
+  const documentFields = [
+    'schemaVersion', 'id', 'name', 'templateId', 'createdAt', 'updatedAt',
+    'sourceMaterial', 'deliverableDraft', 'provenance', 'viewport', 'meta', 'format',
+  ];
+  const isLegacyOutputExport =
+    typeof value.title === 'string' &&
+    isNodeArray(value.nodes) &&
+    isEdgeArray(value.edges) &&
+    !documentFields.some((field) => Object.prototype.hasOwnProperty.call(value, field));
+  if (isLegacyOutputExport) {
     const now = new Date().toISOString();
-    const workspace: WorkspaceDocument = {
+    const candidate = {
       schemaVersion: WORKSPACE_SCHEMA_VERSION,
-      id: typeof value.id === 'string' ? value.id : `imported_${Date.now()}`,
-      name: typeof value.title === 'string' ? value.title : 'Imported workflow',
+      id: `imported_${Date.now()}`,
+      name: value.title as string,
       templateId: null,
       createdAt: now,
       updatedAt: now,
       sourceMaterial: '',
-      nodes: value.nodes,
-      edges: value.edges,
+      nodes: (value.nodes as AppNode[]).map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          title: node.data.title ?? `New ${node.type} step`,
+          description: node.data.description ?? '',
+          content: node.data.content ?? '',
+        },
+      })),
+      edges: value.edges as AppEdge[],
     };
+    const validated = validateWorkspaceDocument(candidate);
+    if (!validated.ok) return { ok: false, error: `Legacy project is invalid: ${validated.error}` };
     return {
       ok: true,
       data: {
         format: 'weavestudio-project',
         formatVersion: 1,
         exportedAt: now,
-        workspace,
+        workspace: validated.data,
       },
     };
   }

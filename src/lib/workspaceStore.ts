@@ -47,16 +47,27 @@ const recordsMatch = (actual: Record<string, string>, expected: Record<string, s
 
 const storageFailure = (error: unknown, fallback = 'Could not save to local storage.'): SaveResult => {
   const message = error instanceof Error ? error.message : String(error);
-  if (message.toLowerCase().includes('quota') || message.toLowerCase().includes('storage')) {
+  const errorName = typeof error === 'object' && error !== null && 'name' in error
+    ? String((error as { name?: unknown }).name)
+    : '';
+  if (errorName === 'QuotaExceededError' || /quota|storage is full|storage limit/i.test(message)) {
     return { status: 'quota', error: 'Browser storage is full. Export a backup, then free space or delete old workspaces.' };
   }
   return { status: 'error', error: fallback };
 };
 
 const replaceOwnedRecordsUnchecked = (records: Record<string, string>): void => {
-  const currentKeys = Object.keys(collectOwnedRecords());
-  currentKeys.forEach((key) => localStorage.removeItem(key));
-  Object.entries(records).forEach(([key, value]) => localStorage.setItem(key, value));
+  const current = collectOwnedRecords();
+  for (const [key, value] of Object.entries(records)) {
+    if (current[key] !== value) localStorage.setItem(key, value);
+  }
+  const afterWrites = collectOwnedRecords();
+  for (const [key, value] of Object.entries(records)) {
+    if (afterWrites[key] !== value) throw new Error(`Browser storage did not retain ${key}.`);
+  }
+  for (const key of Object.keys(afterWrites)) {
+    if (!Object.prototype.hasOwnProperty.call(records, key)) localStorage.removeItem(key);
+  }
   if (!recordsMatch(collectOwnedRecords(), records)) {
     throw new Error('Browser storage did not retain every record.');
   }
@@ -68,11 +79,13 @@ const replaceOwnedRecordsUnchecked = (records: Record<string, string>): void => 
  * restored before the failure is reported.
  */
 const replaceOwnedRecords = (records: Record<string, string>): SaveResult => {
-  const previous = collectOwnedRecords();
+  let previous: Record<string, string> | null = null;
   try {
+    previous = collectOwnedRecords();
     replaceOwnedRecordsUnchecked(records);
     return { status: 'saved' };
   } catch (error) {
+    if (!previous) return storageFailure(error);
     try {
       replaceOwnedRecordsUnchecked(previous);
     } catch {
@@ -86,9 +99,13 @@ const replaceOwnedRecords = (records: Record<string, string>): SaveResult => {
 };
 
 const writeJson = (key: string, value: unknown): SaveResult => {
-  const records = collectOwnedRecords();
-  records[key] = JSON.stringify(value);
-  return replaceOwnedRecords(records);
+  try {
+    const records = collectOwnedRecords();
+    records[key] = JSON.stringify(value);
+    return replaceOwnedRecords(records);
+  } catch (error) {
+    return storageFailure(error);
+  }
 };
 
 export const loadIndex = (): WorkspaceIndex => {
@@ -103,13 +120,17 @@ const persistWorkspaceAndIndex = (
   index: WorkspaceIndex,
   options: { mirrorLegacyWorkspace?: boolean } = {},
 ): SaveResult => {
-  const records = collectOwnedRecords();
-  records[workspaceKey(workspace.id)] = JSON.stringify(workspace);
-  records[INDEX_KEY] = JSON.stringify(index);
-  if (options.mirrorLegacyWorkspace) {
-    records[LEGACY_WORKSPACE_KEY] = JSON.stringify({ nodes: workspace.nodes, edges: workspace.edges });
+  try {
+    const records = collectOwnedRecords();
+    records[workspaceKey(workspace.id)] = JSON.stringify(workspace);
+    records[INDEX_KEY] = JSON.stringify(index);
+    if (options.mirrorLegacyWorkspace) {
+      records[LEGACY_WORKSPACE_KEY] = JSON.stringify({ nodes: workspace.nodes, edges: workspace.edges });
+    }
+    return replaceOwnedRecords(records);
+  } catch (error) {
+    return storageFailure(error);
   }
-  return replaceOwnedRecords(records);
 };
 
 const failWrite = (result: SaveResult): never => {
@@ -183,7 +204,8 @@ export const getOrCreateGuidedDemo = (factory: () => WorkspaceDocument): Workspa
   for (const entry of index.workspaces) {
     const existing = loadWorkspaceById(entry.id);
     if (existing?.meta?.guidedDemo === true) {
-      setActiveWorkspaceId(existing.id);
+      const result = setActiveWorkspaceId(existing.id);
+      if (result.status !== 'saved') failWrite(result);
       return existing;
     }
   }
@@ -196,33 +218,41 @@ export const getOrCreateGuidedDemo = (factory: () => WorkspaceDocument): Workspa
 };
 
 export const saveWorkspaceDocument = (doc: WorkspaceDocument): SaveResult => {
-  const updated: WorkspaceDocument = {
-    ...doc,
-    schemaVersion: WORKSPACE_SCHEMA_VERSION,
-    updatedAt: new Date().toISOString(),
-  };
-  const index = loadIndex();
-  const entry = {
-    id: updated.id,
-    name: updated.name,
-    updatedAt: updated.updatedAt,
-    templateId: updated.templateId,
-  };
-  const nextIndex: WorkspaceIndex = {
-    ...index,
-    workspaces: [entry, ...index.workspaces.filter((item) => item.id !== updated.id)],
-    activeWorkspaceId: updated.id,
-  };
-  return persistWorkspaceAndIndex(updated, nextIndex, { mirrorLegacyWorkspace: true });
+  try {
+    const updated: WorkspaceDocument = {
+      ...doc,
+      schemaVersion: WORKSPACE_SCHEMA_VERSION,
+      updatedAt: new Date().toISOString(),
+    };
+    const index = loadIndex();
+    const entry = {
+      id: updated.id,
+      name: updated.name,
+      updatedAt: updated.updatedAt,
+      templateId: updated.templateId,
+    };
+    const nextIndex: WorkspaceIndex = {
+      ...index,
+      workspaces: [entry, ...index.workspaces.filter((item) => item.id !== updated.id)],
+      activeWorkspaceId: updated.id,
+    };
+    return persistWorkspaceAndIndex(updated, nextIndex, { mirrorLegacyWorkspace: true });
+  } catch (error) {
+    return storageFailure(error);
+  }
 };
 
 export const setActiveWorkspaceId = (id: string | null): SaveResult => {
-  const index = loadIndex();
-  if (id !== null && !index.workspaces.some((entry) => entry.id === id)) {
-    return { status: 'error', error: 'Cannot activate a workspace that is not present in the workspace index.' };
+  try {
+    const index = loadIndex();
+    if (id !== null && !index.workspaces.some((entry) => entry.id === id)) {
+      return { status: 'error', error: 'Cannot activate a workspace that is not present in the workspace index.' };
+    }
+    index.activeWorkspaceId = id;
+    return saveIndex(index);
+  } catch (error) {
+    return storageFailure(error);
   }
-  index.activeWorkspaceId = id;
-  return saveIndex(index);
 };
 
 export const duplicateWorkspace = (id: string): WorkspaceDocument | null => {
@@ -248,18 +278,22 @@ export const duplicateWorkspace = (id: string): WorkspaceDocument | null => {
 };
 
 export const deleteWorkspace = (id: string): SaveResult => {
-  const index = loadIndex();
-  index.workspaces = index.workspaces.filter((entry) => entry.id !== id);
-  if (index.activeWorkspaceId === id) {
-    index.activeWorkspaceId = index.workspaces[0]?.id ?? null;
+  try {
+    const index = loadIndex();
+    index.workspaces = index.workspaces.filter((entry) => entry.id !== id);
+    if (index.activeWorkspaceId === id) {
+      index.activeWorkspaceId = index.workspaces[0]?.id ?? null;
+    }
+    const records = collectOwnedRecords();
+    delete records[workspaceKey(id)];
+    records[INDEX_KEY] = JSON.stringify(index);
+    const snaps = getSnapshots().filter((snap) => snap.workspaceId !== id);
+    records[SNAPSHOTS_KEY] = JSON.stringify(snaps);
+    records[LEGACY_VERSIONS_KEY] = JSON.stringify(snaps);
+    return replaceOwnedRecords(records);
+  } catch (error) {
+    return storageFailure(error);
   }
-  const records = collectOwnedRecords();
-  delete records[workspaceKey(id)];
-  records[INDEX_KEY] = JSON.stringify(index);
-  const snaps = getSnapshots().filter((snap) => snap.workspaceId !== id);
-  records[SNAPSHOTS_KEY] = JSON.stringify(snaps);
-  records[LEGACY_VERSIONS_KEY] = JSON.stringify(snaps);
-  return replaceOwnedRecords(records);
 };
 
 export const renameWorkspace = (id: string, name: string): WorkspaceDocument | null => {
@@ -294,37 +328,41 @@ export const importProjectFile = (
   const validated = validateProjectExportFile(raw);
   if (!validated.ok) return { ok: false, error: validated.error };
 
-  const incoming = validated.data.workspace;
-  if (mode === 'replace-active') {
-    const active = getActiveWorkspace();
-    const targetId = active?.id ?? createId('ws');
-    const merged: WorkspaceDocument = {
-      ...incoming,
-      id: targetId,
-      updatedAt: new Date().toISOString(),
-      createdAt: active?.createdAt ?? incoming.createdAt,
-    };
-    const result = saveWorkspaceDocument(merged);
-    if (result.status !== 'saved') return { ok: false, error: result.error ?? 'Could not replace the active workspace.' };
-    return { ok: true, workspace: merged };
-  }
+  try {
+    const incoming = validated.data.workspace;
+    if (mode === 'replace-active') {
+      const active = getActiveWorkspace();
+      const targetId = active?.id ?? createId('ws');
+      const merged: WorkspaceDocument = {
+        ...incoming,
+        id: targetId,
+        updatedAt: new Date().toISOString(),
+        createdAt: active?.createdAt ?? incoming.createdAt,
+      };
+      const result = saveWorkspaceDocument(merged);
+      if (result.status !== 'saved') return { ok: false, error: result.error ?? 'Could not replace the active workspace.' };
+      return { ok: true, workspace: merged };
+    }
 
-  const asNew: WorkspaceDocument = {
-    ...incoming,
-    id: createId('ws'),
-    name: incoming.name.endsWith('(imported)') ? incoming.name : `${incoming.name} (imported)`,
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  const index = loadIndex();
-  index.workspaces = [
-    { id: asNew.id, name: asNew.name, updatedAt: asNew.updatedAt, templateId: asNew.templateId },
-    ...index.workspaces,
-  ];
-  index.activeWorkspaceId = asNew.id;
-  const result = persistWorkspaceAndIndex(asNew, index);
-  if (result.status !== 'saved') return { ok: false, error: result.error ?? 'Could not create the imported workspace.' };
-  return { ok: true, workspace: asNew };
+    const asNew: WorkspaceDocument = {
+      ...incoming,
+      id: createId('ws'),
+      name: incoming.name.endsWith('(imported)') ? incoming.name : `${incoming.name} (imported)`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    const index = loadIndex();
+    index.workspaces = [
+      { id: asNew.id, name: asNew.name, updatedAt: asNew.updatedAt, templateId: asNew.templateId },
+      ...index.workspaces,
+    ];
+    index.activeWorkspaceId = asNew.id;
+    const result = persistWorkspaceAndIndex(asNew, index);
+    if (result.status !== 'saved') return { ok: false, error: result.error ?? 'Could not create the imported workspace.' };
+    return { ok: true, workspace: asNew };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Could not import the project.' };
+  }
 };
 
 export const getSnapshots = (): VersionSnapshot[] => {
@@ -456,11 +494,15 @@ export const applySnapshotToWorkspace = (
 };
 
 export const deleteSnapshot = (id: string): SaveResult => {
-  const next = getSnapshots().filter((snap) => snap.id !== id);
-  const records = collectOwnedRecords();
-  records[SNAPSHOTS_KEY] = JSON.stringify(next);
-  records[LEGACY_VERSIONS_KEY] = JSON.stringify(next);
-  return replaceOwnedRecords(records);
+  try {
+    const next = getSnapshots().filter((snap) => snap.id !== id);
+    const records = collectOwnedRecords();
+    records[SNAPSHOTS_KEY] = JSON.stringify(next);
+    records[LEGACY_VERSIONS_KEY] = JSON.stringify(next);
+    return replaceOwnedRecords(records);
+  } catch (error) {
+    return storageFailure(error);
+  }
 };
 
 export const clearAllLocalData = (): SaveResult => replaceOwnedRecords({});

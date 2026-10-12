@@ -13,11 +13,14 @@ const readyWorkspace = (template = getPrimaryTemplates()[0]): WorkspaceDocument 
   };
 };
 
-const seed = async (page: Page, workspace: WorkspaceDocument) => {
+const seed = async (page: Page, workspace: WorkspaceDocument, snapshots: unknown[] = []) => {
   await page.addInitScript((doc) => {
     localStorage.setItem('weavestudio_v1_index', JSON.stringify({ schemaVersion: 1, activeWorkspaceId: doc.id, workspaces: [{ id: doc.id, name: doc.name, templateId: doc.templateId, updatedAt: doc.updatedAt }] }));
     localStorage.setItem(`weavestudio_v1_ws_${doc.id}`, JSON.stringify(doc));
   }, workspace);
+  if (snapshots.length) {
+    await page.addInitScript((items) => localStorage.setItem('weavestudio_v1_snapshots', JSON.stringify(items)), snapshots);
+  }
   await page.goto('/app');
 };
 
@@ -79,6 +82,50 @@ test('snapshot write failure preserves exact owned storage and shows recovery fe
   await page.getByLabel('Snapshot name').fill('Recovery failure fixture');
   await page.getByRole('button', { name: 'Save Snapshot', exact: true }).click();
   await expect(page.getByRole('status').filter({ hasText: /quota|storage|snapshot|write/i })).toBeVisible();
+  const after = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((key) => key.startsWith('weavestudio_')).sort().map((key) => [key, localStorage.getItem(key)])));
+  expect(after).toEqual(before);
+});
+
+test('switching workspaces immediately preserves edits inside the autosave delay', async ({ page }) => {
+  const first = readyWorkspace();
+  const second = { ...readyWorkspace(), id: 'workspace-b', name: 'Workspace B' };
+  await page.addInitScript(({ a, b }: { a: WorkspaceDocument; b: WorkspaceDocument }) => {
+    localStorage.setItem('weavestudio_v1_index', JSON.stringify({
+      schemaVersion: 1,
+      activeWorkspaceId: a.id,
+      workspaces: [a, b].map(({ id, name, updatedAt, templateId }) => ({ id, name, updatedAt, templateId })),
+    }));
+    localStorage.setItem(`weavestudio_v1_ws_${a.id}`, JSON.stringify(a));
+    localStorage.setItem(`weavestudio_v1_ws_${b.id}`, JSON.stringify(b));
+  }, { a: first, b: second });
+  await page.goto('/app');
+
+  const name = page.getByLabel('Workspace name');
+  await name.fill('Edited before the save timer');
+  await page.locator('#workspace-select').selectOption(second.id);
+  await expect(name).toHaveValue(second.name);
+  await page.locator('#workspace-select').selectOption(first.id);
+
+  await expect(name).toHaveValue('Edited before the save timer');
+});
+
+test('invalid snapshot restore leaves exact owned storage unchanged and reports the error', async ({ page }) => {
+  const workspace = readyWorkspace();
+  const snapshot = {
+    id: 'invalid-nested-data', timestamp: Date.now(), title: 'Malformed snapshot', snapshotVersion: 2,
+    workspaceId: workspace.id, sourceMaterial: workspace.sourceMaterial,
+    nodes: [{ id: 'bad', type: 'transform', position: { x: 0, y: 0 }, data: { title: 'Bad', description: '', content: 123 } }],
+    edges: [],
+  };
+  await seed(page, workspace, [snapshot]);
+  await page.waitForTimeout(2_200);
+  const snapshotsButton = page.getByRole('button', { name: /snapshots/i });
+  if (await snapshotsButton.count()) await snapshotsButton.click();
+  const before = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((key) => key.startsWith('weavestudio_')).sort().map((key) => [key, localStorage.getItem(key)])));
+
+  await page.getByRole('button', { name: 'Restore', exact: true }).click();
+
+  await expect(page.getByRole('status').filter({ hasText: /invalid snapshot|snapshot graph is invalid/i })).toBeVisible();
   const after = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).filter((key) => key.startsWith('weavestudio_')).sort().map((key) => [key, localStorage.getItem(key)])));
   expect(after).toEqual(before);
 });
