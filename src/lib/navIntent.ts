@@ -15,17 +15,21 @@ export const claimNavIntent = (
     return factory();
   }
 
+  let existingId: string | null = null;
   try {
-    const existingId = sessionStorage.getItem(intentKey(intentId));
-    if (existingId) {
-      const existing = loadWorkspaceById(existingId);
-      if (existing) {
-        setActiveWorkspaceId(existing.id);
-        return existing;
-      }
-    }
+    existingId = sessionStorage.getItem(intentKey(intentId));
   } catch {
     /* sessionStorage unavailable */
+  }
+  if (existingId) {
+    const existing = loadWorkspaceById(existingId);
+    if (existing) {
+      const activation = setActiveWorkspaceId(existing.id);
+      if (activation.status !== 'saved') {
+        throw new Error(activation.error ?? 'Could not reactivate the workspace for this navigation.');
+      }
+      return existing;
+    }
   }
 
   const created = factory();

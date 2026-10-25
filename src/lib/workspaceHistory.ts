@@ -14,12 +14,16 @@ export const createWorkspaceHistory = (initial: WorkspaceDocument, limit = 80): 
   let current = structuredClone(initial);
   let future: WorkspaceDocument[] = [];
   let lastGroup: string | undefined;
+  let lastRecordedAt = 0;
   const clone = (doc: WorkspaceDocument) => structuredClone(doc);
   return {
     record(next, group) {
       if (JSON.stringify(current) === JSON.stringify(next)) return;
-      if (group !== lastGroup || past.length === 0) past = [...past, clone(current)].slice(-limit);
+      const now = Date.now();
+      const continuous = group?.startsWith('text:') || group?.startsWith('drag:');
+      if (!continuous || group !== lastGroup || now - lastRecordedAt > 750 || past.length === 0) past = [...past, clone(current)].slice(-limit);
       current = clone(next); future = []; lastGroup = group;
+      lastRecordedAt = now;
     },
     undo() { if (!past.length) return null; future = [clone(current), ...future].slice(0, limit); current = past.pop()!; lastGroup = undefined; return clone(current); },
     redo() { if (!future.length) return null; past = [...past, clone(current)].slice(-limit); current = future.shift()!; lastGroup = undefined; return clone(current); },

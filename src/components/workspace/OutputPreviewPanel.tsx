@@ -12,6 +12,7 @@ import ReactMarkdown from 'react-markdown';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
 import { AccessibleDialog } from '../ui/AccessibleDialog';
 import { ProvenancePanel } from './ProvenancePanel';
+import { MarkdownImage } from './MarkdownImage';
 
 interface OutputPreviewPanelProps {
   workspace: WorkspaceDocument;
@@ -144,7 +145,7 @@ export const OutputPreviewPanel = ({
         onClose={onClose}
         className="bg-panel border border-border rounded-lg shadow-2xl w-full max-w-6xl h-full max-h-[880px] flex flex-col overflow-hidden"
       >
-        <div className="flex items-center justify-between px-6 py-4 bg-[#1e1e24] border-b border-gray-800 shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 sm:px-6 py-4 bg-[#1e1e24] border-b border-gray-800 shrink-0">
           <div>
             <h2 className="text-lg font-bold text-white">Deliverable preview</h2>
             <p className="text-xs text-gray-400">
@@ -195,8 +196,8 @@ export const OutputPreviewPanel = ({
           </div>
         </div>
 
-        <div className="flex-1 flex flex-col md:flex-row min-h-0">
-          <div className="flex-1 md:border-r border-gray-800 overflow-y-auto bg-canvas flex flex-col min-h-0">
+        <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-y-auto md:overflow-hidden">
+          <div tabIndex={0} role="region" aria-label="Deliverable review panel" className="h-[60vh] min-h-80 shrink-0 md:h-auto md:min-h-0 md:flex-1 md:shrink md:border-r border-gray-800 overflow-y-auto bg-canvas flex flex-col">
             {viewMode === 'provenance' ? (
               <ProvenancePanel workspace={workspace} onWorkspacePatch={onWorkspacePatch} />
             ) : (
@@ -248,10 +249,10 @@ export const OutputPreviewPanel = ({
                 )}
 
                 <div className="flex-1 min-h-0 bg-panel border border-gray-800 rounded-lg overflow-hidden">
-                  <div className="h-full overflow-y-auto p-8 bg-white text-gray-900">
+                  <div role="region" aria-label="Deliverable content" tabIndex={0} className="h-full overflow-y-auto p-8 bg-white text-gray-900">
                     {viewMode === 'preview' ? (
                       <div className="prose prose-slate max-w-none">
-                        <ReactMarkdown>{markdown}</ReactMarkdown>
+                        <ReactMarkdown components={{ img: ({ src, alt }) => <MarkdownImage src={typeof src === 'string' ? src : undefined} alt={alt} />, a: ({ children, ...props }) => <a {...props} className="underline" rel="noreferrer noopener" referrerPolicy="no-referrer">{children}</a> }}>{markdown}</ReactMarkdown>
                       </div>
                     ) : (
                       <textarea
@@ -268,7 +269,7 @@ export const OutputPreviewPanel = ({
           </div>
 
           <div className="w-full md:w-72 p-6 bg-[#1e1e24] flex flex-col space-y-4 shrink-0 overflow-y-auto">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-gray-500 mb-2">Export</h3>
+            <h3 className="font-bold text-sm uppercase tracking-wider text-gray-400 mb-2">Export</h3>
 
             {exportError && (
               <div className="text-xs text-red-300 bg-red-900/20 border border-red-900/40 rounded p-2">{exportError}</div>
@@ -284,7 +285,7 @@ export const OutputPreviewPanel = ({
               </div>
               <div>
                 <div className="font-semibold text-sm text-blue-300">Markdown</div>
-                <div className="text-xs opacity-70">Editable text file</div>
+                <div className="text-xs text-gray-300">Complete editable deliverable</div>
               </div>
             </button>
 
@@ -301,7 +302,7 @@ export const OutputPreviewPanel = ({
                 <div className="font-semibold text-sm text-purple-300">
                   {isExportingPdf ? 'Preparing PDF' : 'PDF report'}
                 </div>
-                <div className="text-xs opacity-70">Local print-oriented file</div>
+                <div className="text-xs text-gray-300">Paginated reading view</div>
               </div>
             </button>
 
@@ -315,12 +316,12 @@ export const OutputPreviewPanel = ({
               </div>
               <div>
                 <div className="font-semibold text-sm text-amber-300">Project JSON</div>
-                <div className="text-xs opacity-70">Re-importable workspace</div>
+                <div className="text-xs text-gray-300">Re-importable workspace</div>
               </div>
             </button>
 
-            <p className="text-[11px] text-gray-500 leading-relaxed">
-              Project JSON round-trips nodes, edges, source material, template id, deliverable draft, and provenance. No server upload.
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Use Markdown for the complete editable text and Project JSON for a recoverable workspace. JSON includes nodes, edges, source, template, draft, and provenance. PDF is a reading view with simplified formatting. No server upload.
             </p>
           </div>
         </div>

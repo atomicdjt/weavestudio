@@ -12,15 +12,15 @@ const TemplateCard = ({ template, onLoad }: { template: WorkflowTemplate; onLoad
       <p className="text-sm text-gray-400 mb-4">{template.description}</p>
       <div className="space-y-3 mb-6">
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Ideal for</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Ideal for</span>
           <p className="text-sm text-gray-300">{template.idealUser}</p>
         </div>
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">You paste</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">You paste</span>
           <p className="text-sm text-gray-400 line-clamp-2">{template.inputInstructions}</p>
         </div>
         <div>
-          <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Output</span>
+          <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Output</span>
           <div className="flex items-center space-x-1 text-sm text-blue-400 mt-1">
             <FileText className="w-4 h-4" />
             <span>{template.expectedOutputType}</span>
@@ -59,7 +59,7 @@ export const TemplatesGallery = () => {
         </p>
       </div>
 
-      <h2 className="text-sm font-bold uppercase tracking-wider text-gray-500 mb-4">Primary workflows</h2>
+      <h2 className="text-sm font-bold uppercase tracking-wider text-gray-400 mb-4">Primary workflows</h2>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10">
         {primary.map((template) => (
           <TemplateCard key={template.id} template={template} onLoad={handleLoad} />

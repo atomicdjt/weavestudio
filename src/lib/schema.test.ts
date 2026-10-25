@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { validateProjectExportFile, validateWorkspaceDocument } from './schema';
+import { validateProjectExportFile, validateVersionSnapshot, validateWorkspaceDocument, validateWorkspaceIndex } from './schema';
 import { WORKSPACE_SCHEMA_VERSION } from '../types';
 import { fingerprintText } from './provenance';
 
@@ -72,6 +72,19 @@ describe('validateWorkspaceDocument', () => {
   it('rejects missing nodes', () => {
     const result = validateWorkspaceDocument({ id: 'x', name: 'y' });
     expect(result.ok).toBe(false);
+  });
+
+  it('rejects a node with structurally invalid persisted data', () => {
+    const result = validateWorkspaceDocument({
+      ...validWorkspace,
+      nodes: [{
+        ...validWorkspace.nodes[0],
+        data: { title: 'Input', description: '', content: { leaked: 'object' } },
+      }],
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/node data/i);
   });
 
   it.each([
@@ -227,5 +240,47 @@ describe('validateProjectExportFile', () => {
       expect(result.data.workspace.nodes).toHaveLength(1);
       expect(result.data.workspace.provenance).toBeUndefined();
     }
+  });
+
+  it('rejects malformed legacy-shaped input instead of bypassing node validation', () => {
+    const result = validateProjectExportFile({
+      title: 'Old export',
+      nodes: [{
+        id: 'x', type: 'transform', position: { x: 0, y: 0 },
+        data: { content: 123 },
+      }],
+      edges: [],
+    });
+
+    expect(result.ok).toBe(false);
+  });
+
+  it('rejects malformed source material instead of silently clearing it', () => {
+    const result = validateWorkspaceDocument({ ...validWorkspace, sourceMaterial: { notes: 'keep me' } });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.error).toMatch(/source/i);
+  });
+
+  it('rejects unsupported project wrapper versions', () => {
+    const result = validateProjectExportFile({
+      format: 'weavestudio-project', formatVersion: 99, workspace: validWorkspace,
+    });
+
+    expect(result.ok).toBe(false);
+  });
+});
+
+describe('full backup component validation', () => {
+  it('rejects unsupported index versions and incomplete or future full snapshots', () => {
+    expect(validateWorkspaceIndex({ schemaVersion: 99, workspaces: [] }).ok).toBe(false);
+    expect(validateVersionSnapshot({
+      id: 'future', timestamp: 1, title: 'Future snapshot', snapshotVersion: 99,
+      workspaceId: 'ws', sourceMaterial, nodes: validWorkspace.nodes, edges: [],
+    }).ok).toBe(false);
+    expect(validateVersionSnapshot({
+      id: 'incomplete-full', timestamp: 1, title: 'Incomplete snapshot', snapshotVersion: 2,
+      workspaceId: 'ws', nodes: validWorkspace.nodes, edges: [],
+    }).ok).toBe(false);
   });
 });

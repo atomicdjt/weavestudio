@@ -2,6 +2,7 @@ export type AIProviderId = 'openai' | 'gemini';
 
 export type AIRequest = { provider: AIProviderId; model: string; apiKey: string; prompt: string };
 export type AIResponse = { text: string; usage?: { inputTokens?: number; outputTokens?: number } };
+export const createAIRequestSignature = (revision: { provider: AIProviderId; model: string; promptInstruction?: string; expectedInput?: string; expectedOutput?: string; content?: string }): string => JSON.stringify(revision);
 export type AIProviderErrorCode = 'auth' | 'rate_limit' | 'model' | 'safety' | 'timeout' | 'aborted' | 'network' | 'malformed' | 'unknown';
 export class AIProviderError extends Error {
   code: AIProviderErrorCode;
@@ -29,9 +30,13 @@ export const runAIRequest = async (request: AIRequest, signal: AbortSignal): Pro
         body: JSON.stringify({ model: request.model, input: request.prompt }),
       });
       if (!response.ok) throw normaliseError('openai', response.status);
-      const json = await response.json() as { output_text?: unknown; usage?: { input_tokens?: number; output_tokens?: number } };
-      if (typeof json.output_text !== 'string' || !json.output_text.trim()) throw new AIProviderError('malformed', 'OpenAI returned no usable text output.');
-      return { text: json.output_text, usage: { inputTokens: json.usage?.input_tokens, outputTokens: json.usage?.output_tokens } };
+      const json = await response.json() as { output_text?: unknown; output?: Array<{ content?: Array<{ type?: string; text?: unknown; refusal?: string }> }>; usage?: { input_tokens?: number; output_tokens?: number } };
+      const parts = json.output?.flatMap((item) => item.content ?? []) ?? [];
+      const refusal = parts.find((part) => part.type === 'refusal');
+      if (refusal) throw new AIProviderError('safety', `OpenAI refused this request: ${refusal.refusal || 'The provider declined to generate a draft.'}`);
+      const text = parts.filter((part) => part.type === 'output_text' && typeof part.text === 'string').map((part) => part.text).join('\n') || (typeof json.output_text === 'string' ? json.output_text : '');
+      if (!text.trim()) throw new AIProviderError('malformed', 'OpenAI returned no usable text output.');
+      return { text, usage: { inputTokens: json.usage?.input_tokens, outputTokens: json.usage?.output_tokens } };
     }
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(request.model)}:generateContent`, {
       method: 'POST', signal,

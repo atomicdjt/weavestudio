@@ -1,4 +1,6 @@
 import type { AppEdge, AppNode } from '../types';
+import { sha256 } from '@noble/hashes/sha2.js';
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js';
 
 /**
  * Extracts the semantically meaningful fields from a node for signature comparison.
@@ -135,6 +137,111 @@ const reviewSubgraphSignature = (
     sourceMaterial,
     nodes: subgraphNodes.toSorted(compareSemanticNodes),
     edges: subgraphEdges.toSorted(compareSemanticEdges),
+  });
+};
+
+/**
+ * Creates a versioned cryptographic digest for the semantic graph a reviewer
+ * is approving. This binds a saved decision to the current content; it does
+ * not identify the reviewer or protect a portable file from someone who edits
+ * both the content and the digest.
+ */
+export const createReviewApprovalSignature = (params: {
+  reviewId: string;
+  nodes: AppNode[];
+  edges: AppEdge[];
+  sourceMaterial?: string;
+}): string => {
+  if (
+    !params.nodes.every(isNodeRecord) ||
+    !hasUniqueNodeIds(params.nodes)
+  ) {
+    throw new TypeError('Cannot sign a review with malformed or duplicate nodes.');
+  }
+
+  const review = params.nodes.find((node) => node.id === params.reviewId);
+  if (!review || review.type !== 'review') {
+    throw new TypeError('Cannot sign a missing or non-review node.');
+  }
+
+  const nodeById = new Map(params.nodes.map((node) => [node.id, node]));
+  const nodeIds = new Set(params.nodes.map((node) => node.id));
+  const incoming = buildIncomingMap(params.edges, nodeIds);
+  const canonicalSubgraph = reviewSubgraphSignature(
+    params.reviewId,
+    params.edges,
+    params.sourceMaterial ?? '',
+    nodeById,
+    nodeIds,
+    incoming,
+  );
+
+  return `sha256:${bytesToHex(sha256(utf8ToBytes(canonicalSubgraph)))}`;
+};
+
+/** Attaches a fresh digest after an explicit approve action. */
+export const attestApprovedReviewNode = (params: {
+  reviewId: string;
+  nodes: AppNode[];
+  edges: AppEdge[];
+  sourceMaterial?: string;
+}): AppNode[] => {
+  const review = params.nodes.find((node) => node.id === params.reviewId);
+  if (!review || review.type !== 'review' || review.data.status !== 'approved') {
+    throw new TypeError('Only an approved review node can receive an approval digest.');
+  }
+  const approvalSignature = createReviewApprovalSignature(params);
+  return params.nodes.map((node) => node.id === params.reviewId
+    ? { ...node, data: { ...node.data, approvalSignature, approvalAttestationVersion: 1 } }
+    : node);
+};
+
+/**
+ * Verifies signed approvals on a loaded or imported graph. Legacy approvals
+ * without the field remain unchanged for schema compatibility. A malformed,
+ * unverifiable, or stale signature fails closed to pending.
+ */
+export const verifyReviewApprovalSignatures = (params: {
+  nodes: AppNode[];
+  edges: AppEdge[];
+  sourceMaterial?: string;
+}): AppNode[] => {
+  const invalidatedIds = new Set<string>();
+
+  for (const node of params.nodes) {
+    if (
+      !isNodeRecord(node) ||
+      node.type !== 'review' ||
+      node.data.status !== 'approved' ||
+      (!Object.prototype.hasOwnProperty.call(node.data, 'approvalSignature') &&
+        !Object.prototype.hasOwnProperty.call(node.data, 'approvalAttestationVersion'))
+    ) continue;
+
+    try {
+      if (node.data.approvalAttestationVersion !== 1 || typeof node.data.approvalSignature !== 'string') {
+        invalidatedIds.add(node.id);
+        continue;
+      }
+      const expected = createReviewApprovalSignature({
+        reviewId: node.id,
+        nodes: params.nodes,
+        edges: params.edges,
+        sourceMaterial: params.sourceMaterial,
+      });
+      if (node.data.approvalSignature !== expected) invalidatedIds.add(node.id);
+    } catch {
+      invalidatedIds.add(node.id);
+    }
+  }
+
+  if (invalidatedIds.size === 0) return params.nodes;
+
+  return params.nodes.map((node) => {
+    if (!isNodeRecord(node) || !invalidatedIds.has(node.id)) return node;
+    const data = { ...node.data };
+    delete data.approvalSignature;
+    delete data.approvalAttestationVersion;
+    return { ...node, data: { ...data, status: 'pending' } };
   });
 };
 
@@ -291,9 +398,11 @@ export const invalidateApprovedReviews = (params: {
 
   if (invalidatedIds.size === 0) return params.nextNodes;
 
-  return params.nextNodes.map((node) =>
-    isNodeRecord(node) && invalidatedIds.has(node.id)
-      ? { ...node, data: { ...node.data, status: 'pending' } }
-      : node,
-  );
+  return params.nextNodes.map((node) => {
+    if (!isNodeRecord(node) || !invalidatedIds.has(node.id)) return node;
+    const data = { ...node.data };
+    delete data.approvalSignature;
+    delete data.approvalAttestationVersion;
+    return { ...node, data: { ...data, status: 'pending' } };
+  });
 };

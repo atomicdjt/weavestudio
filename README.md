@@ -68,6 +68,12 @@ It is designed for researchers, analysts, project managers, and consultants who 
 - Owned-data backup, validated restore, import-as-new, scoped clearing, and storage-pressure guidance
 - Optional OpenAI/Gemini BYOK assistance with explicit consent for each request and human review before applying output
 
+Current verification is bound to an exact commit and UTC date in
+`release/VERIFICATION.json`; see [the protocol](docs/RELEASE_VERIFICATION.md).
+The [representative-user study kit](docs/research/STUDY_PROTOCOL.md) contains
+synthetic matched tasks and a blank completion/time ledger. No representative
+participant outcomes or measured time-saving claims have been collected.
+
 ## Product tour
 
 ### Guided workflow workspace

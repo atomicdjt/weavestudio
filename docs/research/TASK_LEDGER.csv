@@ -1,0 +1,1 @@
+participant_id,role,consent_recorded,session_date_utc,commit,deployment,device_browser,tool_order,scenario_variant,tool,elapsed_seconds,unassisted_complete,assisted_complete,timeout,interventions,error_count,quality_score,quality_max,redacted_notes

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AppEdge, AppNode, NodeType } from '../types';
+import type { AppEdge, AppNode, NodeType, WorkflowTemplate } from '../types';
+import { TEMPLATE_SCHEMA_VERSION } from '../types';
 import { buildWorkflowValidator, findCycleNodeIds } from './workflowValidator';
 
 const makeNode = (
@@ -33,6 +34,54 @@ const makeReviewGraph = (reviewStatus: string) => {
 };
 
 describe('buildWorkflowValidator human review readiness', () => {
+  it('blocks readiness when a selected template has an unfilled required section', () => {
+    const { nodes, edges } = makeReviewGraph('approved');
+    nodes.splice(1, 0, {
+      ...makeNode('action', 'transform'),
+      data: { ...makeNode('action', 'transform').data, category: 'action' },
+    });
+    edges.splice(0, edges.length,
+      { id: 'input-action', source: 'input', target: 'action' },
+      { id: 'action-review', source: 'action', target: 'review' },
+      { id: 'review-output', source: 'review', target: 'output' },
+    );
+    const template = {
+      schemaVersion: TEMPLATE_SCHEMA_VERSION,
+      id: 'required-sections',
+      title: 'Required sections',
+      description: '',
+      idealUser: '',
+      inputInstructions: '',
+      messyInputSample: '',
+      expectedOutputType: 'Plan',
+      valueProposition: '',
+      stages: [],
+      nodes: [],
+      edges: [],
+      pack: 'primary' as const,
+      completionCriteria: [],
+      exportBehavior: { defaultFilenameStem: 'required-sections', includeProcessAppendix: false },
+      outputStructure: {
+        title: 'Plan',
+        requiredSections: [
+          { id: 'actions', title: 'Action items', categories: ['action' as const], required: true },
+          { id: 'decisions', title: 'Decisions', categories: ['decision' as const], required: true },
+        ],
+        optionalSections: [],
+      },
+    } satisfies WorkflowTemplate;
+
+    const result = buildWorkflowValidator(nodes, edges, template);
+
+    expect(result.exportReadiness).toBe('Incomplete');
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'missing-required-section-decisions',
+        title: 'Required template section is empty',
+      }),
+    ]));
+  });
+
   it('blocks Ready while a required review is pending', () => {
     const { nodes, edges } = makeReviewGraph('pending');
 
@@ -60,6 +109,21 @@ describe('buildWorkflowValidator human review readiness', () => {
     expect(result.completenessScore).toBe(100);
     expect(result.issueCount).toBe(0);
     expect(result.walkthrough.find((step) => step.nodeId === 'review')?.status).toBe('Ready');
+  });
+
+  it('blocks an output path that bypasses human review', () => {
+    const { nodes, edges } = makeReviewGraph('approved');
+    edges.push({ id: 'input-output-bypass', source: 'input', target: 'output' });
+
+    const result = buildWorkflowValidator(nodes, edges);
+
+    expect(result.exportReadiness).toBe('Needs Review');
+    expect(result.issues).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        id: 'output-unreviewed-path-output',
+        title: 'Output has an unreviewed path',
+      }),
+    ]));
   });
 
   it('blocks Ready and surfaces remediation when a required review is rejected', () => {

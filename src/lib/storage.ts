@@ -11,13 +11,14 @@ import {
   saveSnapshot,
   saveWorkspaceDocument,
 } from './workspaceStore';
+import type { SaveResult } from './workspaceStore';
 
 export { clearAll as clearAllLocalData };
 
-export const saveWorkspace = (nodes: AppNode[], edges: AppEdge[]) => {
+export const saveWorkspace = (nodes: AppNode[], edges: AppEdge[]): SaveResult | null => {
   const active = getActiveWorkspace();
-  if (!active) return;
-  saveWorkspaceDocument({ ...active, nodes, edges });
+  if (!active) return null;
+  return saveWorkspaceDocument({ ...active, nodes, edges });
 };
 
 export const loadWorkspace = (): { nodes: AppNode[]; edges: AppEdge[] } | null => {
@@ -26,10 +27,10 @@ export const loadWorkspace = (): { nodes: AppNode[]; edges: AppEdge[] } | null =
   return { nodes: active.nodes, edges: active.edges };
 };
 
-export const clearWorkspace = () => {
+export const clearWorkspace = (): SaveResult | null => {
   const active = getActiveWorkspace();
-  if (!active) return;
-  saveWorkspaceDocument({
+  if (!active) return null;
+  return saveWorkspaceDocument({
     ...active,
     nodes: [],
     edges: [],

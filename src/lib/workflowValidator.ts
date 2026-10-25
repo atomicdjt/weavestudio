@@ -1,4 +1,5 @@
-import type { AppEdge, AppNode, NodeType, workflowValidatorIssue, WorkflowValidatorResult, workflowValidatorStatus } from '../types';
+import type { AppEdge, AppNode, NodeType, workflowValidatorIssue, WorkflowTemplate, WorkflowValidatorResult, workflowValidatorStatus } from '../types';
+import { buildDeliverableSectionPlan } from './deliverableEngine';
 
 const actionByType: Record<NodeType, string> = {
   input: 'Collect and preserve source material',
@@ -60,6 +61,28 @@ const hasUpstreamInput = (nodeId: string, nodes: AppNode[], edges: AppEdge[]) =>
     queue.push(...(incomingByTarget.get(current) ?? []));
   }
 
+  return false;
+};
+
+const hasUnreviewedInputPath = (outputId: string, nodes: AppNode[], edges: AppEdge[]): boolean => {
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  const outgoing = new Map<string, string[]>();
+  edges.forEach((edge) => {
+    outgoing.set(edge.source, [...(outgoing.get(edge.source) ?? []), edge.target]);
+  });
+  const queue = nodes.filter((node) => node.type === 'input').map((node) => node.id);
+  const visited = new Set(queue);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) continue;
+    for (const target of outgoing.get(current) ?? []) {
+      if (target === outputId) return true;
+      if (visited.has(target) || byId.get(target)?.type === 'review') continue;
+      visited.add(target);
+      queue.push(target);
+    }
+  }
   return false;
 };
 
@@ -135,7 +158,11 @@ const addIssue = (issues: workflowValidatorIssue[], issue: workflowValidatorIssu
   issues.push(issue);
 };
 
-export const buildWorkflowValidator = (nodes: AppNode[], edges: AppEdge[]): WorkflowValidatorResult => {
+export const buildWorkflowValidator = (
+  nodes: AppNode[],
+  edges: AppEdge[],
+  template?: WorkflowTemplate | null,
+): WorkflowValidatorResult => {
   const issues: workflowValidatorIssue[] = [];
   const nodeIds = new Set(nodes.map((node) => node.id));
   const connectedNodeIds = new Set<string>();
@@ -178,6 +205,21 @@ export const buildWorkflowValidator = (nodes: AppNode[], edges: AppEdge[]): Work
       detail: 'Exports are strongest when at least one Output node contains the final deliverable text.',
       suggestedFix: 'Add an Output node and draft the final brief, SOP, plan, or report content.',
     });
+  }
+
+  if (template) {
+    const { assignments } = buildDeliverableSectionPlan(nodes, template);
+    assignments
+      .filter(({ section, hasContent }) => section.required && !hasContent)
+      .forEach(({ section }) => {
+        addIssue(issues, {
+          id: `missing-required-section-${section.id}`,
+          status: 'Incomplete',
+          title: 'Required template section is empty',
+          detail: `${section.title} has no content assigned by the selected template.`,
+          suggestedFix: `Add content to a node assigned to the “${section.title}” section.`,
+        });
+      });
   }
 
   const cycleNodeIds = findCycleNodeIds(nodes, validEdges);
@@ -293,6 +335,16 @@ export const buildWorkflowValidator = (nodes: AppNode[], edges: AppEdge[]): Work
         title: 'Output lacks upstream input',
         detail: `${node.data.title || 'Output node'} is not traceable back to an Input node.`,
         suggestedFix: 'Connect the output path back through the workflow to a source Input node.',
+        nodeId: node.id,
+      });
+    }
+    if (hasUpstreamInput(node.id, nodes, validEdges) && hasUnreviewedInputPath(node.id, nodes, validEdges)) {
+      addIssue(issues, {
+        id: `output-unreviewed-path-${node.id}`,
+        status: 'Needs Review',
+        title: 'Output has an unreviewed path',
+        detail: `${node.data.title || 'Output node'} can be reached from source material without passing through a human review checkpoint.`,
+        suggestedFix: 'Route every input-to-output path through an approved Review node before export.',
         nodeId: node.id,
       });
     }

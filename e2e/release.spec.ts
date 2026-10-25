@@ -1,4 +1,44 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Route } from '@playwright/test';
+
+test('delayed AI draft belongs to its original node and revision', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop exercises async inspector selection.');
+  let pending: Route | undefined;
+  await page.route(/api\.openai\.com/, (route) => { pending = route; });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Add AI Assist node' }).click();
+  await page.getByLabel('Title', { exact: true }).fill('AI target A');
+  await page.getByLabel('API key (memory only)').fill('test-key');
+  await page.getByRole('button', { name: /run live provider/i }).click();
+  await page.getByRole('button', { name: /confirm and send/i }).click();
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await page.getByLabel('Add AI Assist node', { exact: true }).click();
+  await page.getByLabel('Title', { exact: true }).fill('AI target B');
+  await pending!.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output_text: 'Delayed draft for A' }) });
+  await expect(page.getByRole('button', { name: /run live provider/i })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Apply to node' })).toHaveCount(0);
+  await page.getByRole('button', { name: /workflow outline/i }).click();
+  await page.getByRole('region', { name: /workflow outline/i }).getByRole('button', { name: /AI target A/ }).click();
+  await expect(page.getByText('Delayed draft for A')).toBeVisible();
+  await page.getByLabel('Prompt', { exact: true }).fill('New revision after response');
+  await expect(page.getByRole('button', { name: 'Apply to node' })).toHaveCount(0);
+  await expect(page.getByText(/draft no longer matches/i)).toBeVisible();
+});
+
+test('cancelling a dispatched AI request never exposes an apply-able draft', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Desktop async cancellation regression.');
+  let pending: Route | undefined;
+  await page.route(/api\.openai\.com/, (route) => { pending = route; });
+  await page.goto('/app');
+  await page.getByRole('button', { name: 'Add AI Assist node' }).click();
+  await page.getByLabel('API key (memory only)').fill('test-key');
+  await page.getByRole('button', { name: /run live provider/i }).click();
+  await page.getByRole('button', { name: /confirm and send/i }).click();
+  await expect.poll(() => Boolean(pending)).toBe(true);
+  await page.getByRole('button', { name: 'Cancel request', exact: true }).click();
+  await expect(page.getByText('The request was cancelled.')).toBeVisible();
+  await pending!.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ output_text: 'Cancelled draft' }) }).catch(() => undefined);
+  await expect(page.getByRole('button', { name: 'Apply to node' })).toHaveCount(0);
+});
 
 test('landing page renders without browser console errors', async ({ page }) => {
   const errors: string[] = [];
@@ -110,6 +150,35 @@ test('data-clear confirmation closes with Escape without clearing data', async (
   await expect(confirmation).toBeHidden();
   await expect(portability).toBeVisible();
   await expect(portability.getByRole('button', { name: /clear all local data/i })).toBeFocused();
+});
+
+test('cancelling a derived-node split preserves exact storage bytes', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The same confirmation component is exercised on desktop where the source controls stay visible.');
+  await page.goto('/app#legacy-split-flow');
+  await page.getByLabel('Source material').fill('First source block\n\nSecond source block');
+  await page.getByLabel('Add Transform node', { exact: true }).click();
+  await page.waitForTimeout(1_100);
+
+  const before = await page.evaluate(() => Object.fromEntries(
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('weavestudio_'))
+      .sort()
+      .map((key) => [key, localStorage.getItem(key)]),
+  ));
+
+  await page.getByRole('button', { name: 'Split into nodes' }).click();
+  const confirmation = page.getByRole('dialog', { name: 'Replace derived nodes?' });
+  await expect(confirmation).toBeVisible();
+  await confirmation.getByRole('button', { name: 'Cancel' }).click();
+  await page.waitForTimeout(1_100);
+
+  const after = await page.evaluate(() => Object.fromEntries(
+    Object.keys(localStorage)
+      .filter((key) => key.startsWith('weavestudio_'))
+      .sort()
+      .map((key) => [key, localStorage.getItem(key)]),
+  ));
+  expect(after).toEqual(before);
 });
 
 test('workflow outline exposes a linear, selectable node flow', async ({ page }) => {

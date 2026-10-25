@@ -9,5 +9,6 @@ export default defineConfig({
     { name: 'desktop', testIgnore: /a11y\.spec\.ts/, use: { ...devices['Desktop Chrome'] } },
     { name: 'mobile', testIgnore: /a11y\.spec\.ts/, use: { ...devices['iPhone 13'], browserName: 'chromium' } },
     { name: 'a11y', testMatch: /a11y\.spec\.ts/, dependencies: ['desktop', 'mobile'], use: { ...devices['Desktop Chrome'] } },
+    { name: 'a11y-mobile', testMatch: /a11y\.spec\.ts/, use: { ...devices['iPhone 13'], browserName: 'chromium' } },
   ],
 });
