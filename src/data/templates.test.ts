@@ -6,6 +6,8 @@ import {
   resolveTemplateId,
   TEMPLATES,
 } from './templates';
+import { composeDeliverableMarkdown } from '../lib/deliverableEngine';
+import { buildWorkflowValidator } from '../lib/workflowValidator';
 
 describe('templates registry', () => {
   it('exposes five primary templates', () => {
@@ -24,6 +26,24 @@ describe('templates registry', () => {
       expect(template.outputStructure.requiredSections.length).toBeGreaterThan(0);
       expect(template.nodes.length).toBeGreaterThan(0);
       expect(template.inputInstructions.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('composes every fully populated primary template with matching Ready validation', () => {
+    for (const template of getPrimaryTemplates()) {
+      const nodes = template.nodes.map((node) => ({
+        ...node,
+        data: {
+          ...node.data,
+          content: node.data.content || `${node.data.title} complete content.`,
+          ...(node.type === 'review' ? { status: 'approved' as const } : {}),
+        },
+      }));
+      const markdown = composeDeliverableMarkdown(nodes, template.edges, { template });
+      const validation = buildWorkflowValidator(nodes, template.edges, template);
+
+      expect(markdown).not.toContain('Section incomplete');
+      expect(validation.exportReadiness).toBe('Ready');
     }
   });
 

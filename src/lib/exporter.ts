@@ -129,54 +129,25 @@ export const exportPdfFile = async (markdown: string, title = 'Workflow Output')
   };
 
   lines.forEach((line) => {
-    if (line.startsWith('# ')) {
-      ensureSpace(14);
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      const wrapped = doc.splitTextToSize(line.replace(/^#\s+/, ''), contentWidth);
-      doc.text(wrapped, margin, y);
-      y += wrapped.length * 8 + 4;
-      return;
+    if (line.trim() === '' || line.trim() === '---') { ensureSpace(4); y += 4; return; }
+    const level = line.match(/^(#{1,3})\s+/)?.[1].length ?? 0;
+    const size = level === 1 ? 18 : level === 2 ? 14 : level === 3 ? 12 : 10;
+    const lineHeight = level === 1 ? 8 : level === 2 ? 7 : level === 3 ? 6 : 5.5;
+    const style = level ? 'bold' : 'normal';
+    const cleaned = line.replace(/^#{1,3}\s+/, '').replace(/^>\s+/, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1').replace(/_(.*?)_/g, '$1').replace(/`([^`]+)`/g, '$1');
+    doc.setFontSize(size);
+    doc.setFont('helvetica', style);
+    const wrapped = doc.splitTextToSize(cleaned, contentWidth) as string[];
+    for (const text of wrapped) {
+      ensureSpace(lineHeight);
+      // Page footers change the active font; restore the block style on every line.
+      doc.setFontSize(size);
+      doc.setFont('helvetica', style);
+      doc.text(text, margin, y);
+      y += lineHeight;
     }
-
-    if (line.startsWith('## ')) {
-      ensureSpace(12);
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      const wrapped = doc.splitTextToSize(line.replace(/^##\s+/, ''), contentWidth);
-      doc.text(wrapped, margin, y);
-      y += wrapped.length * 7 + 3;
-      return;
-    }
-
-    if (line.startsWith('### ')) {
-      ensureSpace(10);
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      const wrapped = doc.splitTextToSize(line.replace(/^###\s+/, ''), contentWidth);
-      doc.text(wrapped, margin, y);
-      y += wrapped.length * 6 + 2;
-      return;
-    }
-
-    if (line.trim() === '' || line.trim() === '---') {
-      y += 4;
-      return;
-    }
-
-    // Strip light markdown emphasis for PDF text layer
-    const cleaned = line
-      .replace(/^>\s+/, '')
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/_(.*?)_/g, '$1')
-      .replace(/`([^`]+)`/g, '$1');
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    const wrapped = doc.splitTextToSize(cleaned, contentWidth);
-    ensureSpace(wrapped.length * 5.5);
-    doc.text(wrapped, margin, y);
-    y += wrapped.length * 5.5;
+    if (level) y += 3;
   });
 
   footer();

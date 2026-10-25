@@ -35,7 +35,7 @@ interface WorkflowCanvasProps {
   /** Bump when parent applies an external graph replacement (not every keystroke). */
   graphEpoch: number;
   workspaceId: string;
-  onNodesChange: (nodes: AppNode[]) => void;
+  onNodesChange: (nodes: AppNode[], historyGroup?: string) => void;
   onEdgesChange: (edges: AppEdge[]) => void;
   onNodeSelect: (node: AppNode | null) => void;
   onViewportChange?: (viewport: Viewport) => void;
@@ -47,12 +47,12 @@ const getDefaultNodeData = (type: NodeType): AppNode['data'] => {
     return {
       title: 'New AI Assist Blueprint',
       description: 'Optional BYOK AI step. Live network calls require explicit consent.',
-      content: 'Blueprint only by default. Use Mock offline, or allow a network call to run a provider.',
+      content: 'Optional blueprint. Edit it locally, or explicitly confirm an OpenAI/Gemini request.',
       status: 'pending',
       promptInstruction: '',
       expectedInput: '',
       expectedOutput: '',
-      providerNote: 'Requires a user-supplied key or local Ollama. No bundled API keys. Live calls are gated.',
+      providerNote: 'OpenAI/Gemini require a user-supplied API key. Keys stay in tab memory; every request requires consent.',
       reviewRequired: true,
     };
   }
@@ -84,6 +84,9 @@ const WorkflowCanvasInner = ({
   const applyingExternalRef = useRef(false);
 
   const [nodes, setNodes, onNodesChangeInternal] = useNodesState<AppNode>(parentNodes);
+  const dragSession = useRef(0);
+  const dragging = useRef(false);
+  const interactionGroup = useRef<string | undefined>(undefined);
   const [edges, setEdges, onEdgesChangeInternal] = useEdgesState<AppEdge>(parentEdges);
 
   const onNodesChangeRef = useRef(onNodesChange);
@@ -94,7 +97,7 @@ const WorkflowCanvasInner = ({
   // Push interaction updates upward (skip while applying external graph)
   useEffect(() => {
     if (applyingExternalRef.current) return;
-    onNodesChangeRef.current(nodes);
+    onNodesChangeRef.current(nodes, interactionGroup.current);
   }, [nodes]);
 
   useEffect(() => {
@@ -191,7 +194,15 @@ const WorkflowCanvasInner = ({
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChangeInternal}
+        onNodesChange={(changes) => {
+          const positions = changes.filter((change) => change.type === 'position');
+          if (positions.length) {
+            if (!dragging.current) dragSession.current++;
+            interactionGroup.current = `drag:canvas:${dragSession.current}`;
+            dragging.current = positions.some((change) => change.dragging);
+          } else interactionGroup.current = undefined;
+          onNodesChangeInternal(changes);
+        }}
         onEdgesChange={onEdgesChangeInternal}
         onConnect={onConnect}
         onInit={(instance) => {

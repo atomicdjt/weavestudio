@@ -1,43 +1,61 @@
-# Release Verification
+# Release verification protocol
 
-## Release scope
+Reproduce current engineering verification under Node 24:
 
-- **Release:** WeaveStudio v1.0.0
-- **Authoritative branch:** `main` (`master` is retained only as a legacy compatibility branch)
-- **Production URL:** [https://weavestudio-nine.vercel.app/](https://weavestudio-nine.vercel.app/)
-- **Production-tested base commit:** `742a017388547e1e89b996c8d01bea9e79f9a55d`
+```sh
+npm ci
+npx playwright install chromium
+npm run verify
+```
 
-## Local validation
+The runner executes production dependency auditing, TS/TSX tests, lint,
+TypeScript, production build, desktop/mobile browser regressions, route/dialog
+accessibility, document validation, and package hygiene. Each check runs once.
+The separate `npm run verify:buyer` command remains available.
 
-- [x] `npm ci`
-- [x] `npm test` - 33 tests passing
-- [x] `npm run lint` - zero errors and zero warnings
-- [x] `npm run typecheck` - zero TypeScript errors
-- [x] `npm run build` - successful production build
+It writes `release/VERIFICATION.json` with the exact checked-out commit, UTC
+start/end times, Node version, platform, every command/exit code, CI run URL,
+and whether the source was dirty. CI uploads the receipt with the package
+manifest. A dirty receipt characterizes a working tree, not a published commit.
 
-## Product behavior verified
+## Candidate and production identity
 
-- [x] Core routes render and direct refreshes use the SPA rewrite.
-- [x] Guided demo creates exactly one workspace.
-- [x] Source synchronization preserves unrelated node edits and canvas viewport.
-- [x] Workflow Validator completes structural and export-readiness checks.
-- [x] Deliverable generation completes without duplicate generated headings.
-- [x] Manual draft edits require confirmation before overwrite.
-- [x] Snapshots restore coherent workspace state.
-- [x] Markdown, PDF, and Project JSON exports work; Project JSON re-imports.
-- [x] The standard workflow makes no hidden provider request.
+The 12 October 2026 quality repair is a candidate until independently reviewed
+and merged. Read its receipt and PR checks for current results. Historical
+release checklists and frozen test counts are separate evidence.
 
-## Optional AI boundary
+Production inspected on 12 October 2026:
 
-AI Assist is an optional blueprint. The offline/mock path is the default. A live provider request can occur only after explicit confirmation and may send the configured prompt/context to that provider. No API key is bundled; keys are not written to browser `localStorage`.
+- URL: https://weavestudio-nine.vercel.app/
+- Source: `main` at `f74c835e0953a135f7aefef1a64a68d0d0cd9d0f`
+- Vercel deployment: `dpl_8p5eSou5k4GptwTSZRtSPNt4ubRg`
+- State: READY at inspection, not a future health guarantee.
 
-## Deployment configuration
+The historical v1.0.0 tag, current production, local verification, preview
+deployment, independent approval, and merge are distinct evidence.
 
-- Build command: `npm run build`
-- Output directory: `dist/`
-- Hosting: Vercel static deployment with SPA rewrite in `vercel.json`
-- No environment configuration is required for the standard workflow.
+## Scope and remaining validation
 
-## Release gate
+OpenAI/Gemini requests are mocked in QA; no live key, paid call, or participant
+data is used. Core composition remains deterministic and local. Browser QA uses
+Chromium desktop and phone-sized emulation, not physical devices or native iOS
+Safari. Automated accessibility does not replace screen-reader/user validation.
+Task completion and time saved remain unmeasured; see the
+[study protocol](research/STUDY_PROTOCOL.md).
 
-This document records verified checks; it is not a guarantee of future deployment health. Final merge, production verification, tagging, and GitHub Release publication remain separately approval-gated.
+PDF is a paginated reading view with simplified formatting and limited Unicode.
+Markdown and Project JSON are complete handoff/recovery formats. The candidate's
+production dependency audit is clean; the full development audit retains two
+moderate build-only findings through typography's selector parser. Compatible
+fixes pass the same PR gate; an incompatible downgrade is not forced.
+
+## Hosting and release gate
+
+Vercel uses `npm run build`, `dist/`, Node 24, and the SPA rewrite. No environment
+variable is required for the core workflow. Assets must load first: there is no
+offline installation/service-worker guarantee. Optional AI and explicitly loaded
+remote images require networking.
+
+Merge requires independent approval and required checks. Tie the resulting
+production deployment to its merged commit and perform live checks before
+calling that release production-verified.

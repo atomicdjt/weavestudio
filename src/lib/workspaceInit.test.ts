@@ -27,7 +27,7 @@ vi.mock('./workspaceStore', () => {
       return doc;
     },
     loadWorkspaceById: (id: string) => store.get(id) ?? null,
-    setActiveWorkspaceId: vi.fn(),
+    setActiveWorkspaceId: vi.fn(() => ({ status: 'saved' as const })),
     getOrCreateGuidedDemo: (factory: () => { name: string; templateId: string; nodes: unknown[]; edges: unknown[]; sourceMaterial: string }) => {
       const existing = [...store.values()].find((entry) => entry.meta?.guidedDemo);
       if (existing) return existing;

@@ -78,7 +78,7 @@ export const stripDuplicateLeadingHeadings = (
     const match = line.match(/^#{1,6}\s+(.+)$/);
     if (!match) break;
     const headingNorm = normalizeHeading(match[1]);
-    if (blocked.some((b) => b && (headingNorm === b || headingNorm.includes(b) || b.includes(headingNorm)))) {
+    if (blocked.some((b) => b && headingNorm === b)) {
       i += 1;
       continue;
     }
@@ -88,22 +88,52 @@ export const stripDuplicateLeadingHeadings = (
   return lines.slice(i).join('\n').trim();
 };
 
-const nodeMatchesSection = (node: AppNode, section: SectionDef): boolean => {
-  if (section.nodeIds?.length && section.nodeIds.includes(node.id)) return true;
+/**
+ * Explicit starter-node IDs own their node. Categorized nodes use only a
+ * category selector; type matching remains a compatibility fallback for older
+ * uncategorized graphs.
+ */
+const nodeMatchesSection = (
+  node: AppNode,
+  section: SectionDef,
+  sectionIndex: number,
+  explicitOwners: Map<string, number>,
+): boolean => {
+  const explicitOwner = explicitOwners.get(node.id);
+  if (explicitOwner !== undefined && explicitOwner !== sectionIndex) return false;
+  if (section.nodeIds?.length) return explicitOwner === sectionIndex && section.nodeIds.includes(node.id);
   if (section.categories?.length) {
-    const cat = node.data.category;
-    if (cat && section.categories.includes(cat)) return true;
+    if (node.data.category) return section.categories.includes(node.data.category);
+    return Boolean(section.nodeTypes?.includes(node.type));
   }
-  if (section.nodeTypes?.length && node.type && section.nodeTypes.includes(node.type)) return true;
-  return false;
+  return !node.data.category && Boolean(section.nodeTypes?.includes(node.type));
 };
 
-const collectSectionNodes = (nodes: AppNode[], section: SectionDef, usedIds: Set<string>): AppNode[] => {
-  const matches = nodes.filter((node) => !usedIds.has(node.id) && nodeMatchesSection(node, section));
+const collectSectionNodes = (
+  nodes: AppNode[],
+  section: SectionDef,
+  sectionIndex: number,
+  usedIds: Set<string>,
+  explicitOwners: Map<string, number>,
+): AppNode[] => {
+  const matches = nodes.filter((node) =>
+    !usedIds.has(node.id) && nodeMatchesSection(node, section, sectionIndex, explicitOwners),
+  );
   const withContent = matches.filter((node) => node.data.content?.trim());
   const selected = withContent.length > 0 ? withContent : matches;
   selected.forEach((node) => usedIds.add(node.id));
   return selected;
+};
+
+export type DeliverableSectionAssignment = {
+  section: SectionDef;
+  nodes: AppNode[];
+  hasContent: boolean;
+};
+
+export type DeliverableSectionPlan = {
+  assignments: DeliverableSectionAssignment[];
+  usedNodeIds: Set<string>;
 };
 
 export const formatNodeBodyForExport = (
@@ -176,6 +206,37 @@ const defaultSectionsFromGraph = (nodes: AppNode[]): SectionDef[] => {
   ];
 };
 
+export const buildDeliverableSectionPlan = (
+  nodes: AppNode[],
+  template?: WorkflowTemplate | null,
+): DeliverableSectionPlan => {
+  const required = template?.outputStructure.requiredSections ?? [];
+  const optional = template?.outputStructure.optionalSections ?? [];
+  const sections: SectionDef[] =
+    required.length + optional.length > 0
+      ? [
+          ...required.map((section) => ({ ...section, required: true })),
+          ...optional.map((section) => ({ ...section, required: false })),
+        ]
+      : defaultSectionsFromGraph(nodes);
+  const explicitOwners = new Map<string, number>();
+  sections.forEach((section, sectionIndex) => {
+    section.nodeIds?.forEach((nodeId) => {
+      if (!explicitOwners.has(nodeId)) explicitOwners.set(nodeId, sectionIndex);
+    });
+  });
+  const usedNodeIds = new Set<string>();
+  const assignments = sections.map((section, sectionIndex) => {
+    const matched = collectSectionNodes(nodes, section, sectionIndex, usedNodeIds, explicitOwners);
+    return {
+      section,
+      nodes: matched,
+      hasContent: matched.some((node) => node.data.content?.trim()),
+    };
+  });
+  return { assignments, usedNodeIds };
+};
+
 const buildEdgeSummary = (nodes: AppNode[], edges: AppEdge[]): string => {
   if (edges.length === 0) return '_No process connections defined._';
   const titles = new Map(nodes.map((node) => [node.id, node.data.title || node.id]));
@@ -199,23 +260,11 @@ export const composeDeliverableMarkdown = (
     template?.expectedOutputType ||
     'Workflow Deliverable';
 
-  const required = template?.outputStructure.requiredSections ?? [];
-  const optional = template?.outputStructure.optionalSections ?? [];
-  const sections: SectionDef[] =
-    required.length + optional.length > 0
-      ? [
-          ...required.map((s) => ({ ...s, required: true })),
-          ...optional.map((s) => ({ ...s, required: false })),
-        ]
-      : defaultSectionsFromGraph(nodes);
-
-  const usedIds = new Set<string>();
+  const { assignments, usedNodeIds } = buildDeliverableSectionPlan(nodes, template);
   const bodyParts: string[] = [];
   const missingRequired: string[] = [];
 
-  sections.forEach((section) => {
-    const matched = collectSectionNodes(nodes, section, usedIds);
-    const hasContent = matched.some((node) => node.data.content?.trim());
+  assignments.forEach(({ section, nodes: matched, hasContent }) => {
 
     if (!hasContent) {
       if (section.required) {
@@ -243,7 +292,7 @@ export const composeDeliverableMarkdown = (
   });
 
   const leftoverOutputs = nodes.filter(
-    (node) => node.type === 'output' && !usedIds.has(node.id) && node.data.content?.trim(),
+    (node) => node.type === 'output' && !usedNodeIds.has(node.id) && node.data.content?.trim(),
   );
   if (leftoverOutputs.length > 0 && bodyParts.length === 0) {
     leftoverOutputs.forEach((node) => {

@@ -25,7 +25,7 @@ import type {
   WorkspaceDocument,
 } from '../types';
 import { buildWorkflowValidator } from '../lib/workflowValidator';
-import { invalidateApprovedReviews } from '../lib/reviewState';
+import { attestApprovedReviewNode, invalidateApprovedReviews } from '../lib/reviewState';
 import { upsertSourceFragment } from '../lib/provenance';
 import {
   applySourceToInputNode,
@@ -38,6 +38,7 @@ import { createId } from '../lib/ids';
 import { getTemplateById, resolveTemplateId, TEMPLATES } from '../data/templates';
 import {
   applySnapshotToWorkspace,
+  createEmptyWorkspaceDocument,
   createWorkspace,
   deleteWorkspace,
   duplicateWorkspace,
@@ -72,11 +73,11 @@ const getNewNodeData = (type: NodeType): AppNode['data'] => {
   return {
     ...base,
     description: 'Optional BYOK-ready AI adapter step. Live network calls require explicit consent.',
-    content: 'Blueprint only by default. Use Mock offline, or allow a network call to run a provider.',
+    content: 'Optional blueprint. Edit it locally, or explicitly confirm an OpenAI/Gemini request.',
     promptInstruction: '',
     expectedInput: '',
     expectedOutput: '',
-    providerNote: 'Requires a user-supplied key or local Ollama. No bundled API keys. Live calls are gated.',
+    providerNote: 'OpenAI/Gemini require a user-supplied API key. Keys stay in tab memory; every request requires consent.',
     reviewRequired: true,
   };
 };
@@ -92,7 +93,13 @@ const defaultWorkspace = (): WorkspaceDocument => {
   const existing = getActiveWorkspace();
   if (existing) return existing;
 
-  return createWorkspace({ name: 'Blank workspace', nodes: [], edges: [], sourceMaterial: '' });
+  try {
+    return createWorkspace({ name: 'Blank workspace', nodes: [], edges: [], sourceMaterial: '' });
+  } catch {
+    // The delayed save effect will surface the storage error while keeping the
+    // user's unsaved canvas available for an export/retry.
+    return createEmptyWorkspaceDocument('Blank workspace');
+  }
 };
 
 const readHistoryState = (): LocationState => {
@@ -109,7 +116,13 @@ export const WorkspacePage = () => {
   const locationState = location.state as LocationState;
 
   const [workspace, setWorkspace] = useState<WorkspaceDocument>(() => {
-    const fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
+    let fromNav: WorkspaceDocument | null = null;
+    try {
+      fromNav = resolveWorkspaceFromNav(locationState ?? readHistoryState());
+    } catch {
+      // The fallback remains in memory and the ordinary save path reports the
+      // persistence error without losing a user-entered canvas.
+    }
     return fromNav ?? defaultWorkspace();
   });
   const historyRef = useRef(createWorkspaceHistory(workspace));
@@ -144,6 +157,30 @@ export const WorkspacePage = () => {
       : null,
   );
 
+  const persistWorkspaceBeforeLeaving = useCallback((current: WorkspaceDocument): boolean => {
+    try {
+      const result = saveWorkspaceDocument(current);
+      setSaveStatus(result.status === 'saved' ? 'saved' : result.status);
+      setSaveError(result.error ?? null);
+      if (result.status !== 'saved') {
+        setNotice(result.error ?? 'Could not save the current workspace. The workspace change was cancelled.');
+        return false;
+      }
+      try {
+        setIndexEntries(loadIndex().workspaces);
+      } catch {
+        // The document write succeeded; a temporary list-read failure should not discard it.
+      }
+      return true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Could not save the current workspace.';
+      setSaveStatus('error');
+      setSaveError(message);
+      setNotice(`${message} The workspace change was cancelled.`);
+      return false;
+    }
+  }, []);
+
   const nodes = workspace.nodes;
   const edges = workspace.edges;
   const template = useMemo(
@@ -172,8 +209,15 @@ export const WorkspacePage = () => {
       return;
     }
     if (navConsumedKey === location.key) return;
+    if (!persistWorkspaceBeforeLeaving(workspace)) return;
 
-    const next = resolveWorkspaceFromNav(locationState);
+    let next: WorkspaceDocument | null = null;
+    try {
+      next = resolveWorkspaceFromNav(locationState);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Could not create the requested workspace.');
+      return;
+    }
     if (!next) return;
 
     setWorkspace(next);
@@ -185,7 +229,7 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
     setNavConsumedKey(location.key);
     navigate('/app', { replace: true, state: null });
-  }, [location.key, locationState, navConsumedKey, navigate]);
+  }, [location.key, locationState, navConsumedKey, navigate, persistWorkspaceBeforeLeaving, workspace]);
 
   useEffect(() => {
     if (locationState && (locationState.openGuidedDemo || locationState.blankWorkspace || locationState.loadTemplate)) {
@@ -197,17 +241,26 @@ export const WorkspacePage = () => {
   useEffect(() => {
     setSaveStatus('saving');
     const timer = setTimeout(() => {
-      const result = saveWorkspaceDocument(workspace);
-      setSaveStatus(result.status === 'saved' ? 'saved' : result.status);
-      setSaveError(result.error ?? null);
-      setIndexEntries(loadIndex().workspaces);
+      try {
+        const result = saveWorkspaceDocument(workspace);
+        setSaveStatus(result.status === 'saved' ? 'saved' : result.status);
+        setSaveError(result.error ?? null);
+        try {
+          setIndexEntries(loadIndex().workspaces);
+        } catch (error) {
+          setSaveError(error instanceof Error ? error.message : 'Workspace list could not be refreshed.');
+        }
+      } catch (error) {
+        setSaveStatus('error');
+        setSaveError(error instanceof Error ? error.message : 'Could not save workspace changes.');
+      }
     }, 900);
     return () => clearTimeout(timer);
   }, [workspace]);
 
   const patchWorkspace = (
     patch: Partial<WorkspaceDocument> | ((current: WorkspaceDocument) => WorkspaceDocument),
-    historyGroup: string | false = 'mutation',
+    historyGroup: string | false | undefined = undefined,
   ) => {
     setWorkspace((current) => {
       const next = typeof patch === 'function' ? patch(current) : { ...current, ...patch };
@@ -248,11 +301,33 @@ export const WorkspacePage = () => {
     setGraphEpoch((e) => e + 1);
   };
 
-  const handleUpdateNode = (id: string, data: Partial<AppNode['data']>) => {
+  const handleUpdateNode = (id: string, data: Partial<AppNode['data']>, command = false) => {
     patchWorkspace((current) => {
-      const nextNodes = current.nodes.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, ...data } } : node,
+      const requestedData = { ...data };
+      delete requestedData.approvalSignature;
+      delete requestedData.approvalAttestationVersion;
+      let nextNodes = current.nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, ...requestedData } } : node,
       );
+      const updatedNode = nextNodes.find((node) => node.id === id);
+      if (updatedNode?.type === 'review') {
+        if (requestedData.status === 'approved') {
+          nextNodes = attestApprovedReviewNode({
+            reviewId: id,
+            nodes: nextNodes,
+            edges: current.edges,
+            sourceMaterial: current.sourceMaterial,
+          });
+        } else if (requestedData.status !== undefined) {
+          nextNodes = nextNodes.map((node) => {
+            if (node.id !== id || node.type !== 'review') return node;
+            const nextData = { ...node.data };
+            delete nextData.approvalSignature;
+            delete nextData.approvalAttestationVersion;
+            return { ...node, data: nextData };
+          });
+        }
+      }
       return {
         ...current,
         nodes: invalidateApprovedReviews({
@@ -264,7 +339,7 @@ export const WorkspacePage = () => {
           nextSource: current.sourceMaterial,
         }),
       };
-    }, `node:${id}`);
+    }, !command && Object.keys(data).length === 1 && ['title', 'description', 'content', 'promptInstruction', 'expectedInput', 'expectedOutput'].includes(Object.keys(data)[0]) ? `text:node:${id}:${Object.keys(data)[0]}` : undefined);
     setWorkflowValidator(null);
     setGraphEpoch((e) => e + 1);
   };
@@ -279,7 +354,7 @@ export const WorkspacePage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspace.nodes, workspace.edges]);
 
-  const handleCanvasNodesChange = (canvasNodes: AppNode[]) => {
+  const handleCanvasNodesChange = (canvasNodes: AppNode[], historyGroup?: string) => {
     if (restoringHistoryRef.current) return;
     setWorkspace((current) => {
       if (JSON.stringify(canvasNodes) === JSON.stringify(current.nodes)) return current;
@@ -292,7 +367,8 @@ export const WorkspacePage = () => {
         nextSource: current.sourceMaterial,
       });
       const next = { ...current, nodes: guardedNodes };
-      historyRef.current.record(next, 'canvas');
+      const semantic = (nodes: AppNode[]) => nodes.map(({ id, type, position, data }) => ({ id, type, position, data }));
+      if (JSON.stringify(semantic(current.nodes)) !== JSON.stringify(semantic(guardedNodes))) historyRef.current.record(next, historyGroup);
       setHistoryVersion((value) => value + 1);
       return next;
     });
@@ -350,7 +426,15 @@ export const WorkspacePage = () => {
 
   const handlePortabilityReload = () => {
     const active = getActiveWorkspace();
-    const target = active ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+    let target = active;
+    if (!target) {
+      try {
+        target = createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Could not create a replacement workspace.');
+        return;
+      }
+    }
     setWorkspace(target);
     historyRef.current.reset(target);
     setHistoryVersion((v) => v + 1);
@@ -363,8 +447,15 @@ export const WorkspacePage = () => {
 
   const handleResetDemo = () => {
     const openDemo = () => {
+      if (!persistWorkspaceBeforeLeaving(workspace)) return;
       const intentId = createId('intent');
-      const next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
+      let next: WorkspaceDocument | null = null;
+      try {
+        next = resolveWorkspaceFromNav({ openGuidedDemo: true, intentId });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Could not open the guided demo.');
+        return;
+      }
       if (!next) return;
       setWorkspace(next);
       historyRef.current.reset(next);
@@ -382,9 +473,18 @@ export const WorkspacePage = () => {
   };
 
   const handleRestoreSnapshot = (snapshot: VersionSnapshot) => {
+    let restored: WorkspaceDocument;
+    let legacyIncomplete: boolean;
+    try {
+      const proposed = applySnapshotToWorkspace(workspace, snapshot);
+      restored = proposed.workspace;
+      legacyIncomplete = proposed.legacyIncomplete;
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'This snapshot could not be restored.');
+      return;
+    }
     const checkpoint = saveRecoverySnapshot(`Recovery before restoring ${snapshot.title}`, workspace);
     if (checkpoint.result.status !== 'saved') { setNotice(checkpoint.result.error ?? 'Could not save recovery checkpoint. Restore cancelled.'); return; }
-    const { workspace: restored, legacyIncomplete } = applySnapshotToWorkspace(workspace, snapshot);
     setWorkspace(restored);
     historyRef.current.reset(restored);
     setHistoryVersion((v) => v + 1);
@@ -400,11 +500,11 @@ export const WorkspacePage = () => {
   };
 
   const handleWorkflowValidator = () => {
-    setWorkflowValidator(buildWorkflowValidator(nodes, edges));
+    setWorkflowValidator(buildWorkflowValidator(nodes, edges, template));
   };
 
   const handleOpenPreview = () => {
-    const liveValidation = buildWorkflowValidator(nodes, edges);
+    const liveValidation = buildWorkflowValidator(nodes, edges, template);
     if (liveValidation.exportReadiness === 'Incomplete' || liveValidation.exportReadiness === 'Needs Review') {
       setWorkflowValidator(liveValidation);
       setNotice('Resolve blocking validation issues and approve required human review before generating or exporting.');
@@ -446,36 +546,16 @@ export const WorkspacePage = () => {
     }
 
     const derived = countDerivedNodes(workspace.nodes);
-    let replaceDerived = false;
-
     if (derived > 0) {
       setConfirmation({ title: 'Replace derived nodes?', description: `There are ${derived} derived node(s). This creates a fresh split from the source panel.`, label: 'Replace derived nodes', destructive: true, action: () => {
         const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, { replaceDerived: true });
         replaceGraph({ nodes: result.nodes, edges: result.edges, meta: { ...workspace.meta, appliedSourceFingerprint: workspace.sourceMaterial, sourceSyncStatus: 'in_sync' } });
       } });
-      if (window.location.hash === '#legacy-split-flow') {
-      const replace = Boolean(
-        `Split into nodes can restructure derived canvas content.\n\n` +
-          `There are currently ${derived} transform/decision/AI node(s).\n\n` +
-          `OK = REPLACE those derived nodes with a fresh split from the source panel (Input content also updates).\n` +
-          `Cancel = choose append-only or abort next.`,
-      );
-      if (!replace) {
-        const append = Boolean(
-          'Append split nodes without removing existing derived nodes?\n\n' +
-            'OK = append new nodes from source (Input content updates; existing derived nodes stay).\n' +
-            'Cancel = do nothing — canvas is preserved.',
-        );
-        if (!append) return;
-        replaceDerived = false;
-      } else {
-        replaceDerived = true;
-      }
-    }
+      return;
     }
 
     const result = splitSourceIntoNodes(workspace.sourceMaterial, workspace.nodes, workspace.edges, {
-      replaceDerived,
+      replaceDerived: false,
     });
 
     replaceGraph({
@@ -543,9 +623,15 @@ export const WorkspacePage = () => {
   const selectedNode = nodes.find((node) => node.id === selectedNodeId) ?? null;
 
   const switchWorkspace = (id: string) => {
+    if (id === workspace.id) return;
     const next = loadWorkspaceById(id);
     if (!next) return;
-    setActiveWorkspaceId(id);
+    if (!persistWorkspaceBeforeLeaving(workspace)) return;
+    const result = setActiveWorkspaceId(id);
+    if (result.status !== 'saved') {
+      setNotice(result.error ?? 'Could not switch the active workspace.');
+      return;
+    }
     setWorkspace(next);
     historyRef.current.reset(next);
     setHistoryVersion((v) => v + 1);
@@ -555,10 +641,22 @@ export const WorkspacePage = () => {
   };
 
   const removeWorkspace = () => {
-    deleteWorkspace(workspace.id);
+    const result = deleteWorkspace(workspace.id);
+    if (result.status !== 'saved') {
+      setNotice(result.error ?? 'Could not delete this workspace.');
+      return;
+    }
     const index = loadIndex();
     const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId) : null;
-    const active = next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+    let active = next;
+    if (!active) {
+      try {
+        active = createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
+      } catch (error) {
+        setNotice(error instanceof Error ? error.message : 'Workspace was deleted, but a replacement workspace could not be created.');
+        return;
+      }
+    }
     setWorkspace(active);
     historyRef.current.reset(active);
     setHistoryVersion((v) => v + 1);
@@ -602,7 +700,14 @@ export const WorkspacePage = () => {
               onSelect={switchWorkspace}
               onRename={(name) => patchWorkspace({ name })}
               onCreate={() => {
-                const next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
+                if (!persistWorkspaceBeforeLeaving(workspace)) return;
+                let next: WorkspaceDocument;
+                try {
+                  next = createWorkspace({ name: 'Untitled workspace', nodes: [], edges: [] });
+                } catch (error) {
+                  setNotice(error instanceof Error ? error.message : 'Could not create a new workspace.');
+                  return;
+                }
                 setWorkspace(next);
                 historyRef.current.reset(next);
                 setHistoryVersion((v) => v + 1);
@@ -612,7 +717,14 @@ export const WorkspacePage = () => {
                 setGraphEpoch((e) => e + 1);
               }}
               onDuplicate={() => {
-                const copy = duplicateWorkspace(workspace.id);
+                if (!persistWorkspaceBeforeLeaving(workspace)) return;
+                let copy: WorkspaceDocument | null;
+                try {
+                  copy = duplicateWorkspace(workspace.id);
+                } catch (error) {
+                  setNotice(error instanceof Error ? error.message : 'Could not duplicate this workspace.');
+                  return;
+                }
                 if (!copy) return;
                 setWorkspace(copy);
                 historyRef.current.reset(copy);
@@ -623,18 +735,6 @@ export const WorkspacePage = () => {
               }}
               onDelete={() => {
                 setConfirmation({ title: `Delete “${workspace.name}”?`, description: 'This removes the workspace and its snapshots from this browser. Export a backup first if you may need it later.', label: 'Delete workspace', destructive: true, action: removeWorkspace });
-                if (window.location.hash === '#legacy-delete-flow') {
-                deleteWorkspace(workspace.id);
-                const index = loadIndex();
-                const next = index.activeWorkspaceId ? loadWorkspaceById(index.activeWorkspaceId!) : null;
-                const active = next ?? createWorkspace({ name: 'Blank workspace', nodes: [], edges: [] });
-                setWorkspace(active);
-                historyRef.current.reset(active);
-                setHistoryVersion((v) => v + 1);
-                setIndexEntries(loadIndex().workspaces);
-                setWorkflowValidator(null);
-                setGraphEpoch((e) => e + 1);
-                }
               }}
             />
             <div className="pointer-events-auto flex flex-wrap items-center gap-2">
@@ -771,7 +871,7 @@ export const WorkspacePage = () => {
                     ),
                   },
                 };
-              }, 'source');
+              }, 'text:source');
               setWorkflowValidator(null);
               setGraphEpoch((e) => e + 1);
             }}
@@ -830,11 +930,11 @@ export const WorkspacePage = () => {
         </div>
       </div>
 
-      <div className="hidden lg:contents"><NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
+      <div className="hidden lg:contents"><NodeInspector workspaceId={workspace.id} selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /><VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} /></div>
 
       {mobilePanel && <AccessibleDialog label={mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'} onClose={() => setMobilePanel(null)} className="mx-auto flex h-full max-w-xl flex-col overflow-hidden rounded-xl border border-border bg-panel shadow-2xl">
           <div className="flex items-center justify-between border-b border-border px-4 py-3"><h2 className="font-semibold">{mobilePanel === 'inspector' ? 'Inspector' : 'Snapshots'}</h2><button type="button" onClick={() => setMobilePanel(null)} aria-label={`Close ${mobilePanel === 'inspector' ? 'inspector' : 'snapshots'}`} className="rounded p-2"><X className="w-5 h-5" /></button></div>
-          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
+          <div className="min-h-0 flex-1 overflow-y-auto">{mobilePanel === 'inspector' ? <NodeInspector workspaceId={workspace.id} selectedNode={selectedNode} onUpdate={handleUpdateNode} onDelete={handleDeleteNode} onAddInput={() => handleAddNode('input')} /> : <VersionHistory workspace={workspace} clearSignal={clearSignal} onRestore={handleRestoreSnapshot} />}</div>
       </AccessibleDialog>}
 
       {showOutline && <AccessibleDialog label="Workflow outline" onClose={() => setShowOutline(false)} className="h-full w-full max-w-lg overflow-hidden rounded-xl border border-border bg-panel shadow-2xl"><WorkflowOutline workspace={workspace} selectedNodeId={selectedNodeId} onSelect={(node) => { setSelectedNodeId(node.id); setShowOutline(false); }} onClose={() => setShowOutline(false)} /></AccessibleDialog>}
