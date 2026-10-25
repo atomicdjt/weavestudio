@@ -31,7 +31,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
-    "@tailwindcss/typography": "^0.5.20",
+    "@tailwindcss/typography": "0.5.4",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
@@ -40,11 +40,11 @@
     "autoprefixer": "^10.5.4",
     "jsdom": "^29.1.1",
     "oxlint": "^1.80.0",
-    "postcss": "^8.5.26",
+    "postcss": "^8.5.31",
     "tailwindcss": "^4.3.2",
     "typescript": "~6.0.2",
-    "vite": "^8.2.2",
-    "vitest": "^4.1.11"
+    "vite": "^8.3.5",
+    "vitest": "4.1.12"
   },
   "license": "UNLICENSED",
   "engines": {
