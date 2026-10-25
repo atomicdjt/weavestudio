@@ -14,11 +14,13 @@ npm test
 npm run lint
 npm run typecheck
 npm run build
+npm audit --omit=dev
+npm audit --audit-level=moderate
 npx playwright install chromium
-npm run test:browser
+npm run test:browser -- --workers=1
 ```
 
-Review [the CI workflow](../.github/workflows/ci.yml) for the exact hosted gate. The buyer/acquisition package is a separate deliverable and should be verified with `npm run verify:buyer` and `npm run package:acquisition` only if that packaging scope is under review.
+Review [the CI workflow](../.github/workflows/ci.yml) for the exact hosted gate. The browser command is serialized because the local test server uses a fixed port and parallel workers can create a false-negative collision. The buyer/acquisition package is a separate deliverable and should be verified with `npm run verify:buyer` and `npm run package:acquisition` only if that packaging scope is under review.
 
 ## Manual evidence path
 
@@ -33,6 +35,6 @@ Optional AI Assist is BYOK and requires explicit initiation; the normal flow doe
 
 ## Important version boundary
 
-[PR #64](https://github.com/atomicdjt/weavestudio/pull/64) (approval attestations) and [PR #65](https://github.com/atomicdjt/weavestudio/pull/65) (workspace/deliverable trust) are **open as of the October 20 audit**. Their branch behaviors must not be described as shipped `main` capabilities. Inspect PR-specific CI if assessing those proposals.
+[PR #65](https://github.com/atomicdjt/weavestudio/pull/65) was merged into `main` at commit `fae8e7034711cc717128678e9fa8538a9fee254f` and includes the approval-attestation work originally proposed in [PR #64](https://github.com/atomicdjt/weavestudio/pull/64). Re-check the exact current `main` commit before treating any capability or verification result as current; this guide records a reproducible review path, not a release claim.
 
 No independent customer traction, enterprise deployment, privacy certification, or factual correctness of generated content is implied. See [case study](CASE_STUDY.md), [data portability](DATA-PORTABILITY.md), and [privacy](PRIVACY.md).
