@@ -12,6 +12,7 @@ import type {
   WorkspaceIndex,
 } from '../types';
 import { SNAPSHOT_FORMAT_VERSION, WORKSPACE_SCHEMA_VERSION } from '../types';
+import { verifyReviewApprovalSignatures } from './reviewState';
 
 export type ValidationResult<T> =
   | { ok: true; data: T }
@@ -360,7 +361,11 @@ export const validateWorkspaceDocument = (value: unknown): ValidationResult<Work
     createdAt: typeof value.createdAt === 'string' ? value.createdAt : now,
     updatedAt: typeof value.updatedAt === 'string' ? value.updatedAt : now,
     sourceMaterial: typeof value.sourceMaterial === 'string' ? value.sourceMaterial : '',
-    nodes: value.nodes,
+    nodes: verifyReviewApprovalSignatures({
+      nodes: value.nodes,
+      edges: value.edges,
+      sourceMaterial: typeof value.sourceMaterial === 'string' ? value.sourceMaterial : '',
+    }),
     edges: value.edges,
     deliverableDraft,
     provenance,
@@ -378,13 +383,6 @@ export const validateVersionSnapshot = (value: unknown): ValidationResult<Versio
   if (typeof value.timestamp !== 'number' || !Number.isFinite(value.timestamp)) {
     return { ok: false, error: 'Snapshot timestamp is invalid.' };
   }
-
-  const graph = validateWorkspaceDocument({
-    id: `snapshot-${value.id}`,
-    nodes: value.nodes,
-    edges: value.edges,
-  });
-  if (!graph.ok) return { ok: false, error: `Snapshot graph is invalid: ${graph.error}` };
 
   if (
     (value.workspaceId !== undefined && (typeof value.workspaceId !== 'string' || !value.workspaceId.trim())) ||
@@ -408,6 +406,18 @@ export const validateVersionSnapshot = (value: unknown): ValidationResult<Versio
   )) {
     return { ok: false, error: 'Full snapshot is missing its workspace or source material.' };
   }
+
+  // Approval attestations are bound to the snapshot's source material, not the
+  // workspace that happens to receive the snapshot later. Validate the graph
+  // with that exact source so a valid signed snapshot remains valid and a stale
+  // one is normalized to pending during inspection.
+  const graph = validateWorkspaceDocument({
+    id: `snapshot-${value.id}`,
+    nodes: value.nodes,
+    edges: value.edges,
+    sourceMaterial: typeof value.sourceMaterial === 'string' ? value.sourceMaterial : '',
+  });
+  if (!graph.ok) return { ok: false, error: `Snapshot graph is invalid: ${graph.error}` };
 
   let deliverableDraft: DeliverableDraft | undefined;
   if (value.deliverableDraft !== undefined) {

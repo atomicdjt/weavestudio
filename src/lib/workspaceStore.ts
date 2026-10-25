@@ -8,6 +8,7 @@ import type {
   WorkspaceIndex,
 } from '../types';
 import { SNAPSHOT_FORMAT_VERSION, WORKSPACE_SCHEMA_VERSION } from '../types';
+import { verifyReviewApprovalSignatures } from './reviewState';
 import { createId } from './ids';
 import {
   ensureMigratedStore,
@@ -450,13 +451,16 @@ export const applySnapshotToWorkspace = (
     snapshot.deliverableDraft !== undefined;
 
   if (isFull) {
+    const nodes = structuredClone(snapshot.nodes);
+    const edges = structuredClone(snapshot.edges);
+    const sourceMaterial = snapshot.sourceMaterial ?? '';
     return {
       legacyIncomplete: false,
       workspace: {
         ...workspace,
-        nodes: structuredClone(snapshot.nodes),
-        edges: structuredClone(snapshot.edges),
-        sourceMaterial: snapshot.sourceMaterial ?? '',
+        nodes: verifyReviewApprovalSignatures({ nodes, edges, sourceMaterial }),
+        edges,
+        sourceMaterial,
         deliverableDraft: snapshot.deliverableDraft
           ? structuredClone(snapshot.deliverableDraft)
           : undefined,
@@ -480,7 +484,11 @@ export const applySnapshotToWorkspace = (
     legacyIncomplete: true,
     workspace: {
       ...workspace,
-      nodes: structuredClone(snapshot.nodes),
+      nodes: verifyReviewApprovalSignatures({
+        nodes: structuredClone(snapshot.nodes),
+        edges: structuredClone(snapshot.edges),
+        sourceMaterial: workspace.sourceMaterial,
+      }),
       edges: structuredClone(snapshot.edges),
       deliverableDraft: undefined,
       provenance: undefined,
@@ -544,6 +552,7 @@ export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBr
   if (!keys.length || keys.some((key) => !ownedKey(key) || !isRecognizedBackupKey(key) || typeof records[key] !== 'string')) {
     return { ok: false, error: 'Backup contains invalid or non-WeaveStudio records.' };
   }
+  const normalizedRecords = { ...(records as Record<string, string>) };
 
   if (!Object.prototype.hasOwnProperty.call(records, INDEX_KEY)) {
     return { ok: false, error: 'Backup is missing its workspace index and cannot safely replace local data.' };
@@ -570,6 +579,7 @@ export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBr
     if (valid.data.id !== entry.id || valid.data.name !== entry.name) {
       return { ok: false, error: `Workspace “${entry.name}” does not match its index entry.` };
     }
+    normalizedRecords[key] = JSON.stringify(valid.data);
   }
 
   for (const key of keys.filter((item) => item.startsWith('weavestudio_v1_ws_'))) {
@@ -609,7 +619,7 @@ export const inspectFullBrowserBackup = (raw: unknown): { ok: true; data: FullBr
   return {
     ok: true,
     data: {
-      records: records as Record<string, string>,
+      records: normalizedRecords,
       workspaceCount: index.data.workspaces.length,
       snapshotCount,
     },

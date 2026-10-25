@@ -64,6 +64,11 @@ export const DocsPage = () => {
           </ul>
         </section>
 
+        <section className="bg-panel border border-border rounded-lg p-6">
+          <h2 className="text-xl font-bold text-white mb-4">Human review and approval integrity</h2>
+          <p className="text-sm leading-relaxed">Approving a review checkpoint stores a SHA-256 digest of its semantic upstream workflow and source material. A changed or unverifiable digest returns the checkpoint to Pending when a workspace, project import, or snapshot is loaded. Older workspaces without an attestation remain readable. The digest detects stale content when it is left unchanged; it does not identify the reviewer or prevent someone who can edit a project file from changing both the content and digest.</p>
+        </section>
+
         <section id="exports" className="bg-panel border border-border rounded-lg p-6">
           <h2 className="text-xl font-bold text-white mb-4">Exports</h2>
           <ul className="list-disc list-inside space-y-2 text-sm">

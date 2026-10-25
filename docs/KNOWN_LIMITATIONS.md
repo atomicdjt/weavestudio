@@ -12,6 +12,7 @@
 
 - Output generation is deterministic local composition from user-provided node content and template structure.
 - Workflow Validator evaluates structure, completeness, review checkpoints, and export readiness.
+- Review approval digests bind approvals to workflow content and detect stale edits when the digest is preserved. They are not reviewer identity signatures or protection against a person who edits both a portable document and its digest.
 - Neither output generation nor Workflow Validator verifies facts, extracts truth automatically, or guarantees correctness.
 - Review generated deliverables before sharing them.
 

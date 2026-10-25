@@ -25,7 +25,7 @@ import type {
   WorkspaceDocument,
 } from '../types';
 import { buildWorkflowValidator } from '../lib/workflowValidator';
-import { invalidateApprovedReviews } from '../lib/reviewState';
+import { attestApprovedReviewNode, invalidateApprovedReviews } from '../lib/reviewState';
 import { upsertSourceFragment } from '../lib/provenance';
 import {
   applySourceToInputNode,
@@ -303,9 +303,31 @@ export const WorkspacePage = () => {
 
   const handleUpdateNode = (id: string, data: Partial<AppNode['data']>, command = false) => {
     patchWorkspace((current) => {
-      const nextNodes = current.nodes.map((node) =>
-        node.id === id ? { ...node, data: { ...node.data, ...data } } : node,
+      const requestedData = { ...data };
+      delete requestedData.approvalSignature;
+      delete requestedData.approvalAttestationVersion;
+      let nextNodes = current.nodes.map((node) =>
+        node.id === id ? { ...node, data: { ...node.data, ...requestedData } } : node,
       );
+      const updatedNode = nextNodes.find((node) => node.id === id);
+      if (updatedNode?.type === 'review') {
+        if (requestedData.status === 'approved') {
+          nextNodes = attestApprovedReviewNode({
+            reviewId: id,
+            nodes: nextNodes,
+            edges: current.edges,
+            sourceMaterial: current.sourceMaterial,
+          });
+        } else if (requestedData.status !== undefined) {
+          nextNodes = nextNodes.map((node) => {
+            if (node.id !== id || node.type !== 'review') return node;
+            const nextData = { ...node.data };
+            delete nextData.approvalSignature;
+            delete nextData.approvalAttestationVersion;
+            return { ...node, data: nextData };
+          });
+        }
+      }
       return {
         ...current,
         nodes: invalidateApprovedReviews({

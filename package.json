@@ -17,6 +17,7 @@
     "verify": "node scripts/verify-release.mjs"
   },
   "dependencies": {
+    "@noble/hashes": "^2.4.0",
     "@xyflow/react": "^12.11.5",
     "clsx": "^2.1.1",
     "jspdf": "^4.2.1",
