@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AppEdge, AppNode, WorkspaceDocument } from '../types';
 import { WORKSPACE_SCHEMA_VERSION, SNAPSHOT_FORMAT_VERSION } from '../types';
-import { validateWorkspaceDocument, validateProjectExportFile } from './schema';
+import { validateVersionSnapshot, validateWorkspaceDocument, validateProjectExportFile } from './schema';
 import { applySnapshotToWorkspace, inspectFullBrowserBackup } from './workspaceStore';
 import { INDEX_KEY, workspaceKey } from './migrations';
 import { attestApprovedReviewNode, createReviewApprovalSignature, invalidateApprovedReviews, verifyReviewApprovalSignatures } from './reviewState';
@@ -161,6 +161,30 @@ describe('review approval attestations', () => {
     const restored = applySnapshotToWorkspace(current, snapshot);
     expect(reviewNode(restored.workspace)?.data.status).toBe('pending');
     expect(reviewNode(restored.workspace)?.data.approvalSignature).toBeUndefined();
+  });
+
+  it('keeps a valid approval when a full snapshot has non-empty source material', () => {
+    const sourceMaterial = 'Snapshot evidence';
+    const signature = createReviewApprovalSignature({
+      reviewId: 'review', nodes: [input(), review()], edges, sourceMaterial,
+    });
+    const result = validateVersionSnapshot({
+      id: 'signed-snapshot',
+      timestamp: 1,
+      title: 'Signed snapshot',
+      snapshotVersion: SNAPSHOT_FORMAT_VERSION,
+      workspaceId: 'review-workspace',
+      sourceMaterial,
+      nodes: [input(), review(signature, 1)],
+      edges,
+    });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const restoredReview = result.data.nodes.find((node) => node.id === 'review');
+      expect(restoredReview?.data.status).toBe('approved');
+      expect(restoredReview?.data.approvalSignature).toBe(signature);
+    }
   });
 
   it('fails closed if an attested approval loses its digest', () => {
