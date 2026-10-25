@@ -16,7 +16,7 @@
 
 **Turn fragmented information into a structured, reviewable, reusable deliverable workflow.**
 
-**[Canonical project page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/weavestudio) · [Public demo](https://weavestudio-nine.vercel.app/) · [Case study](docs/CASE_STUDY.md) · [Known limitations](docs/KNOWN_LIMITATIONS.md)**
+**[Canonical project page](https://ai-project-portfolio-portfolio-hub.vercel.app/projects/weavestudio) · [Public demo](https://weavestudio-nine.vercel.app/) · [Independent review guide](docs/REVIEWER_QUICKSTART.md) · [Case study](docs/CASE_STUDY.md) · [Known limitations](docs/KNOWN_LIMITATIONS.md)**
 
 **License:** **Proprietary / All Rights Reserved.** Public source visibility is for evaluation, portfolio review, technical critique, and prospective collaboration. This repository is **not open source**; see [LICENSE.md](LICENSE.md).
 
@@ -168,4 +168,4 @@ No revenue, customer, active-user, compliance-certification, or completed-acquis
 
 ## More projects
 
-[Agent Session Bridge](https://github.com/atomicdjt/agent-session-bridge) · [Validation Ledger](https://github.com/atomicdjt/validation-ledger) · [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [GitHub profile](https://github.com/atomicdjt) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
+[Trajectory Fidelity Bridge](https://github.com/atomicdjt/trajectory-fidelity-bridge) · [Validation Ledger](https://github.com/atomicdjt/validation-ledger) · [BuildWorld AI](https://github.com/atomicdjt/buildworld-ai) · [GitHub profile](https://github.com/atomicdjt) · [Full portfolio](https://ai-project-portfolio-portfolio-hub.vercel.app/)
