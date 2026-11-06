@@ -49,5 +49,10 @@
   "license": "UNLICENSED",
   "engines": {
     "node": ">=24 <25"
+  },
+  "overrides": {
+    "@tailwindcss/typography": {
+      "postcss-selector-parser": "6.1.5"
+    }
   }
 }
