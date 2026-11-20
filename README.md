@@ -100,7 +100,11 @@ See the [case study](docs/CASE_STUDY.md) and [known limitations](docs/KNOWN_LIMI
 
 ## Local development
 
+Requires Node.js 24 and npm. From a fresh checkout:
+
 ```bash
+git clone https://github.com/atomicdjt/weavestudio.git
+cd weavestudio
 npm ci
 npm run dev
 ```
